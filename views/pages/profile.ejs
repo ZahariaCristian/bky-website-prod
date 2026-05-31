@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Profilo</title>
+    <%- include('../partials/head'); %>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Profilo</h1>
+            <div class="innerLR">
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserName">Nome Utente</label>
+                                    <input type="text" id="inputUserName" class="form-control" value="" placeholder="nome" autocomplete="off-UserNAme">
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserPassword">Password</label>
+                                    <input type="password" id="inputUserPassword" class="form-control" value="" placeholder="****" autocomplete="off-PasswordUser">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserMail">Mail</label>
+                                    <input type="text" id="inputUserMail" class="form-control" value="" placeholder="example@mail.com" autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="inputTwoUserPassword">Ripeti Password</label>
+                                    <input type="password" id="inputTwoUserPassword" class="form-control" value="" placeholder="****" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>bakecaincontrii.com</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserName">Nome Utente</label>
+                                    <input type="text" id="inputBKUserName" class="form-control" value="" placeholder="nome" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserPassword">Password</label>
+                                    <input type="password" id="inputBKUserPassword" class="form-control" value="" placeholder="****" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Bakeca.it</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputBakecaUserName">Nome Utente</label>
+                                    <input type="text" id="inputBakecaUserName" class="form-control" value="" placeholder="nome" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputBakecaUserPassword">Password</label>
+                                    <input type="password" id="inputBakecaUserPassword" class="form-control" value="" placeholder="****" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Me API</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputMegaescortUserName">API User</label>
+                                    <input type="text" id="inputMegaescortUserName" class="form-control" value="" placeholder="email API" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Trovagnocca</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputTrovagnoccaUserName">Nome Utente</label>
+                                    <input type="text" id="inputTrovagnoccaUserName" class="form-control" value="" placeholder="email" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputTrovagnoccaUserPassword">Password</label>
+                                    <input type="password" id="inputTrovagnoccaUserPassword" class="form-control" value="" placeholder="****" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnCreaUtente"><b>SALVA</b></button>
+                    </div>
+                </div>
+            </div>          
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+            
+    <script src="/js/profile.js"></script>
+</body>
+</html>

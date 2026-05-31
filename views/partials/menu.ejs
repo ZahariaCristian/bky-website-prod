@@ -1,0 +1,159 @@
+<style>
+    .blink {
+        animation: blink 1s steps(5, start) infinite;
+        -webkit-animation: blink 1s steps(5, start) infinite;
+    }
+    @keyframes blink {
+        to {
+            visibility: hidden;
+        }
+    }
+    @-webkit-keyframes blink {
+        to {
+            visibility: hidden;
+        }
+    }
+    .blink-bg {
+    animation: blink-bg 0.5s linear infinite;
+    -webkit-animation: blink-bg 0.5s linear infinite;
+}
+@keyframes blink-bg {
+    0% { background-color: rgba(255,0,0,0.1); }
+    25% { background-color: rgba(255,0,0,0.5); }
+    50% { background-color: rgba(255,0,0,0.8); }
+    75% { background-color: rgba(255,0,0,0.5); }
+    100% { background-color: rgba(255,0,0,0.1); }
+}
+@-webkit-keyframes blink-bg {
+    0% { background-color: rgba(255,0,0,0.1); }
+    25% { background-color: rgba(255,0,0,0.5); }
+    50% { background-color: rgba(255,0,0,0.8); }
+    75% { background-color: rgba(255,0,0,0.5); }
+    100% { background-color: rgba(255,0,0,0.1); }
+}
+</style>
+<div id="menu" class="hidden-print hidden-xs animated fadeInLeft" style="visibility: visible;">
+    <div id="sidebar-discover-wrapper" class="hasNiceScroll" tabindex="5000" style="overflow-y: hidden; outline: none;">
+        <ul class="list-unstyled">
+            <li><a href="#sidebar-discover-annunci" data-toggle="sidebar-discover" class="glyphicons list"><i></i><span>Annunci</span></a>
+                <div id="sidebar-discover-annunci" class="sidebar-discover-menu">
+                    <div class="innerAll text-center border-bottom text-muted-dark">
+                        <strong>Annunci</strong>
+                        <button class="btn btn-xs btn-default close-discover"><i class="fa fa-fw fa-times"></i>
+                        </button>
+                    </div>
+                    <ul class="animated fadeIn">
+                        <li><a href="/annuncio.html?edit=new"><i class="fa fa-calendar-plus"></i> Nuovo</a>
+                        </li>
+                        <li><a href="/listaAnnunci.html"><i class="fa fa-list"></i> Annunci</a>
+                        </li>
+                        <li><a href="/deadline.html"><i class="fa fa-calendar"></i> Scadenze</a>
+                        </li>
+                        <li><a href="/blacklist.html"><i class="fa fa-ban"></i> Filtro Parole</a>
+                        </li>
+                        <li>
+                            <a href="/annuncio.html?edit=new" style="padding: 0;">
+                                <img src="/assets/panels/bakecaincontri.png" style="width: 100%; border: 0;height:100%; padding:0;" />
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/annuncio.html?edit=new&panel=bakeca" style="padding: 0;">
+                                <img src="/assets/panels/bakeca.png" style="width: 100%; border: 0;height:100%; padding:0;" />
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/annuncio.html?edit=new&panel=megaescort" style="padding: 0;">
+                                <img src="/assets/panels/me.png" style="width: 100%; border: 0;height:100%; padding:0;" />
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/annuncio.html?edit=new&panel=trovagnocca" style="padding: 0;">
+                                <img src="/assets/panels/trovagnocca.png" style="width: 100%; border: 0;height:100%; padding:0;" />
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            <li>
+                <a href="/comunicazioni.html" class="glyphicons message_full">
+                    <i></i>
+                    <span>Comunicazioni</span>
+                    <span id="comunicazioni-badge" class="badge" style="display: none; background-color: red; margin-left: 5px;"></span>
+                </a>
+            </li>
+            <li><a href="/segnalazioni.html" class="glyphicons flag"><i></i><span>Segnalazioni</span></a>
+            </li>
+            <li><a href="/gestPagamenti.html" class="glyphicons money"><i></i><span>Gest. Pagamenti</span></a>
+            </li>
+            <li><a href="/addbook.html" class="glyphicons parents"><i></i><span>Rubrica</span></a>
+            </li>
+            <li><a href="#sidebar-discover-team" data-toggle="sidebar-discover" class="glyphicons group"><i></i><span>Team</span></a>
+                <div id="sidebar-discover-team" class="sidebar-discover-menu">
+                    <div class="innerAll text-center border-bottom text-muted-dark">
+                        <strong>Team</strong>
+                        <button class="btn btn-xs btn-default close-discover"><i class="fa fa-fw fa-times"></i>
+                        </button>
+                    </div>
+                    <ul class="animated fadeIn">
+                        <li><a href="#panel-newMember" data-toggle="modal"><i class="fa fa-plus"></i> Invita Membro</a>
+                        </li>
+                        <li><a href="/team.html"><i class="fa fa-list"></i> Membri</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            <li><a href="#sidebar-discover-user" data-toggle="sidebar-discover" class="glyphicons adjust_alt"><i></i><span>Account</span></a>
+                <div id="sidebar-discover-user" class="sidebar-discover-menu">
+                    <div class="innerAll text-center border-bottom text-muted-dark">
+                        <strong>Utenti</strong>
+                        <button class="btn btn-xs btn-default close-discover"><i class="fa fa-fw fa-times"></i>
+                        </button>
+                    </div>
+                    <ul class="animated fadeIn">
+                        <li><a href="/newUser.html"><i class="fa fa-plus"></i> Nuovo Utente</a>
+                        </li>
+                        <li><a href="/Users.html"><i class="fa fa-list"></i> Lista Utenti</a>
+                        </li>
+                        <li><a href="/Profile.html"><i class="fa fa-user"></i> Profilo</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+        <div id="discover"></div>
+    </div>
+<div id="ascrail2000" class="nicescroll-rails" style="width: 5px; z-index: 2; cursor: default; position: absolute; top: 0px; left: 231px; height: 903px; display: none; opacity: 0;"><div style="position: relative; top: 0px; float: right; width: 5px; height: 0px; background-color: rgb(54, 149, 213); border: none; background-clip: padding-box; border-radius: 0px;"></div>
+</div>
+</div>
+<div id="panel-newMember" class="modal fade" aria-hidden="false" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Mail dell'utente che si vuole aggiungere</h3>
+            </div>
+            <div class="modal-body" style="overflow: visible;">
+                <div class="relativeWrapp" style="vertical-align: middle;">
+                    <input id="userMailInvite" class="form-control" type="text">
+                    <p>L'utente riceverà una mail dove troverà un link per accettare l'invito.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnInviteUser" type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="loader">
+    <img src="/assets/loader.gif" />
+</div>
+<div class="pnlAlert" style="display: none;">
+    <div id="lblSaved" class="alert alert-success pnlAlertItem" style="display: none;">
+        Oggetto Salvato
+    </div>
+    <div id="lblCopied" class="alert alert-warning pnlAlertItem" style="display: none;">
+        Le uscite sono state copiate nella clipboard
+    </div>
+    <div id="lblCustom" class="alert alert-danger pnlAlertItem" style="display: none;"></div>
+</div>
+
+<script src="/js/menu.js"></script>

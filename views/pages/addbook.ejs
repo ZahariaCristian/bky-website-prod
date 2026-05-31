@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Rubrica</title>
+    <%- include('../partials/head'); %>
+    <style>
+        .custom-loader{
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            height: 100%;
+            top:0;
+            background: white;
+            opacity: 0.5;
+        }
+        .custom-loader > img{
+            position: fixed;
+            z-index: 1001;
+            top: calc(50% - 58px);
+            left: calc(50% - 58px);
+        }
+    </style>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Rubrica</h1>
+            <div class="innerLR">
+                <div class="row">
+                    <div class="col-lg-9">
+                        <div class="custom-loader">
+                            <img src="/assets/loader.gif" />
+                        </div>
+                        <div class="widget">
+                            <div class="media widget-body">
+                                <!-- <button id="btnEditProfile" class="pull-right btn btn-default btn-sm"><i class="fa fa-fw fa-edit"></i> Modifica</button> -->
+                                <img id="imgPhoto" src="" class="thumb pull-left animated fadeInDown" alt="" width="100" style="visibility: visible;">
+                                <div class="media-body innerLR">
+                                    <a onclick="deleteClient" class="btn btn-danger btnDelete" style="position: absolute; right: 20px;"><span class="fa fa-times"></span></a>
+                                    <a id="btnGoTo" href=""><h4 id="txtName" class="media-heading text-large text-primary text-uppercase"></h4></a>
+                                    <p><span id="txtAge"></span>
+                                        <br><span id="txtCity"></span>,
+                                        <br>N. Tel. 
+                                        <strong id="txtPhone"></strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="widget">
+                            <div class="row row-merge margin-none ">
+                                <div class="col-md-4">
+                                    <div class="innerAll text-center">
+                                        <span id="txtTotaleRestanti" class="text-large strong"></span>
+                                        <br>Annunci Restanti
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="innerAll text-center">
+                                        <span id="txtTotalePubblicati" class="text-large strong"></span>
+                                        <br>Annunci Pubblicati
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="innerAll text-center">
+                                        <span id="txtCrediti" class="text-large strong"></span>
+                                        <br>Crediti da avere
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="widget">
+                            <div class="widget-head">
+                                <h4 class="heading pull-left">Storico Pagamenti</h4>
+                                <i class="fa fa-fw fa-clock-o pull-right text-muted innerT half"></i> 
+                            </div>
+                            <div class="widget-body padding-none">
+                                <ul id="rptStorico" class="timeline-activity list-unstyled">
+                                    <li class="row center rptNoData">Nessun dato rilevato
+                                        <div class="separator"></div>
+                                    </li>
+                                    <li class="rptItemStorico" style="display: none;">
+                                        <i class="list-icon fa fa-money"></i>
+                                        <div class="block">
+                                            <div class="caret"></div>
+                                            <div class="box-generic">
+                                                <div class="timeline-top-info border-bottom">
+                                                    <span class="text-regular strong">Crediti recuperati</span> 
+                                                    <span class="text-muted2">€ @importo@.00</span>
+                                                </div>
+                                                <div class="innerAll half inline-block">
+                                                    <i class="fa fa-clock-o text-primary"></i> @ora@
+                                                    &nbsp;
+                                                    <i class="fa fa-calendar text-primary"></i> @data@</div>
+                                            </div>
+                                            <div class="separator bottom"></div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="widget">
+                            <div class="widget-head	">
+                                <h4 class="heading pull-left">Clienti</h4>
+                                <div class="clearfix"></div>
+                            </div>
+                            <div class="innerAll">
+                                <div style="width: 100%;" class="input-group input-group-sm">
+                                    <input id="txtSearch" type="text" class="form-control" placeholder="Trova ...">
+                                </div>
+                            </div>
+                            <div class="widget-body padding-none">
+                                <ul id="rptClienti" class="list-group list-group-1 borders-none margin-none" style="max-height: 500px; overflow-y: auto; overflow-x: hidden;">
+                                    <div class="row center rptNoData">Nessun dato rilevato
+                                        <div class="separator"></div>
+                                    </div>
+                                    <li class="rptItemClienti list-group-item" style="display: none;">
+                                        <div class="media innerAll" data-id="@id@">
+                                            <button class="pull-right btn btn-primary btn-stroke btn-xs"><i class="fa fa-arrow-right"></i>
+                                            </button>
+                                            <img src="@foto@" alt="" width="35" class="pull-left thumb">
+                                            <div class="media-body">
+                                                <h5 class="media-heading strong text-uppercase">@nome@</h5>
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fa fa-phone"></i> @telefono@</li>
+                                                    <li><i class="fa fa-map-marker"></i> @citta@</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <!-- // End Widget-body-->
+                        </div>
+                    </div>
+                </div>
+            </div>          
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+            
+    <script src="/js/addbook.js"></script>
+</body>
+</html>

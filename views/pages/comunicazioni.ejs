@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Comunicazioni</title>
+    <%- include('../partials/head'); %>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Comunicazioni</h1>
+            <div class="innerLR">
+                <div id="txtAdminCom" style="display: none;" class="widget widget-body-gray">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons download"><i></i>Nuova Comunicazione</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="innerAll inner-2x" style="background-color: white;">
+                                <textarea id="txtCom" class="notebook border-none form-control padding-none" rows="5" placeholder="Scrivi qui la tua comunicazione..."></textarea>
+                                <div class="clearfix"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnUpdateCom"><b>INSERISCI</b></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="rptCom" class="col-md-12">
+                    <div class="row center rptNoData">
+                        <div class="widget widget-body-gray">
+                            <div class="widget-body">
+                                <div class="row">
+                                    Nessun dato rilevato
+                                </div>
+                            </div>
+                        </div></div>
+                    <div class="rptItemCom row" style="display: none;">
+                        <div class="widget widget-body-gray">
+                            <div class="widget-head">
+                                <h3 class="heading glyphicons user"><i></i>@userName@</h3>
+                                <h3 class="heading glyphicons clock pull-right"><i></i>@time@</h3>
+                            </div>
+                            <div class="widget-body">
+                                <div class="row">
+                                    <div class="innerAll"><a class="btn btn-danger pull-right" style="display: none;" href="#" onclick="deleteThis(this, '@id@')"><i class="fa fa-times"></i></a>
+                                        @text@
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>  
+        </div>
+    </div>
+            
+    <script src="/js/comunicazioni.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+  // Mark all as read when this page loads
+  fetch('/comunicazioni/mark-as-read', { 
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json'
+      }
+  }).catch(error => console.error('Error marking messages as read:', error));
+});
+    </script>
+</body>
+</html>

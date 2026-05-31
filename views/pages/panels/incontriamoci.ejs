@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+
+<head>
+    <link rel="stylesheet" href="/css/annuncio.css">
+    <title>BKY - Annuncio</title>
+    <%- include('../../partials/head'); %>
+        <link rel="stylesheet" href="/css/cropper.css" />
+        <script src="/js/cropper.js"></script>
+        <script type="text/javascript"
+            src="/assets/components/common/forms/calendar/jquery.simple-calendar.min.js"></script>
+        <link rel="stylesheet" type="text/css"
+            href="/assets/components/common/forms/calendar/css/simple-calendar.css" />
+        <style>
+            /* Custom Modal Styles */
+            .custom-modal {
+                display: none;
+                /* Hidden by default */
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.5);
+                /* Semi-transparent background */
+            }
+
+            .custom-modal-content {
+                background-color: #fff;
+                margin: 10% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                max-width: 800px;
+                border-radius: 8px;
+            }
+
+            .custom-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+
+            .custom-modal-title {
+                font-size: 1.5em;
+                font-weight: bold;
+            }
+
+            .custom-modal-close {
+                background: none;
+                border: none;
+                font-size: 1.5em;
+                cursor: pointer;
+            }
+
+            .custom-modal-close:hover {
+                color: #f00;
+            }
+
+            .custom-modal-body {
+                margin-bottom: 20px;
+            }
+
+            .custom-modal-footer {
+                text-align: right;
+            }
+
+            .custom-modal-save {
+                background-color: #007bff;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .custom-modal-save:hover {
+                background-color: #0056b3;
+            }
+
+            .promo>.promoPanel,
+            .promo>.videochiamata-promo,
+            .promo>.premium-promo {
+                padding: 12px;
+            }
+
+            .servizi-wrapper {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .servizi-box {
+                width: 33%;
+            }
+
+            .widget-after {
+                display: none;
+            }
+
+            .rptItemStorico:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStorico:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStorico>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStorico>div:first-child {
+                padding: 0 !important;
+            }
+
+            .rptItemStoricoSospesi:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStoricoSospesi:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStoricoSospesi>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStoricoSospesi>div:first-child {
+                padding: 0 !important;
+            }
+
+            .removed .btn-primary {
+                display: none;
+            }
+
+            .persistent .btn-success {
+                display: none;
+            }
+
+            .pic-panel .btn {
+                width: 37px;
+            }
+
+            .pics.removed {
+                display: none;
+            }
+
+            .widget.widget-tabs>.widget-head ul li.active {
+                background: none !important;
+                font-weight: 700;
+            }
+
+            .rptItemStorico .btn {
+                font-size: 18px;
+            }
+
+            .event-container {
+                display: none !important;
+            }
+
+            .newpost-wrapper>button {
+                margin-left: 12px;
+                height: 34px !important;
+            }
+
+            .promoFree .btnPremiumCam {
+                display: none;
+            }
+
+            label.lblDateTime {
+                line-height: 34px;
+                padding-right: 8px;
+            }
+
+            .time-slot .lblDateTime {
+                margin-left: -36px;
+            }
+        </style>
+</head>
+
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <input id="annuncioID" type="hidden" value="new" />
+    <input id="donnaID" type="hidden" name="donnaID" value="new" />
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../../partials/menu'); %>
+            <div id="content">
+                <%- include('../../partials/header'); %>
+                    <h1>Nuovo Annuncio-incontriamoci</h1>
+
+                    <footer>
+                        <%- include('../../partials/footer'); %>
+                    </footer>
+            </div>
+    </div>
+    <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
+    <script src="/js/annuncio.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const totalCostElement = document.getElementById('totalCost');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const toggleTableBtn = document.getElementById('toggleTableBtn');
+            const costTableContainer = document.getElementById('costTableContainer');
+            const costTableBody = document.getElementById('costTableBody');
+
+            // Function to fetch listino data from the server
+            async function fetchListinoData() {
+                try {
+                    const response = await fetch('/gestPagamenti/getListino', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include', // Include cookies for session authentication
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return data.listino; // Return the listino data
+                } catch (error) {
+                    console.error('Error fetching listino data:', error);
+                    return []; // Return an empty array in case of error
+                }
+            }
+
+            // Function to count dynamically added fields for 10x1, 10x3, and 10x7
+            function countDynamicFields(promoType) {
+                const container = document.querySelector(`#tab${promoType} .post-list`);
+                return container.children.length; // Number of dynamically added fields
+            }
+
+            // Function to calculate the total cost
+            async function calculateTotalCost() {
+                // Fetch the listino data
+                const listinoData = await fetchListinoData();
+                if (listinoData.length === 0) {
+                    console.warn('No listino data available.');
+                    return;
+                }
+
+                let totalCost = 0;
+
+                // Count the number of selected checkboxes for each promo type
+                const selectedPromos = {
+                    '1x1': 0,
+                    '1x3': 0,
+                    '1x7': 0,
+                    '10x1': 0,
+                    '10x3': 0,
+                    '10x7': 0
+                };
+
+                // Count selected checkboxes for 1x1, 1x3, and 1x7
+                checkboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        const id = checkbox.id; // e.g., "1x108001000"
+                        const promoType = id.slice(0, 3); // e.g., "1x1"
+
+                        // Increment the count for the corresponding promo type
+                        if (selectedPromos.hasOwnProperty(promoType)) {
+                            selectedPromos[promoType]++;
+                        } else {
+                            console.warn(`Unknown promo type: ${promoType}`);
+                        }
+                    }
+                });
+
+                // Count dynamically added fields for 10x1, 10x3, and 10x7
+                selectedPromos['10x1'] = countDynamicFields('10x1');
+                selectedPromos['10x3'] = countDynamicFields('10x3');
+                selectedPromos['10x7'] = countDynamicFields('10x7');
+
+                // Calculate the total cost based on the number of selected checkboxes and dynamic fields
+                for (const [promoType, count] of Object.entries(selectedPromos)) {
+                    if (count > 0) {
+                        // Find the listino item with the matching uscita (number of hours)
+                        const listinoItem = listinoData.find(item => item.uscita === count);
+                        if (listinoItem) {
+                            switch (promoType) {
+                                case '1x1':
+                                    totalCost += listinoItem.oneXone;
+                                    break;
+                                case '1x3':
+                                    totalCost += listinoItem.oneXthree;
+                                    break;
+                                case '1x7':
+                                    totalCost += listinoItem.oneXseven;
+                                    break;
+                                case '10x1':
+                                    totalCost += listinoItem.tenXone;
+                                    break;
+                                case '10x3':
+                                    totalCost += listinoItem.tenXthree;
+                                    break;
+                                case '10x7':
+                                    totalCost += listinoItem.tenXseven;
+                                    break;
+                                default:
+                                    console.warn(`Unknown promo type: ${promoType}`);
+                            }
+                        } else {
+                            console.warn(`No listino item found for uscita: ${count}`);
+                        }
+                    }
+                }
+
+                // Update the total cost display
+                totalCostElement.textContent = `${totalCost} €`;
+
+                // Update the table with the total cost for 1 to 10 days
+                updateCostTable(totalCost);
+            }
+
+            // Function to update the cost table
+            function updateCostTable(totalCost) {
+                costTableBody.innerHTML = ''; // Clear the table body
+
+                for (let days = 1; days <= 10; days++) {
+                    const row = document.createElement('tr');
+                    const daysCell = document.createElement('td');
+                    const totalCell = document.createElement('td');
+
+                    daysCell.textContent = `${days} giorno${days > 1 ? 'i' : ''}`; // Pluralize "giorno" if needed
+                    totalCell.textContent = `${(totalCost * days).toFixed(2)} €`; // Calculate total for N days
+
+                    row.appendChild(daysCell);
+                    row.appendChild(totalCell);
+                    costTableBody.appendChild(row);
+                }
+            }
+
+            // Add event listeners to checkboxes
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', calculateTotalCost);
+            });
+
+            // Add event listeners to "+" buttons for 10x1, 10x3, and 10x7
+            document.querySelectorAll('.promoPanel .btn-primary').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Wait for the dynamic field to be added (you may need to adjust this based on your implementation)
+                    setTimeout(calculateTotalCost, 100);
+                });
+            });
+
+            // Add event listener to the dropdown button
+            toggleTableBtn.addEventListener('click', () => {
+                // Toggle the visibility of the table
+                if (costTableContainer.style.display === 'none') {
+                    costTableContainer.style.display = 'block';
+                    toggleTableBtn.textContent = 'Nascondi dettagli per più giorni';
+                } else {
+                    costTableContainer.style.display = 'none';
+                    toggleTableBtn.textContent = 'Mostra dettagli per più giorni';
+                }
+            });
+
+            // Initial calculation
+            calculateTotalCost();
+        });
+    </script>
+</body>
+
+</html>

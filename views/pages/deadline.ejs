@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Rubrica</title>
+    <%- include('../partials/head'); %>
+    <style>
+        .optionPage{
+            position: absolute;
+            right: 22px;
+        }
+        .rptItemDeadLines:nth-child(even) {background: #e3e3e3}
+        .rptItemDeadLines:nth-child(odd) {background: transparent}
+        .control-label{
+            line-height: 42px;
+            vertical-align: super;
+        }
+    </style>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <div class="optionPage">
+                Raggruppa <div class="make-switch" data-on="primary" data-off="default"><input id="chkGroup" type="checkbox" checked></div>
+            </div>
+            <h1 style="margin-bottom: 20px;">Scadenze</h1>
+            <div class="innerLR">
+                <div class="dateSelector">
+                    <input class="form-control" type="date" id="dateSelector">
+                </div>
+                <div class="separator-h"></div>
+                <div class="widget widget-body-gray">
+        <h4 class="heading" style="padding: 10px 0 0 15px;">Messaggio WhatsApp per annunci scaduti</h4>
+
+    <div class="widget-body">
+        <div class="row">
+            <div class="col-md-10 col-sm-12">
+                <input type="text" class="form-control" id="expiredMessageInput" placeholder="Inserisci il messaggio che il bot invierà agli utenti con annunci scaduti">
+            </div>
+            <div class="col-md-2 col-sm-12" style="margin-top: 8px;">
+                <button id="saveExpiredMessageBtn" class="btn btn-primary w-100">Salva messaggio</button>
+            </div>
+            <div class="col-12">
+                <span id="expiredMessageStatus" style="margin-left:10px;"></span>
+            </div>
+        </div>
+
+
+<div id="qrcode"></div>
+<div style="margin-top:10px;">
+    <span id="whatsappStatus"></span>
+</div>
+
+<div style="max-height:300px; overflow-y:auto; border:1px solid #ccc; margin-top:20px;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead style="top: 0; background: #fff; z-index: 2;">
+            <tr>
+        <th style="padding: 8px 16px;">Data invio</th>
+        <th style="padding: 8px 16px;">Username</th>
+        <th style="padding: 8px 16px;">Telefono</th>
+        <th style="padding: 8px 16px;">Messaggio</th>
+            </tr>
+        </thead>
+        <tbody id="whatsappLogsTableBody">
+            <tr><td colspan="5">Caricamento...</td></tr>
+        </tbody>
+    </table>
+</div>
+    </div>
+</div>
+
+                <div class="widget widget-body-gray">
+                    <div class="widget-head">
+                        <div class="col-md-1 col-sm-1">
+                            <div class="row"><h4 class="heading">Tipo</h4></div>
+                        </div>
+                        <div class="col-md-7 col-sm-7">
+                            <div class="row"><h4 class="heading">Annuncio</h4></div>
+                        </div>
+                        <div class="col-md-3 col-sm-3">
+                            <div class="row"><h4 class="heading">Cliente</h4></div>
+                        </div>
+                        <div class="col-md-1 col-sm-1">
+                            <div class="row"><h4 class="heading"></h4></div>
+                        </div>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div id="rptDeadLines" class="col-md-12">
+                                <div class="row center rptNoData">Nessun annuncio trovato in questa data.</div>
+                                <div class="rptItemDeadLines row" style="display: none;">
+                                    <input type="hidden" fieldName="id" value="0" />
+<!--
+<span fieldName="notified" style="display:none;"></span>
+<button class="btn btn-sm btn-toggle-notify" type="button" fieldName="notifyEnabled"></button>
+<input type="datetime-local" class="form-control form-control-sm expiresAt-input" style="width:170px; display:inline-block; margin-left:5px;" fieldName="expiresAt" />
+<button class="btn btn-sm btn-save-expiresAt" type="button" style="margin-left:5px;">Salva</button>
+-->
+                                    <div class="col-md-1 col-sm-1">
+                                        <span class="strong control-label">TOP </span><span class="strong control-label" fieldName="typeAnnuncio"></span>
+                                    </div>
+                                    <div class="col-md-7 col-sm-7">
+                                        <a class="control-label" href="/annuncio.html?edit=" fieldName="tblAnnunci.title"></a>
+                                    </div>
+                                    <div class="col-md-3 col-sm-3">
+                                        <a class="text-uppercase control-label" href="/addbook.html?c=" fieldName="tblAnnunci.tblDonne.id"></a><span class="control-label"> - </span><span class="control-label" style="font-style: italic;" fieldName="city"></span>
+                                    </div>
+                                    <div class="col-md-1 col-sm-1">
+                                        <a class="btn btnWhatappShare" target="_blank" href="https://api.whatsapp.com/send/?phone=%2B39@phone@&text=Buongiorno,%20oggi%20sei%20senza%20annunci%20su%20bakecaincontrii&app_absent=0"><i class="fa fa-2x fa-whatsapp"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>          
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+            
+    <script src="/js/deadline.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function loadWhatsappQR() {
+    fetch('/deadline/whatsapp-qr', { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+            // Show QR code if present
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
+            if (data.qr) {
+                new QRCode(qrDiv, {
+                    text: data.qr,
+                    width: 256,
+                    height: 256
+                });
+            } else {
+                qrDiv.textContent = 'QR code non disponibile.';
+            }
+
+            // Show status
+            const statusSpan = document.getElementById('whatsappStatus');
+            if (data.status === 1) {
+                statusSpan.textContent = '✅ WhatsApp attivo';
+                statusSpan.style.color = 'green';
+            } else {
+                statusSpan.textContent = '❌ WhatsApp non connesso, scansiona il QR code per connetterti.';
+                statusSpan.style.color = 'red';
+            }
+        })
+        .catch(() => {
+            document.getElementById('qrcode').textContent = 'Errore nel caricamento del QR code.';
+            document.getElementById('whatsappStatus').textContent = '';
+        });
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', loadWhatsappQR);
+setInterval(loadWhatsappQR, 10000);
+</script>
+</body>
+</html>

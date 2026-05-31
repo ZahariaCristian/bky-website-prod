@@ -1,0 +1,19 @@
+/* .container {
+    min-height: 600px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.logout-wrapper button {
+    width: 160px;
+}
+
+.disabled {
+    display: none;
+}
+
+.container div {
+    transform: scale(1.25);
+} */

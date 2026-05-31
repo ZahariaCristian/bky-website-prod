@@ -1,0 +1,206 @@
+#link-form, #phone-form {
+    display: flex;
+    margin-bottom: 35px;
+}
+
+label[for="title"],
+label[for="description"],
+label[for="city"],
+label[for="location"],
+label[for="age"] {
+    margin-top: 12px;
+} 
+
+.input-editor {
+    transform: scale(0.8) translate(-5px, -5px);
+}
+.input-editor img {
+    transform: scale(1.75);
+}
+
+.info-section, .carica-section {
+    background-color: rgba(0, 0, 0, .15);
+    border-radius: 15px;
+    padding: 10px;
+}
+.info-section, .carica-section {
+    margin-bottom: 20px;
+}
+
+.pics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.add-pic {
+    width: 180px;
+    text-align: center;
+    flex-direction: column;
+    justify-content: center;
+    color: white;
+    font-size: 100px;
+    font-weight: 300;
+}
+.add-pic:hover {
+    transition: .3s;
+    cursor: pointer;
+    background-color: #00000060;
+}
+.add-pic b {
+    transform: translateY(-15px) scale(1.5);
+}
+
+.pic-arrows {
+    text-align: center;
+}
+
+.pic-panel, .add-pic {
+    padding: 15px;
+    background-color: rgba(0, 0, 0, .2);
+}
+
+.pic-operations {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+}
+.pic-operations button {
+    transform: translateY(-7px);
+}
+.pic-wrapper img {
+    max-width: 250px;
+    max-height: 250px;
+}
+
+.flex-checkbox {
+    display: flex;
+}
+.flex-checkbox label {
+    margin-left: 5px;
+}
+
+.disabled {
+    display: none;
+}
+
+.promoType {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 40px;
+    margin-bottom: 10px;
+}
+
+.phone-wrapper {
+    display: flex;
+}
+.phone-wrapper .btn {
+    margin-left: 10px;
+    min-width: 77px;
+}
+
+.transparent {
+    opacity: 0;
+}
+.phone-wrapper svg {
+    position: absolute;
+    transform: translate(-21px, -6px);
+}
+.phone-panel {
+    background-color: rgb(226 226 226);
+    margin: 20px 0px;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 345px;
+}
+
+#verifica-label, #test-label {
+    position: absolute;
+}
+#verifica-label {
+    transform: translateX(173px);
+}
+#test-label {
+    transform: translateX(264px);
+}
+
+.promo-checkbox-btn {
+    width: 110px;
+}
+
+.promo .form-check {
+    padding: 30px;
+    border-radius: 10px;
+}
+.promo .form-check::before {
+    content: "Top ";
+}
+.promo .form-check:first-child:before {
+    content: "";
+}
+
+.posts {
+    margin-bottom: 10px;
+}
+.newpost-wrapper {
+    display: flex;
+    margin-bottom: 10px;
+}
+.newpost-wrapper input[type="date"] {
+    width: 160px;
+}
+.newpost-wrapper input[type="time"] {
+    width: 95px;
+    min-width: 95px;
+}
+.newpost-wrapper .btn-danger {
+    width: 40px;
+    height: 40px;
+}
+.post-pics {
+    border-radius: 5px;
+    padding: 5px 5px 10px 15px;
+    background-color: rgba(0, 0, 0, .15);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    transform: scale(0.95);
+    min-width: 1000px;
+}
+.post-pic-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center
+}
+.post-pic-wrapper img {
+    max-width: 90px;
+    max-height: 90px;
+}
+
+.time-slot {
+    min-width: 350px;
+}
+.time-slot .posts {
+    transform: scale(0.85);
+}
+
+.btn-anteprima {
+    /* width: 80px;
+    height: 20px; */
+    font-size: 11px;
+}
+.btn-anteprima div {
+    transform: translate(-3px, -5px) scale(1.25);
+}
+@media (max-width: 991px) {
+    #txtTitle{
+        height: 4em;
+    }
+}
+
+@media screen and (max-width: 767px){
+   .post-pics{
+       min-width: 380px !important;   
+    }
+}

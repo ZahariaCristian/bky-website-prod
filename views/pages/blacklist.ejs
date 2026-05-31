@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Filtro</title>
+    <%- include('../partials/head'); %>
+    <style>
+        .rptItemCosti:nth-child(even) {background: #e3e3e3}
+        .rptItemCosti:nth-child(odd) {background: transparent}
+        .rptItemCosti > div{
+            padding: 6px 12px 6px 12px;
+        }
+        .edited{
+            background: #ccfcd7 !important;
+        }
+        .control-label{
+            line-height: 27px;
+            vertical-align: text-top;
+        }
+        .edited .control-label{
+            display: none;
+        }
+        .form-control{
+            display: none;
+        }
+        .edited .form-control{
+            display: block !important;
+        }
+        .control-label{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Filtro Parole</h1>
+            <div class="innerLR">
+                <div class="widget widget-body-gray">
+                    <div class="widget-head">
+                        <div class="col-md-1 col-sm-1">
+                            <div class="row"><h4 class="heading"> </h4></div>
+                        </div>
+                        <div class="col-md-7 col-sm-7">
+                            <div class="row"><h4 class="heading">Testo</h4></div>
+                        </div>
+                        <div class="col-md-2 col-sm-2">
+                            <div class="row"><h4 class="heading">Tipo</h4></div>
+                        </div>
+                        <div class="col-md-2 col-sm-2">
+                            <div class="row"><h4 class="heading">Target</h4></div>
+                        </div>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div id="rptBlackList" class="col-md-12">
+                                <div class="row center rptNoData">Nessun dato rilevato</div>
+                                <div class="rptItemBlackList row edited" style="display: none;">
+                                    <input type="hidden" fieldName="id" value="0" />
+                                    <input type="hidden" fieldName="removeThis" value="0" />
+                                    <div class="col-md-1 col-sm-1">
+                                        <a class="btn" href="#" onclick="deleteThis(this)"><i class="fa fa-times text-danger"></i></a>
+                                    </div>
+                                    <div class="col-md-7 col-sm-7">
+                                        <label class="control-label" fieldName="text"></label>
+                                        <input type="text" class="form-control edit-input" fieldName="text" placeholder="text" value="">
+                                    </div>
+                                    <div class="col-md-2 col-sm-2">
+                                        <label class="control-label" fieldName="typeMatch">0</label>
+                                        <select class="form-control edit-select" fieldName="typeMatch">
+                                            <option value="Contiene">Contiene</option>
+                                            <option value="Inizia per">Inizia per</option>
+                                            <option value="Uguale">Uguale</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 col-sm-2">
+                                        <label class="control-label" fieldName="target">0</label>
+                                        <select class="form-control edit-select" fieldName="target">
+                                            <option value="Titolo e Descrizione">Titolo e Descrizione</option>
+                                            <option value="Titolo">Titolo</option>
+                                            <option value="Descrizione">Descrizione</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn" style="width: 100%; margin-top: 20px;" id="btnAddBlackList"><i class="fa fa-plus"></i> <b>Aggiungi</b></button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnUpdateBlackList"><b>SALVA</b></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>  
+        </div>
+    </div>
+            
+    <script src="/js/blacklist.js"></script>
+</body>
+</html>

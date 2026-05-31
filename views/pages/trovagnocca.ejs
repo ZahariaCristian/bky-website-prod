@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+
+<head>
+    <link rel="stylesheet" href="/css/annuncio.css">
+    <title>BKY - Annuncio</title>
+    <%- include('../partials/head'); %>
+        <link rel="stylesheet" href="/css/cropper.css" />
+        <script src="/js/cropper.js"></script>
+        <script type="text/javascript"
+            src="/assets/components/common/forms/calendar/jquery.simple-calendar.min.js"></script>
+        <link rel="stylesheet" type="text/css"
+            href="/assets/components/common/forms/calendar/css/simple-calendar.css" />
+        <style>
+            /* Custom Modal Styles */
+            .custom-modal {
+                display: none;
+                /* Hidden by default */
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.5);
+                /* Semi-transparent background */
+            }
+
+            .custom-modal-content {
+                background-color: #fff;
+                margin: 10% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                max-width: 800px;
+                border-radius: 8px;
+            }
+
+            .custom-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+
+            .custom-modal-title {
+                font-size: 1.5em;
+                font-weight: bold;
+            }
+
+            .custom-modal-close {
+                background: none;
+                border: none;
+                font-size: 1.5em;
+                cursor: pointer;
+            }
+
+            .custom-modal-close:hover {
+                color: #f00;
+            }
+
+            .custom-modal-body {
+                margin-bottom: 20px;
+            }
+
+            .custom-modal-footer {
+                text-align: right;
+            }
+
+            .custom-modal-save {
+                background-color: #007bff;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .custom-modal-save:hover {
+                background-color: #0056b3;
+            }
+
+            .promo>.promoPanel,
+            .promo>.videochiamata-promo,
+            .promo>.premium-promo {
+                padding: 12px;
+            }
+
+            .servizi-wrapper {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .servizi-box {
+                width: 33%;
+            }
+
+            .widget-after {
+                display: none;
+            }
+
+            .rptItemStorico:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStorico:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStorico>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStorico>div:first-child {
+                padding: 0 !important;
+            }
+
+            .rptItemStoricoSospesi:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStoricoSospesi:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStoricoSospesi>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStoricoSospesi>div:first-child {
+                padding: 0 !important;
+            }
+
+            .removed .btn-primary {
+                display: none;
+            }
+
+            .persistent .btn-success {
+                display: none;
+            }
+
+            .pic-panel .btn {
+                width: 37px;
+            }
+
+            .pics.removed {
+                display: none;
+            }
+
+            .widget.widget-tabs>.widget-head ul li.active {
+                background: none !important;
+                font-weight: 700;
+            }
+
+            .rptItemStorico .btn {
+                font-size: 18px;
+            }
+
+            .event-container {
+                display: none !important;
+            }
+
+            .newpost-wrapper>button {
+                margin-left: 12px;
+                height: 34px !important;
+            }
+
+            .promoFree .btnPremiumCam {
+                display: none;
+            }
+
+            label.lblDateTime {
+                line-height: 34px;
+                padding-right: 8px;
+            }
+
+            .time-slot .lblDateTime {
+                margin-left: -36px;
+            }
+        </style>
+</head>
+
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <input id="annuncioID" type="hidden" value="new" />
+    <input id="donnaID" type="hidden" name="donnaID" value="new" />
+    <input id="panel" type="hidden" name="panel" value="trovagnocca" />
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+            <div id="content">
+                <%- include('../partials/header'); %>
+                    <h1>Nuovo Annuncio-Trovagnocca</h1>
+                    <div class="innerLR">
+                        <div class="widget widget-heading-simple widget-body-gray">
+                            <div class="widget-body">
+                                <p>E' servamente vietato inserire foto, testi, titoli con riferimenti a donna incinta o
+                                    foto pornografiche.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="widget widget-heading-simple widget-body-gray">
+                            <div class="widget-head">
+                                <h3 class="heading glyphicons download"><i></i>Carica un annuncio</h3>
+                            </div>
+                            <div class="widget-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="link-to-scrape">Carica da link</label>
+                                        <div id="link-form">
+                                            <input id="link-to-scrape" class="form-control" type="text"
+                                                placeholder="Inserisci URL">
+                                            <button class="btn btn-info" id="caricalink-button"><i
+                                                    class="fa fa-arrow-right"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="phone-to-scrape">Carica ultimo annuncio di:</label>
+                                        <div id="phone-form">
+                                            <select style="width: 100%;" id="select2_3" name="phone-to-scrape">
+                                                <option>Seleziona cliente</option>
+                                            </select>
+                                            <button class="btn btn-info" id="caricaphone-button"><i
+                                                    class="fa fa-arrow-right"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="widget widget-heading-simple widget-body-gray widget-annuncio">
+                            <div class="widget-head">
+                                <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
+                                <button onclick="startEditPost()" class="input-editor btn btn-success pull-right"><i
+                                        class="fa fa-pen"></i></button>
+                            </div>
+                            <div class="widget-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="innerB">
+                                            <label for="title">Titolo</label>
+                                            <textarea rows="1" type="text" name="title" id="txtTitle"
+                                                class="form-control" placeholder="5 caratteri necessari"
+                                                disabled></textarea>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Descrizione</label>
+                                            <textarea class="form-control" name="description" id="txtDescription"
+                                                cols="30" rows="15" placeholder="20 caratteri necessari"
+                                                disabled></textarea>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="city">Città</label>
+                                                    <select name="city" disabled class="form-select form-control">
+                                                        <option selected>Seleziona una città</option>
+                                                        <option value="Agrigento">Agrigento</option>
+                                                        <option value="Alessandria">Alessandria</option>
+                                                        <option value="Ancona">Ancona</option>
+                                                        <option value="Aosta">Aosta</option>
+                                                        <option value="Arezzo">Arezzo</option>
+                                                        <option value="Ascoli">Ascoli</option>
+                                                        <option value="Asti">Asti</option>
+                                                        <option value="Avellino">Avellino</option>
+                                                        <option value="Bari">Bari</option>
+                                                        <option value="Barletta">Barletta</option>
+                                                        <option value="Belluno">Belluno</option>
+                                                        <option value="Benevento">Benevento</option>
+                                                        <option value="Bergamo">Bergamo</option>
+                                                        <option value="Biella">Biella</option>
+                                                        <option value="Bologna">Bologna</option>
+                                                        <option value="Bolzano">Bolzano</option>
+                                                        <option value="Brescia">Brescia</option>
+                                                        <option value="Brindisi">Brindisi</option>
+                                                        <option value="Cagliari">Cagliari</option>
+                                                        <option value="Caltanissetta">Caltanissetta</option>
+                                                        <option value="Campobasso">Campobasso</option>
+                                                        <option value="Carbonia Iglesias">Carbonia Iglesias</option>
+                                                        <option value="Caserta">Caserta</option>
+                                                        <option value="Catania">Catania</option>
+                                                        <option value="Catanzaro">Catanzaro</option>
+                                                        <option value="Chieti">Chieti</option>
+                                                        <option value="Como">Como</option>
+                                                        <option value="Cosenza">Cosenza</option>
+                                                        <option value="Cremona">Cremona</option>
+                                                        <option value="Crotone">Crotone</option>
+                                                        <option value="Cuneo">Cuneo</option>
+                                                        <option value="Enna">Enna</option>
+                                                        <option value="Fermo">Fermo</option>
+                                                        <option value="Ferrara">Ferrara</option>
+                                                        <option value="Firenze">Firenze</option>
+                                                        <option value="Foggia">Foggia</option>
+                                                        <option value="Forlì">Forlì</option>
+                                                        <option value="Frosinone">Frosinone</option>
+                                                        <option value="Genova">Genova</option>
+                                                        <option value="Gorizia">Gorizia</option>
+                                                        <option value="Grosseto">Grosseto</option>
+                                                        <option value="Imperia">Imperia</option>
+                                                        <option value="Isernia">Isernia</option>
+                                                        <option value="L'Aquila">L'Aquila</option>
+                                                        <option value="La Spezia">La Spezia</option>
+                                                        <option value="Latina">Latina</option>
+                                                        <option value="Lecce">Lecce</option>
+                                                        <option value="Lecco">Lecco</option>
+                                                        <option value="Livorno">Livorno</option>
+                                                        <option value="Lodi">Lodi</option>
+                                                        <option value="Lucca">Lucca</option>
+                                                        <option value="Macerata">Macerata</option>
+                                                        <option value="Mantova">Mantova</option>
+                                                        <option value="Massa Carrara">Massa Carrara</option>
+                                                        <option value="Matera">Matera</option>
+                                                        <option value="Medio Campidano">Medio Campidano</option>
+                                                        <option value="Messina">Messina</option>
+                                                        <option value="Milano">Milano</option>
+                                                        <option value="Modena">Modena</option>
+                                                        <option value="Monza">Monza</option>
+                                                        <option value="Napoli">Napoli</option>
+                                                        <option value="Novara">Novara</option>
+                                                        <option value="Nuoro">Nuoro</option>
+                                                        <option value="Ogliastra">Ogliastra</option>
+                                                        <option value="Olbia Tempio">Olbia Tempio</option>
+                                                        <option value="Oristano">Oristano</option>
+                                                        <option value="Padova">Padova</option>
+                                                        <option value="Palermo">Palermo</option>
+                                                        <option value="Parma">Parma</option>
+                                                        <option value="Pavia">Pavia</option>
+                                                        <option value="Perugia">Perugia</option>
+                                                        <option value="Pescara">Pescara</option>
+                                                        <option value="Piacenza">Piacenza</option>
+                                                        <option value="Pisa">Pisa</option>
+                                                        <option value="Pistoia">Pistoia</option>
+                                                        <option value="Pordenone">Pordenone</option>
+                                                        <option value="Potenza">Potenza</option>
+                                                        <option value="Prato">Prato</option>
+                                                        <option value="Ragusa">Ragusa</option>
+                                                        <option value="Ravenna">Ravenna</option>
+                                                        <option value="Reggio Calabria">Reggio Calabria</option>
+                                                        <option value="R. Emilia">R. Emilia</option>
+                                                        <option value="Rieti">Rieti</option>
+                                                        <option value="Rimini">Rimini</option>
+                                                        <option value="Roma">Roma</option>
+                                                        <option value="Rovigo">Rovigo</option>
+                                                        <option value="Salerno">Salerno</option>
+                                                        <option value="Sassari">Sassari</option>
+                                                        <option value="Savona">Savona</option>
+                                                        <option value="Siena">Siena</option>
+                                                        <option value="Siracusa">Siracusa</option>
+                                                        <option value="Sondrio">Sondrio</option>
+                                                        <option value="Taranto">Taranto</option>
+                                                        <option value="Teramo">Teramo</option>
+                                                        <option value="Terni">Terni</option>
+                                                        <option value="Torino">Torino</option>
+                                                        <option value="Trapani">Trapani</option>
+                                                        <option value="Trento">Trento</option>
+                                                        <option value="Treviso">Treviso</option>
+                                                        <option value="Trieste">Trieste</option>
+                                                        <option value="Udine">Udine</option>
+                                                        <option value="Urbino">Urbino</option>
+                                                        <option value="Varese">Varese</option>
+                                                        <option value="Venezia">Venezia</option>
+                                                        <option value="Verbania">Verbania</option>
+                                                        <option value="Vercelli">Vercelli</option>
+                                                        <option value="Verona">Verona</option>
+                                                        <option value="Vibo Valentia">Vibo Valentia</option>
+                                                        <option value="Vicenza">Vicenza</option>
+                                                        <option value="Viterbo">Viterbo</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="location">Posizione</label>
+                                                    <input class="form-control" type="text" name="location" disabled>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="age">Età</label>
+                                                    <input class="form-control" type="text" name="age" disabled>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="age">Nome</label>
+                                                    <input class="form-control" type="text" name="name" disabled>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="age">Categoria</label>
+                                                    <select name="categorie" disabled class="form-select form-control">
+                                                        <option value="DONNAUOMO" selected>Donna Cerca Uomo</option>
+                                                        <option value="UOMODONNA">Uomo Cerca Donna</option>
+                                                        <option value="UOMOUOMO">Uomo Cerca Uomo</option>
+                                                        <option value="DONNADONNA">Donna Cerca Donna</option>
+                                                        <option value="TRANS">Trans</option>
+                                                        <option value="COPPIE">Coppie</option>
+                                                        <option value="AMICI">Cerco Amici</option>
+                                                        <option value="ANIMAGEMELLA">Cerco L'Anima Gemella</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <div class="phone-panel">
+                                                        <label for="phone">Contatto telefonico</label>
+                                                        <div class="phone-wrapper">
+                                                            <input class="form-control" type="text" name="phone"
+                                                                disabled>
+                                                            <button id="verify-button" class="btn btn-secondary">
+                                                                <svg class="disabled" id="dots" height="28px"
+                                                                    viewBox="0 0 132 58" version="1.1"
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                                    xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+                                                                    <g id="Page-1" stroke="none" stroke-width="1"
+                                                                        fill="none" fill-rule="evenodd"
+                                                                        sketch:type="MSPage">
+                                                                        <g id="dots" sketch:type="MSArtboardGroup"
+                                                                            fill="#FFF">
+                                                                            <circle id="dot1" sketch:type="MSShapeGroup"
+                                                                                cx="25" cy="30" r="13"></circle>
+                                                                            <circle id="dot2" sketch:type="MSShapeGroup"
+                                                                                cx="65" cy="30" r="13"></circle>
+                                                                            <circle id="dot3" sketch:type="MSShapeGroup"
+                                                                                cx="105" cy="30" r="13"></circle>
+                                                                        </g>
+                                                                    </g>
+                                                                </svg>
+                                                                <span><i class="fa fa-arrow-right"></i></span>
+                                                            </button>
+                                                        </div>
+                                                        <p id="test-label">Verifica</p>
+                                                        <div class="flex-checkbox" style="margin-bottom: 5px;">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                name="whatsapp" id="whatsapp"
+                                                                onclick="enableInfoUpdate();" disabled>
+                                                            <label class="form-check-label"
+                                                                for="whatsapp">Whatsapp</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Etnia</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAfricana"
+                                                        name="serviceAfricana" value="serviceAfricana">
+                                                    <label for="serviceAfricana">Africana</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceIndiana"
+                                                        name="serviceIndiana" value="serviceIndiana">
+                                                    <label for="serviceIndiana">Indiana</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAsiatica"
+                                                        name="serviceAsiatica" value="serviceAsiatica">
+                                                    <label for="serviceAsiatica">Asiatica</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAraba"
+                                                        name="serviceAraba" value="serviceAraba">
+                                                    <label for="serviceAraba">Araba</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceLatina"
+                                                        name="serviceLatina" value="serviceLatina">
+                                                    <label for="serviceLatina">Latina</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCaucasica"
+                                                        name="serviceCaucasica" value="serviceCaucasica">
+                                                    <label for="serviceCaucasica">Caucasica</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceItaliana"
+                                                        name="serviceItaliana" value="serviceItaliana">
+                                                    <label for="serviceItaliana">Italiana</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Nazionalitá</label>
+                                            <select name="serviceNazionalita" class="browser-default custom-select">
+                                                <option selected="selected" value=""> Seleziona nazionalità</option>
+                                                <option id="tag-button-nationality_albanian"
+                                                    value="nationality_albanian">🇦🇱 Albanese</option>
+                                                <option id="tag-button-nationality_american"
+                                                    value="nationality_american">🇺🇸 Americana</option>
+                                                <option id="tag-button-nationality_arabic" value="nationality_arabic">
+                                                    🇸🇦 Araba</option>
+                                                <option id="tag-button-nationality_argentinian"
+                                                    value="nationality_argentinian">🇦🇷 Argentina</option>
+                                                <option id="tag-button-nationality_australian"
+                                                    value="nationality_australian">🇦🇺 Australiana</option>
+                                                <option id="tag-button-nationality_austrian"
+                                                    value="nationality_austrian">🇦🇹 Austriaca</option>
+                                                <option id="tag-button-nationality_bangladeshi"
+                                                    value="nationality_bangladeshi">🇧🇩 Bangladese</option>
+                                                <option id="tag-button-nationality_belgian" value="nationality_belgian">
+                                                    🇧🇪 Belga</option>
+                                                <option id="tag-button-nationality_bolivian"
+                                                    value="nationality_bolivian">🇧🇴 Boliviana</option>
+                                                <option id="tag-button-nationality_bosnian" value="nationality_bosnian">
+                                                    🇧🇦 Bosniaca</option>
+                                                <option id="tag-button-nationality_brazilian"
+                                                    value="nationality_brazilian">🇧🇷 Brasiliana</option>
+                                                <option id="tag-button-nationality_bulgarian"
+                                                    value="nationality_bulgarian">🇧🇬 Bulgara</option>
+                                                <option id="tag-button-nationality_canadian"
+                                                    value="nationality_canadian">🇨🇦 Canadese</option>
+                                                <option id="tag-button-nationality_czech" value="nationality_czech">🇨🇿
+                                                    Ceca</option>
+                                                <option id="tag-button-nationality_chilean" value="nationality_chilean">
+                                                    🇨🇱 Cilena</option>
+                                                <option id="tag-button-nationality_chinese" value="nationality_chinese">
+                                                    🇨🇳 Cinese</option>
+                                                <option id="tag-button-nationality_colombian"
+                                                    value="nationality_colombian">🇨🇴 Colombiana</option>
+                                                <option id="tag-button-nationality_costa_rican"
+                                                    value="nationality_costa_rican">🇨🇷 Costaricana</option>
+                                                <option id="tag-button-nationality_croatian"
+                                                    value="nationality_croatian">🇭🇷 Croata</option>
+                                                <option id="tag-button-nationality_cuban" value="nationality_cuban">🇨🇺
+                                                    Cubana</option>
+                                                <option id="tag-button-nationality_danish" value="nationality_danish">
+                                                    🇩🇰 Danese</option>
+                                                <option id="tag-button-nationality_dominican"
+                                                    value="nationality_dominican">🇩🇴 Dominicana</option>
+                                                <option id="tag-button-nationality_ecuadorian"
+                                                    value="nationality_ecuadorian">🇪🇨 Ecuatoriana</option>
+                                                <option id="tag-button-nationality_estonian"
+                                                    value="nationality_estonian">🇪🇪 Estone</option>
+                                                <option id="tag-button-nationality_filipino"
+                                                    value="nationality_filipino">🇵🇭 Filippina</option>
+                                                <option id="tag-button-nationality_finnish" value="nationality_finnish">
+                                                    🇫🇮 Finlandese</option>
+                                                <option id="tag-button-nationality_french" value="nationality_french">
+                                                    🇫🇷 Francese</option>
+                                                <option id="tag-button-nationality_jamaican"
+                                                    value="nationality_jamaican">🇯🇲 Giamaicana</option>
+                                                <option id="tag-button-nationality_japanese"
+                                                    value="nationality_japanese">🇯🇵 Giapponese</option>
+                                                <option id="tag-button-nationality_greek" value="nationality_greek">🇬🇷
+                                                    Greca</option>
+                                                <option id="tag-button-nationality_guatemalan"
+                                                    value="nationality_guatemalan">🇬🇹 Guatemalteca</option>
+                                                <option id="tag-button-nationality_haitian" value="nationality_haitian">
+                                                    🇭🇹 Haitiana</option>
+                                                <option id="tag-button-nationality_honduran"
+                                                    value="nationality_honduran">🇭🇳 Honduregna</option>
+                                                <option id="tag-button-nationality_indian" value="nationality_indian">
+                                                    🇮🇳 Indiana</option>
+                                                <option id="tag-button-nationality_indonesian"
+                                                    value="nationality_indonesian">🇮🇩 Indonesiana</option>
+                                                <option id="tag-button-nationality_english" value="nationality_english">
+                                                    🇬🇧 Inglese</option>
+                                                <option id="tag-button-nationality_irish" value="nationality_irish">🇮🇪
+                                                    Irlandese</option>
+                                                <option id="tag-button-nationality_italian" value="nationality_italian">
+                                                    🇮🇹 Italiana</option>
+                                                <option id="tag-button-nationality_kenyan" value="nationality_kenyan">
+                                                    🇰🇪 Keniota</option>
+                                                <option id="tag-button-nationality_latvian" value="nationality_latvian">
+                                                    🇱🇻 Lettone</option>
+                                                <option id="tag-button-nationality_lithuanian"
+                                                    value="nationality_lithuanian">🇱🇹 Lituana</option>
+                                                <option id="tag-button-nationality_maldivian"
+                                                    value="nationality_maldivian">🇲🇻 Maldivegna</option>
+                                                <option id="tag-button-nationality_malaysian"
+                                                    value="nationality_malaysian">🇲🇾 Malese</option>
+                                                <option id="tag-button-nationality_moroccan"
+                                                    value="nationality_moroccan">🇲🇦 Marocchina</option>
+                                                <option id="tag-button-nationality_mexican" value="nationality_mexican">
+                                                    🇲🇽 Messicana</option>
+                                                <option id="tag-button-nationality_moldovan"
+                                                    value="nationality_moldovan">🇲🇩 Moldava</option>
+                                                <option id="tag-button-nationality_new_zealander"
+                                                    value="nationality_new_zealander">🇳🇿 Neozelandese</option>
+                                                <option id="tag-button-nationality_nicaraguan"
+                                                    value="nationality_nicaraguan">🇳🇮 Nicaraguense</option>
+                                                <option id="tag-button-nationality_nigerian"
+                                                    value="nationality_nigerian">🇳🇬 Nigeriana</option>
+                                                <option id="tag-button-nationality_norwegian"
+                                                    value="nationality_norwegian">🇳🇴 Norvegese</option>
+                                                <option id="tag-button-nationality_dutch" value="nationality_dutch">🇳🇱
+                                                    Olandese</option>
+                                                <option id="tag-button-nationality_pakistani"
+                                                    value="nationality_pakistani">🇵🇰 Pachistana</option>
+                                                <option id="tag-button-nationality_panamanian"
+                                                    value="nationality_panamanian">🇵🇦 Panamense</option>
+                                                <option id="tag-button-nationality_paraguayan"
+                                                    value="nationality_paraguayan">🇵🇾 Paraguayana</option>
+                                                <option id="tag-button-nationality_peruvian"
+                                                    value="nationality_peruvian">🇵🇪 Peruviana</option>
+                                                <option id="tag-button-nationality_polish" value="nationality_polish">
+                                                    🇵🇱 Polacca</option>
+                                                <option id="tag-button-nationality_portuguese"
+                                                    value="nationality_portuguese">🇵🇹 Portoghese</option>
+                                                <option id="tag-button-nationality_romanian"
+                                                    value="nationality_romanian">🇷🇴 Rumena</option>
+                                                <option id="tag-button-nationality_russian" value="nationality_russian">
+                                                    🇷🇺 Russa</option>
+                                                <option id="tag-button-nationality_senegalese"
+                                                    value="nationality_senegalese">🇸🇳 Senegalese</option>
+                                                <option id="tag-button-nationality_serbian" value="nationality_serbian">
+                                                    🇷🇸 Serba</option>
+                                                <option id="tag-button-nationality_singaporean"
+                                                    value="nationality_singaporean">🇸🇬 Singaporese</option>
+                                                <option id="tag-button-nationality_spanish" value="nationality_spanish">
+                                                    🇪🇸 Spagnola</option>
+                                                <option id="tag-button-nationality_south_african"
+                                                    value="nationality_south_african">🇿🇦 Sudafricana</option>
+                                                <option id="tag-button-nationality_swedish" value="nationality_swedish">
+                                                    🇸🇪 Svedese</option>
+                                                <option id="tag-button-nationality_swiss" value="nationality_swiss">🇨🇭
+                                                    Svizzera</option>
+                                                <option id="tag-button-nationality_thai" value="nationality_thai">🇹🇭
+                                                    Tailandese</option>
+                                                <option id="tag-button-nationality_german" value="nationality_german">
+                                                    🇩🇪 Tedesca</option>
+                                                <option id="tag-button-nationality_tunisian"
+                                                    value="nationality_tunisian">🇹🇳 Tunisina</option>
+                                                <option id="tag-button-nationality_turkish" value="nationality_turkish">
+                                                    🇹🇷 Turca</option>
+                                                <option id="tag-button-nationality_ukrainian"
+                                                    value="nationality_ukrainian">🇺🇦 Ucraina</option>
+                                                <option id="tag-button-nationality_hungarian"
+                                                    value="nationality_hungarian">🇭🇺 Ungherese</option>
+                                                <option id="tag-button-nationality_uruguayan"
+                                                    value="nationality_uruguayan">🇺🇾 Uruguaiana</option>
+                                                <option id="tag-button-nationality_venezuelan"
+                                                    value="nationality_venezuelan">🇻🇪 Venezuelana</option>
+                                                <option id="tag-button-nationality_vietnamese"
+                                                    value="nationality_vietnamese">🇻🇳 Vietnamita</option>
+                                            </select>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Seno</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSNaturale"
+                                                        name="serviceSNaturale" value="serviceSNaturale">
+                                                    <label for="serviceSNaturale">Seno Naturale</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSRifatto"
+                                                        name="serviceSRifatto" value="serviceSRifatto">
+                                                    <label for="serviceSRifatto">Seno Rifatto</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Capelli</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCBiondi"
+                                                        name="serviceCBiondi" value="serviceCBiondi">
+                                                    <label for="serviceCBiondi">Capelli Biondi</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCMarroni"
+                                                        name="serviceCMarroni" value="serviceCMarroni">
+                                                    <label for="serviceCMarroni">Capelli Marroni</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCNeri"
+                                                        name="serviceCNeri" value="serviceCNeri">
+                                                    <label for="serviceCNeri">Capelli Neri</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCRossi"
+                                                        name="serviceCRossi" value="serviceCRossi">
+                                                    <label for="serviceCRossi">Capelli Rossi</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Tipo di corpo</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceMagro"
+                                                        name="serviceMagro" value="serviceMagro">
+                                                    <label for="serviceMagro">Magro</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceFormoso"
+                                                        name="serviceFormoso" value="serviceFormoso">
+                                                    <label for="serviceFormoso">Formoso</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Servizi</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceOrale"
+                                                        name="serviceOrale" value="serviceOrale">
+                                                    <label for="serviceOrale">Orale</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAnale"
+                                                        name="serviceAnale" value="serviceAnale">
+                                                    <label for="serviceAnale">Anale</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSadomaso"
+                                                        name="serviceSadomaso" value="serviceSadomaso">
+                                                    <label for="serviceSadomaso">Sadomaso</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceEsperienzaFidanzata"
+                                                        name="serviceEsperienzaFidanzata"
+                                                        value="serviceEsperienzaFidanzata">
+                                                    <label for="serviceEsperienzaFidanzata">Esperienza
+                                                        fidanzata</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAttriciPorno"
+                                                        name="serviceAttriciPorno" value="serviceAttriciPorno">
+                                                    <label for="serviceAttriciPorno">Attrici porno</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceEiaculazioneSulCorpo"
+                                                        name="serviceEiaculazioneSulCorpo"
+                                                        value="serviceEiaculazioneSulCorpo">
+                                                    <label for="serviceEiaculazioneSulCorpo">Eiaculazione Sul
+                                                        Corpo</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceMassaggioErotico"
+                                                        name="serviceMassaggioErotico" value="serviceMassaggioErotico">
+                                                    <label for="serviceMassaggioErotico">Massaggio Erotico</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceMassaggioTantrico"
+                                                        name="serviceMassaggioTantrico"
+                                                        value="serviceMassaggioTantrico">
+                                                    <label for="serviceMassaggioTantrico">Massaggio tantrico</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceFetish"
+                                                        name="serviceFetish" value="serviceFetish">
+                                                    <label for="serviceFetish">Fetish</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceBacioAllaFrancese"
+                                                        name="serviceBacioAllaFrancese"
+                                                        value="serviceBacioAllaFrancese">
+                                                    <label for="serviceBacioAllaFrancese">Bacio alla
+                                                        francese</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceGiocoDiRuolo"
+                                                        name="serviceGiocoDiRuolo" value="serviceGiocoDiRuolo">
+                                                    <label for="serviceGiocoDiRuolo">Gioco di ruolo</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceTrio" name="serviceTrio"
+                                                        value="serviceTrio">
+                                                    <label for="serviceTrio">Trio</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSexting"
+                                                        name="serviceSexting" value="serviceSexting">
+                                                    <label for="serviceSexting">Sexting</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceVideoChiamata"
+                                                        name="serviceVideoChiamata" value="serviceVideoChiamata">
+                                                    <label for="serviceVideoChiamata">Video chiamata</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Servizi destinati a</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceUomini"
+                                                        name="serviceUomini" value="serviceUomini">
+                                                    <label for="serviceUomini">Uomini</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceDonne"
+                                                        name="serviceDonne" value="serviceDonne">
+                                                    <label for="serviceDonne">Donne</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCoppie"
+                                                        name="serviceCoppie" value="serviceCoppie">
+                                                    <label for="serviceCoppie">Coppie</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceDisabili"
+                                                        name="serviceDisabili" value="serviceDisabili">
+                                                    <label for="serviceDisabili">Disabili</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Luogo di servizio</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceACasa"
+                                                        name="serviceACasa" value="serviceACasa">
+                                                    <label for="serviceACasa">A casa</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceEventiEFeste"
+                                                        name="serviceEventiEFeste" value="serviceEventiEFeste">
+                                                    <label for="serviceEventiEFeste">Eventi e feste</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAlbergoMotel"
+                                                        name="serviceAlbergoMotel" value="serviceAlbergoMotel">
+                                                    <label for="serviceAlbergoMotel">Albergo / Motel</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceClubs"
+                                                        name="serviceClubs" value="serviceClubs">
+                                                    <label for="serviceClubs">Clubs</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceVisitaADomicilio"
+                                                        name="serviceVisitaADomicilio" value="serviceVisitaADomicilio">
+                                                    <label for="serviceVisitaADomicilio">Visita a domicilio</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Prezzo per ora</label>
+                                            <select name="hourlyPrice" id="post_price"
+                                                class="browser-default custom-select">
+                                                <option id="empty_option" value="" selected="selected">Seleziona il
+                                                    prezzo</option>
+                                                <option value="25">Da € 25</option>
+                                                <option value="50">Da € 50</option>
+                                                <option value="75">Da € 75</option>
+                                                <option value="100">Da € 100</option>
+                                                <option value="125">Da € 125</option>
+                                                <option value="150">Da € 150</option>
+                                                <option value="175">Da € 175</option>
+                                                <option value="200">Da € 200</option>
+                                                <option value="225">Da € 225</option>
+                                                <option value="250">Da € 250</option>
+                                                <option value="275">Da € 275</option>
+                                                <option value="300">&gt; € 300</option>
+                                            </select>
+                                            <div class="servizi-box">
+                                                <input disabled type="checkbox" id="serviceCash" name="serviceCash"
+                                                    value="serviceCash">
+                                                <label for="serviceCash">Contanti</label><br>
+                                            </div>
+                                            <div class="servizi-box">
+                                                <input disabled type="checkbox" id="serviceCreditCard"
+                                                    name="serviceCreditCard" value="serviceCreditCard">
+                                                <label for="serviceCreditCard">Carta di credito</label><br>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Note</label>
+                                            <textarea class="form-control" name="note" id="txtNote" cols="30" rows="5"
+                                                placeholder=""></textarea>
+                                        </div>
+                                        <div class="innerB">
+                                            <button class="btn btn-info" style="width: 100%;"
+                                                onclick="updateInfo(true);" id="updateInfoBtn"><b>SALVA</b></button>
+                                            <div id="btnUpdateSchedul">
+                                                <div class="separator"></div>
+                                                <div class="center text-muted">
+                                                    <span>------------</span> Oppure <span>------------</span>
+                                                </div>
+                                                <div class="separator"></div>
+                                                <button class="btn btn-warning" style="width: 100%;"
+                                                    id="btnUpdateAnnuncio" onclick="UpdateSchedulazioni()"><b>MODIFICA
+                                                        TUTTI GLI ANNUNCI</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+
+                            <div class="widget widget-heading-simple widget-body-gray widget-after">
+                                <div class="widget-head">
+                                    <h3 class="heading glyphicons edit"><i></i>Pubblicazioni</h3>
+                                </div>
+                                <div class="widget-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="promo wizard">
+                                                <input id="txtDate" type="date"
+                                                    style="width: 160px; margin-bottom: 25px;"
+                                                    class="form-control hidden">
+                                                <div class="widget widget-tabs widget-tabs-responsive">
+                                                    <div class="widget-body">
+                                                        <div class="row">
+                                                            <div class="col-md-4 col-md-offset-4">
+                                                                <div id="calendarContainer"></div>
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                    <div class="promoType widget-head" style="margin-bottom: 0;">
+                                                        <ul>
+                                                            <li class="active"><a href="#tabFree" data-toggle="tab">Top:
+                                                                    Free</a></li>
+                                                            <li><a href="#tab1x1" data-toggle="tab"
+                                                                    style="background-color: #b1f390;">Top: 1x1</a></li>
+                                                            <li><a href="#tab1x3" data-toggle="tab"
+                                                                    style="background-color: #d0d174;">Top: 1x3</a></li>
+                                                            <li><a href="#tab1x7" data-toggle="tab"
+                                                                    style="background-color: #d47ed4;">Top: 1x7</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="widget-body" id="wizar-body">
+                                                        <div class="tab-content">
+                                                            <div class="promoPanel promoFree tab-pane active animated fadeInUp"
+                                                                id="tabFree">
+                                                                <div class="posts">
+                                                                    <div class="post-list">
+                                                                        <!--<div class="newpost-panel">
+                                                        <div class="newpost-wrapper">
+                                                            <input class="form-control" type="time">
+                                                            <button class="btn btn-danger">
+                                                                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" fill="white" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="25px" height="25px" viewBox="0 0 503.021 503.021" style="transform: scale(0.8) translate(-6px, 2px);" xml:space="preserve"><g><g><path d="M491.613,75.643l-64.235-64.235c-15.202-15.202-39.854-15.202-55.056,0L251.507,132.222L130.686,11.407 c-15.202-15.202-39.853-15.202-55.055,0L11.401,75.643c-15.202,15.202-15.202,39.854,0,55.056l120.821,120.815L11.401,372.328 c-15.202,15.202-15.202,39.854,0,55.056l64.235,64.229c15.202,15.202,39.854,15.202,55.056,0l120.815-120.814l120.822,120.814 c15.202,15.202,39.854,15.202,55.056,0l64.235-64.229c15.202-15.202,15.202-39.854,0-55.056L370.793,251.514l120.82-120.815 C506.815,115.49,506.815,90.845,491.613,75.643z"/></g></g></svg>
+                                                            </button>
+                                                            <button class="btn btn-dark">
+                                                                <img src="/assets/photoIcon.svg">
+                                                            </button>
+                                                        </div>
+                                                        <div class="post-pics">
+                                                            <div class="post-pic-wrapper">
+                                                                <input id="devopensarci" type="checkbox" class="form-check-input">
+                                                                <label for="devopensarci">
+                                                                    <img src="https://www.gelestatic.it/thimg/TOsQNufj42E5Cm4M4Cr5qn6WtJ8=/fit-in/735x416/http://www.repstatic.it/content/localirep/img/rep-torino/2017/01/17/114431618-6362291c-d4c3-48b7-b02c-3289a6d5c87b.jpg">
+                                                                </label>
+                                                                <button class="btn btn-warning btn-anteprima"><div>ANTEPRIMA</div></button>
+                                                            </div>
+                                                            <div class="post-pic-wrapper">
+                                                                <input id="devopensarci" type="checkbox" class="form-check-input">
+                                                                <label for="devopensarci">
+                                                                    <img src="https://www.gelestatic.it/thimg/TOsQNufj42E5Cm4M4Cr5qn6WtJ8=/fit-in/735x416/http://www.repstatic.it/content/localirep/img/rep-torino/2017/01/17/114431618-6362291c-d4c3-48b7-b02c-3289a6d5c87b.jpg">
+                                                                </label>
+                                                                <button class="btn btn-warning btn-anteprima"><div>ANTEPRIMA</div></button>
+                                                            </div>
+                                                        </div>
+                                                    </div>-->
+                                                                    </div>
+                                                                    <button class="btn btn-primary">
+                                                                        <span><b><i class="fa fa-plus"></i></b></span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="promoPanel promo1x1 tab-pane animated fadeInUp"
+                                                                id="tab1x1">
+                                                                <label for="promo1x1" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria</label>
+                                                                <div class="wpromo1x1">
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x108001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x108001000"
+                                                                                class="form-check-label">08:00 - 09:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x109001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x109001000"
+                                                                                class="form-check-label">09:00 - 10:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x110001100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x110001100"
+                                                                                class="form-check-label">10:00 - 11:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x111001200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x111001200"
+                                                                                class="form-check-label">11:00 - 12:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x112001300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x112001300"
+                                                                                class="form-check-label">12:00 - 13:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x113001400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x113001400"
+                                                                                class="form-check-label">13:00 - 14:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x114001500" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x114001500"
+                                                                                class="form-check-label">14:00 - 15:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x115001600" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x115001600"
+                                                                                class="form-check-label">15:00 - 16:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x116001700" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x116001700"
+                                                                                class="form-check-label">16:00 - 17:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x117001800" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x117001800"
+                                                                                class="form-check-label">17:00 - 18:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x118001900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x118001900"
+                                                                                class="form-check-label">18:00 - 19:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x119002000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x119002000"
+                                                                                class="form-check-label">19:00 - 20:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x120002100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x120002100"
+                                                                                class="form-check-label">20:00 - 21:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x121002200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x121002200"
+                                                                                class="form-check-label">21:00 - 22:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x122002300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x122002300"
+                                                                                class="form-check-label">22:00 - 23:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x123000000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x123000000"
+                                                                                class="form-check-label">23:00 - 00:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="promoPanel promo1x3 tab-pane animated fadeInUp"
+                                                                id="tab1x3">
+                                                                <label for="promo1x3" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria</label>
+                                                                <div class="wpromo1x3">
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x308001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x308001000"
+                                                                                class="form-check-label">08:00 - 09:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x309001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x309001000"
+                                                                                class="form-check-label">09:00 - 10:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x310001100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x310001100"
+                                                                                class="form-check-label">10:00 - 11:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x311001200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x311001200"
+                                                                                class="form-check-label">11:00 - 12:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x312001300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x312001300"
+                                                                                class="form-check-label">12:00 - 13:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x313001400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x313001400"
+                                                                                class="form-check-label">13:00 - 14:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x314001500" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x314001500"
+                                                                                class="form-check-label">14:00 - 15:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x315001600" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x315001600"
+                                                                                class="form-check-label">15:00 - 16:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x316001700" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x316001700"
+                                                                                class="form-check-label">16:00 - 17:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x317001800" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x317001800"
+                                                                                class="form-check-label">17:00 - 18:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x318001900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x318001900"
+                                                                                class="form-check-label">18:00 - 19:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x319002000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x319002000"
+                                                                                class="form-check-label">19:00 - 20:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x320002100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x320002100"
+                                                                                class="form-check-label">20:00 - 21:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x321002200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x321002200"
+                                                                                class="form-check-label">21:00 - 22:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x322002300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x322002300"
+                                                                                class="form-check-label">22:00 - 23:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x323000000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x323000000"
+                                                                                class="form-check-label">23:00 - 00:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+
+                                                            <div class="promoPanel promo1x7  tab-pane animated fadeInUp"
+                                                                id="tab1x7">
+                                                                <label for="promo1x7" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria</label>
+                                                                <div class="wpromo1x7" style="width: 150px;">
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x708001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x708001000"
+                                                                                class="form-check-label">08:00 - 09:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x709001000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x709001000"
+                                                                                class="form-check-label">09:00 - 10:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x710001100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x710001100"
+                                                                                class="form-check-label">10:00 - 11:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x711001200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x711001200"
+                                                                                class="form-check-label">11:00 - 12:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x712001300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x712001300"
+                                                                                class="form-check-label">12:00 - 13:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x713001400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x713001400"
+                                                                                class="form-check-label">13:00 - 14:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x714001500" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x714001500"
+                                                                                class="form-check-label">14:00 - 15:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x715001600" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x715001600"
+                                                                                class="form-check-label">15:00 - 16:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x716001700" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x716001700"
+                                                                                class="form-check-label">16:00 - 17:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x717001800" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x717001800"
+                                                                                class="form-check-label">17:00 - 18:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x718001900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x718001900"
+                                                                                class="form-check-label">18:00 - 19:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x719002000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x719002000"
+                                                                                class="form-check-label">19:00 - 20:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x720002100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x720002100"
+                                                                                class="form-check-label">20:00 - 21:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x721002200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x721002200"
+                                                                                class="form-check-label">21:00 - 22:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x722002300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x722002300"
+                                                                                class="form-check-label">22:00 - 23:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x723000000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x723000000"
+                                                                                class="form-check-label">23:00 - 00:00</label>
+                                                                        </div>
+                                                                    </div>
+
+                                                                </div>
+                                                            </div>
+                                                            <div class="promoPanel promo10x7 tab-pane animated fadeInUp"
+                                                                id="tab10x7">
+                                                                <div class="posts">
+                                                                    <div class="post-list">
+                                                                    </div>
+                                                                    <button class="btn btn-primary"><b>+</b></button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="total-cost-container">
+                                                    <label for="totalCost">Totale da spendere:</label>
+                                                    <span id="totalCost">0 €</span>
+                                                </div>
+                                                <div class="separator"></div>
+
+                                                <!-- Dropdown button -->
+                                                <button id="toggleTableBtn" class="btn btn-info">Mostra dettagli per più
+                                                    giorni</button>
+
+                                                <!-- Hidden table -->
+                                                <div id="costTableContainer" style="display: none;">
+                                                    <table class="table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Giorni</th>
+                                                                <th>Totale</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="costTableBody">
+                                                            <!-- Rows will be dynamically added here -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="separator"></div>
+                                                <button class="btn btn-success" style="width: 100%;"
+                                                    onclick="updateSchedule();"
+                                                    id="updateScheduleBtn"><b>PUBBLICA/MODIFICA TUTTI I TOP</b></button>
+                                                <div class="separator"></div>
+                                                <div class="row">
+                                                    <div class="col-md-12 form-inline">
+                                                        <input id="txtDateClona" type="date" class="form-control"> <a
+                                                            href="javascript:void(0)" onclick="btnCloneDay()"
+                                                            class="btn btn-default">RIPROPONI USCITE IDENTICHE</a>
+                                                        <div class="separator"></div>
+                                                    </div>
+                                                    <div class="col-md-12">
+                                                        <label>Programmazione estesa</label>
+                                                    </div>
+                                                    <div class="col-md-12 form-inline">
+                                                        <label>Da</label>
+                                                        <input id="txtDateClonaFrom" type="date" class="form-control">
+                                                        <label>A</label>
+                                                        <input id="txtDateClonaTo" type="date" class="form-control"> <a
+                                                            href="javascript:void(0)" onclick="btnCloneProgram()"
+                                                            class="btn btn-default">RIPROPONI USCITE</a>
+                                                        <div class="separator"></div>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-danger" style="width: 100%;"
+                                                    onclick="deletefuture()" id="btnDeleteFuture"><b>CANCELLA TUTTE LE
+                                                        USCITE FUTURE</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="widget widget-heading-simple widget-body-gray widget-after">
+                                <div class="widget-head">
+                                    <h3 class="heading glyphicons edit"><i></i>Immagini</h3>
+                                    <button class="input-editor btn btn-success pull-right" id="btnShowImg"><i
+                                            class="fa fa-eye"></i></button>
+                                </div>
+                                <div class="widget-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="pics-section">
+                                                <div class="pics persistent">
+                                                    <div class="dragHere"
+                                                        style="position: absolute; width: 100%; height: 100%; background-color: #8597d8; opacity: 0.8; display: none; z-index: 1000;">
+                                                        <div
+                                                            style="position: relative;width: calc(100% - 20px);height: calc(100% - 20px);border: dashed 10px #ddd;border-radius: 50px;margin: 10px;">
+                                                            <div
+                                                                style="font-size: 5em; text-align: center; padding: 80px 0 0 0">
+                                                                <span class="fa fa-cloud-upload"
+                                                                    style="color:white; "></span></div>
+                                                            <h1
+                                                                style="color: white; font-size: 3em; text-align: center; padding: 30px;">
+                                                                Trascina Qui</h1>
+                                                        </div>
+                                                    </div>
+                                                    <input type="file" onchange="loadImage(event);" accept="image/*"
+                                                        name="image" id="file-upload" multiple style="display: none;">
+                                                    <label for="file-upload">
+                                                        <div class="add-pic"><b><i class="fa fa-plus"></i></b></div>
+                                                    </label>
+                                                    <!--<div class="pic-panel">
+                                                <div class="pic-operations">
+                                                    <button class="btn btn-danger">
+                                                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" fill="white" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="25px" height="25px" viewBox="0 0 503.021 503.021" style="enable-background:new 0 0 503.021 503.021;" xml:space="preserve"><g><g><path d="M491.613,75.643l-64.235-64.235c-15.202-15.202-39.854-15.202-55.056,0L251.507,132.222L130.686,11.407 c-15.202-15.202-39.853-15.202-55.055,0L11.401,75.643c-15.202,15.202-15.202,39.854,0,55.056l120.821,120.815L11.401,372.328 c-15.202,15.202-15.202,39.854,0,55.056l64.235,64.229c15.202,15.202,39.854,15.202,55.056,0l120.815-120.814l120.822,120.814 c15.202,15.202,39.854,15.202,55.056,0l64.235-64.229c15.202-15.202,15.202-39.854,0-55.056L370.793,251.514l120.82-120.815 C506.815,115.49,506.815,90.845,491.613,75.643z"/></g></g></svg>
+                                                    </button>
+                                                    <button class="btn btn-primary">
+                                                        <svg style="transform: scale(1.35);" width="25px" height="25px" fill="white" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 488.788 488.788" style="enable-background:new 0 0 488.788 488.788;" xml:space="preserve"><g><path d="M462.882,325.833H401.6v51.832h61.281c14.307,0,25.906-11.604,25.906-25.919 C488.788,337.428,477.188,325.833,462.882,325.833z"/><path d="M164.965,27.908c0-14.315-11.609-25.913-25.919-25.913c-14.326,0-25.92,11.598-25.92,25.913V85.22h51.839V27.908z"/><path d="M457.953,51.833c6.749-6.747,6.749-17.666,0-24.42c-6.761-6.747-17.673-6.747-24.439,0l-83.708,83.719 c-0.018,0-0.018,0-0.031,0H25.905C11.6,111.133,0,122.728,0,137.045c0,14.315,11.6,25.92,25.905,25.92h272.059L164.965,295.973 V188.877h-51.839v162.869c0,14.315,11.594,25.919,25.92,25.919h158.887v-51.832H183.949l139.921-139.9v274.94 c0,14.315,11.596,25.919,25.905,25.919c14.306,0,25.919-11.604,25.919-25.919c0,0-0.16-325.615-0.269-326.501L457.953,51.833z"/></g></svg>
+                                                    </button>
+                                                </div>
+                                                <div class="pic-wrapper">
+                                                    <img src="">
+                                                </div>
+                                            </div>-->
+                                                </div>
+                                                <div class="pics removed">
+
+                                                </div>
+                                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;"
+                                                    onclick="updateImages();" id="updatePicsBtn"><b>MODIFICA LE
+                                                        IMMAGINI</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Custom Modal -->
+                            <div id="customModal" class="custom-modal">
+                                <div class="custom-modal-content">
+                                    <div class="custom-modal-header">
+                                        <span class="custom-modal-title">Edit Image</span>
+                                        <button id="closeModalButton" class="custom-modal-close">&times;</button>
+                                    </div>
+                                    <div class="custom-modal-body">
+                                        <!-- Image Container for Cropper.js -->
+                                        <img id="modalImage" src="" alt="Image to Edit" style="max-width: 100%;">
+                                    </div>
+                                    <div class="custom-modal-footer">
+                                        <button id="saveCropButton" class="custom-modal-save">Salva Anteprima
+                                            Bakeca</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="widget widget-body-gray widget-after">
+                                <div class="widget-head" style="background: #eaeaea;">
+                                    <h3 class="heading glyphicons edit" style="margin-left: -10px;"><i></i>Storico
+                                        Pubblicazioni</h3>
+                                    <span class="text-default pull-right btnCopy">Copia le uscite</span> <a
+                                        class="btn btn-xs pull-right btnCopy"><i class="fa fa-copy"
+                                            style="font-size: 27px; line-height: 27px;"></i></a>
+                                    <span class="text-default pull-right btnCopy">Condividi</span> <a id="btnWhatapp"
+                                        class="btn btn-xs pull-right" href="whatsapp://send?text=" target="_blank"><i
+                                            class="fa fa-whatsapp" style="font-size: 27px; line-height: 27px;"></i></a>
+                                </div>
+                                <div class="widget-head">
+                                    <div class="col-md-2 col-sm-2">
+                                        <div class="row">
+                                            <h4 class="heading"> </h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="row">
+                                            <h4 class="heading">Descrizione (città)</h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 col-sm-2">
+                                        <div class="row">
+                                            <h4 class="heading" style="float: none;">Stato</h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 col-sm-1">
+                                        <div class="row">
+                                            <h4 class="heading" style="float: none;">Pagati Cliente</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="widget-body" style="padding-top: 0;">
+                                    <div class="row">
+                                        <div id="rptStorico" class="col-md-12">
+                                            <div class="row center rptNoData">Nessun dato rilevato</div>
+                                            <div class="rptItemStorico row" data-id="@id@" style="display: none;">
+                                                <div class="col-md-2 col-sm-2">
+                                                    <a class="btn" onclick="deleteStorico(this, '@id@')"><i
+                                                            class="fa fa-times text-danger"></i></a>
+                                                    <a class="btn" onclick="copyStorico(this, '@id@')"><i
+                                                            class="fa fa-copy text-primary"></i></a>
+                                                    <a class="btn btnCondividi" data-id="@id@"
+                                                        href="whatsapp://send?text=" target="_blank"><i
+                                                            class="fa fa-whatsapp text-primary"></i></a>
+                                                </div>
+                                                <div class="col-md-6 col-sm-6">
+                                                    <b>@descrizione@</b> (@città@)
+                                                    <div class="col-md-12 dateTimeTop">@orari@</div>
+                                                </div>
+                                                <div class="col-md-2 col-sm-2">
+                                                    @stato@
+                                                    <a class="btn btn-danger btn-xs btnSuspend"
+                                                        onclick="suspendAds(this, '@id@')" style="font-size: 12px;"
+                                                        data-id="@id@">SOSPENDI</a>
+                                                </div>
+                                                <div class="col-md-1 col-sm-1">
+                                                    @pagato@
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="lblTitleStorico col-md-12 text-danger"
+                                            style="display: none; text-align: center;">
+                                            <div class="separator"></div>
+                                            <h5 class="strong">Pubblicazioni Sospese</h5>
+                                        </div>
+                                        <div id="rptStoricoSospesi" class="col-md-12">
+                                            <div class="row center rptNoData">Nessun dato rilevato</div>
+                                            <div class="rptItemStoricoSospesi row" data-id="@id@"
+                                                style="display: none;">
+                                                <div class="col-md-2 col-sm-2">
+                                                    <a class="btn" onclick="deleteStorico(this, '@id@')"><i
+                                                            class="fa fa-times text-danger"></i></a>
+                                                </div>
+                                                <div class="col-md-6 col-sm-6">
+                                                    <b>@descrizione@</b> (@città@)
+                                                    <div class="col-md-12 dateTimeTop">@orari@</div>
+                                                </div>
+                                                <div class="col-md-2 col-sm-2">
+                                                    @stato@
+                                                </div>
+                                                <div class="col-md-1 col-sm-1">
+                                                    @pagato@
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button class="btn btn-primary" style="width: 100%; margin-top: 20px;"
+                                                onclick="toggleSuspended();" id="btnShowSuspended"><b>MOSTRA
+                                                    SOSPESI</b></button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <a class="btn btn-danger btnSuspendAll strong"
+                                                style="width: 100%; margin-top: 20px;"
+                                                onclick="suspendOldAds(this)">SOSPENDI SCADUTI</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <footer>
+                        <%- include('../partials/footer'); %>
+                    </footer>
+            </div>
+    </div>
+    <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
+    <script src="/js/annuncio.trovagnocca.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const totalCostElement = document.getElementById('totalCost');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const toggleTableBtn = document.getElementById('toggleTableBtn');
+            const costTableContainer = document.getElementById('costTableContainer');
+            const costTableBody = document.getElementById('costTableBody');
+            
+            console.log('DOMContentLoaded')
+            // Function to fetch listino data from the server
+            async function fetchListinoData() {
+                try {
+                    const response = await fetch('/gestPagamenti/getListino', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include', // Include cookies for session authentication
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return data.listino; // Return the listino data
+                } catch (error) {
+                    console.error('Error fetching listino data:', error);
+                    return []; // Return an empty array in case of error
+                }
+            }
+
+            // Function to count dynamically added fields for 10x7
+            function countDynamicFields(promoType) {
+                const container = document.querySelector(`#tab${promoType} .post-list`);
+                return container.children.length; // Number of dynamically added fields
+            }
+
+            // Function to calculate the total cost
+            async function calculateTotalCost() {
+                // Fetch the listino data
+                const listinoData = await fetchListinoData();
+                if (listinoData.length === 0) {
+                    console.warn('No listino data available.');
+                    return;
+                }
+
+                let totalCost = 0;
+
+                // Count the number of selected checkboxes for each promo type
+                const selectedPromos = {
+                    '1x1': 0,
+                    '1x3': 0,
+                    '1x7': 0,
+                    '10x7': 0
+                };
+
+                // Count selected checkboxes for 1x1, 1x3, and 1x7
+                checkboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        const id = checkbox.id; // e.g., "1x108001000"
+                        const promoType = id.slice(0, 3); // e.g., "1x1"
+
+                        // Increment the count for the corresponding promo type
+                        if (selectedPromos.hasOwnProperty(promoType)) {
+                            selectedPromos[promoType]++;
+                        } else {
+                            console.warn(`Unknown promo type: ${promoType}`);
+                        }
+                    }
+                });
+
+                // Count dynamically added fields for 10x7
+                selectedPromos['10x7'] = countDynamicFields('10x7');
+
+                // Calculate the total cost based on the number of selected checkboxes and dynamic fields
+                for (const [promoType, count] of Object.entries(selectedPromos)) {
+                    if (count > 0) {
+                        // Find the listino item with the matching uscita (number of hours)
+                        const listinoItem = listinoData.find(item => item.uscita === count);
+                        if (listinoItem) {
+                            switch (promoType) {
+                                case '1x1':
+                                    totalCost += listinoItem.oneXone;
+                                    break;
+                                case '1x3':
+                                    totalCost += listinoItem.oneXthree;
+                                    break;
+                                case '1x7':
+                                    totalCost += listinoItem.oneXseven;
+                                    break;
+                                case '10x7':
+                                    totalCost += listinoItem.tenXseven;
+                                    break;
+                                default:
+                                    console.warn(`Unknown promo type: ${promoType}`);
+                            }
+                        } else {
+                            console.warn(`No listino item found for uscita: ${count}`);
+                        }
+                    }
+                }
+
+                // Update the total cost display
+                totalCostElement.textContent = `${totalCost} €`;
+
+                // Update the table with the total cost for 1 to 10 days
+                updateCostTable(totalCost);
+            }
+
+            // Function to update the cost table
+            function updateCostTable(totalCost) {
+                costTableBody.innerHTML = ''; // Clear the table body
+
+                for (let days = 1; days <= 10; days++) {
+                    const row = document.createElement('tr');
+                    const daysCell = document.createElement('td');
+                    const totalCell = document.createElement('td');
+
+                    daysCell.textContent = `${days} giorno${days > 1 ? 'i' : ''}`; // Pluralize "giorno" if needed
+                    totalCell.textContent = `${(totalCost * days).toFixed(2)} €`; // Calculate total for N days
+
+                    row.appendChild(daysCell);
+                    row.appendChild(totalCell);
+                    costTableBody.appendChild(row);
+                }
+            }
+
+            // Add event listeners to checkboxes
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', calculateTotalCost);
+            });
+
+            // Add event listeners to "+" buttons
+            document.querySelectorAll('.promoPanel .btn-primary').forEach(button => {
+                button.addEventListener('click', () => {
+                    // Wait for the dynamic field to be added (you may need to adjust this based on your implementation)
+                    setTimeout(calculateTotalCost, 100);
+                });
+            });
+
+            // Add event listener to the dropdown button
+            toggleTableBtn.addEventListener('click', () => {
+                // Toggle the visibility of the table
+                if (costTableContainer.style.display === 'none') {
+                    costTableContainer.style.display = 'block';
+                    toggleTableBtn.textContent = 'Nascondi dettagli per più giorni';
+                } else {
+                    costTableContainer.style.display = 'none';
+                    toggleTableBtn.textContent = 'Mostra dettagli per più giorni';
+                }
+            });
+
+            // Initial calculation
+            calculateTotalCost();
+        });
+    </script>
+</body>
+
+</html>

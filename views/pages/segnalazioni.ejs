@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Segnalazioni</title>
+    <%- include('../partials/head'); %>
+    <style>
+        @keyframes blinkRedWhite {
+            0%, 100% { background-color: #dc3545; color: white; }
+            50% { background-color: white; color: #dc3545; }
+        }
+
+        .blinking-btn {
+            animation: blinkRedWhite 1s infinite;
+            border-color: #dc3545 !important;
+        }
+    </style>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+<div class="container-fluid menu-hidden" style="visibility: visible;">
+    <%- include('../partials/menu'); %>
+    <div id="content">
+        <%- include('../partials/header'); %>
+
+        <h1 style="margin-bottom: 20px;">Segnalazioni</h1>
+<button class="btn btn-danger mb-3" data-toggle="modal" data-target="#reportModal">
+  <i class="fa fa-flag"></i> Nuova Segnalazione
+</button><br><br>
+        <!-- Search Box -->
+        <div class="mb-3">
+            <input type="text" id="searchReports" class="form-control" placeholder="Cerca segnalazioni...">
+        </div>
+
+        <!-- Reports Table -->
+        <div class="table-responsive" id="rptReports">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Telefono</th>
+            
+                        <th>Descrizione</th>
+                          <th>Livello</th>
+
+                        <th>Segnalato da</th>
+                        <th>Stato</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <tr><td colspan="4" class="text-center text-muted">Caricamento...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Template for reports -->
+<template id="reportRowTemplate">
+    <tr>
+        <td class="report-date text-break"></td>
+        <td class="report-phone text-break"></td>
+        <td class="report-description text-break"></td>
+        <td class="report-level text-break"></td>
+        <td class="report-user text-break"></td>
+        <td>
+            <span class="report-status badge text-break"></span>
+            <button class="btn btn-solve btn-sm btn-success d-none">Risolvi</button>
+            <button class="btn btn-delete btn-sm btn-danger d-none">X</button>
+
+        </td>
+    </tr>
+</template>
+
+
+<div class="modal fade" id="reportModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h4 class="modal-title">Aggiungi Segnalazione</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="reportPhone">Numero di telefono</label>
+          <input type="text" class="form-control" id="reportPhone" placeholder="Es. 3912345678">
+        </div>
+        <div class="form-group">
+          <label for="reportDescription">Descrizione</label>
+          <textarea class="form-control" id="reportDescription" rows="5"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Livello di Pericolo</label>
+          <div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="dangerLevel" id="dangerLevel0" value="0" checked>
+              <label class="form-check-label" for="dangerLevel0">Nessuno</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="dangerLevel" id="dangerLevel1" value="1">
+              <label class="form-check-label" for="dangerLevel1">Problemi</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="dangerLevel" id="dangerLevel2" value="2">
+              <label class="form-check-label" for="dangerLevel2">Non paga</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="dangerLevel" id="dangerLevel3" value="3">
+              <label class="form-check-label" for="dangerLevel3">Truffa</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-primary" id="btnSaveReport">Salva</button>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    </div>
+</div>
+
+<script>
+let reports = [];
+let loggedInUser = null;
+
+async function getCurrentUser() {
+  try {
+    const res = await fetch('/annuncio/currentUser', {
+      method: 'POST', // changed from GET to POST
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.status === 200) {
+      const data = await res.json();
+      return data.username || data.userId; // Adjust if needed
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function deleteReport(reportId) {
+    if (!confirm("Sei sicuro di voler eliminare questa segnalazione?")) return;
+
+    toggleLoader();
+    fetch("/annuncio/deleteReport", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({ id: reportId })
+    }).then((r) => {
+        toggleLoader();
+        if (r.status == 401) {
+            window.location.href = "/";
+        } else if (r.status !== 200) {
+            return alert("❌ Si è verificato un errore durante l'eliminazione della segnalazione.");
+        }
+        loadReports();
+    });
+}
+
+async function addReport() {
+    const description = $("#reportDescription").val().trim();
+    const phone = $("#reportPhone").val().trim();
+
+    if (!phone) {
+        alert("Inserisci il numero di telefono.");
+        return;
+    }
+    if (!description) {
+        alert("Inserisci una descrizione.");
+        return;
+    }
+
+    const dangerlevel = document.querySelector("input[name='dangerLevel']:checked")?.value;
+
+    if (dangerlevel === undefined) {
+        alert("Seleziona un livello di pericolosità.");
+        return;
+    }
+
+    toggleLoader();
+
+    fetch("/annuncio/addReport", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: JSON.stringify({
+            phone,
+            description,
+            date: new Date(),
+            dangerlevel: parseInt(dangerlevel)
+        })
+    }).then((r) => {
+        toggleLoader();
+        if (r.status === 401) {
+            window.location.href = "/";
+        } else if (r.status !== 200) {
+            return alert("❌ Errore durante il salvataggio della segnalazione.");
+        }
+
+        $("#reportModal").modal("hide");
+        $("#reportPhone").val("");
+        $("#reportDescription").val("");
+        loadReports();
+    });
+}
+
+function loadReports() {
+    fetch("/annuncio/getAllReports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ phone: "" }) // Adjust if needed
+    })
+    .then(res => res.json())
+    .then(data => {
+        reports = data.reports || [];
+        renderReports();
+    });
+}
+
+async function renderReports() {
+  const tableBody = document.getElementById("reportTableBody");
+  const template = document.getElementById("reportRowTemplate");
+  tableBody.innerHTML = "";
+
+  if (reports.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nessuna segnalazione trovata</td></tr>`;
+    return;
+  }
+
+  const currentUser = await getCurrentUser();
+
+  reports.forEach(report => {
+    const clone = template.content.cloneNode(true);
+    clone.querySelector(".report-date").textContent = new Date(report.date).toLocaleString();
+    clone.querySelector(".report-phone").textContent = report.phone;
+    clone.querySelector(".report-description").textContent = report.description;
+    clone.querySelector(".report-user").textContent = report.user;
+
+    const $reportlevel = $(clone).find(".report-level").empty();
+        if (report.dangerlevel > 0) {
+            const badgeText = {
+                1: "Problemi",
+                2: "Non paga",
+                3: "Truffa"
+            };
+            const badgeColor = {
+                1: "warning",
+                2: "danger",
+                3: "danger"
+            };
+            const badge = $(`<span class="badge bg-${badgeColor[report.dangerlevel]} me-2">${badgeText[report.dangerlevel]}</span>`);
+            $reportlevel.append(badge);
+        }
+
+    const statusSpan = clone.querySelector(".report-status");
+    const solveButton = clone.querySelector(".btn-solve");
+    const deleteButton = clone.querySelector(".btn-delete");
+
+    const isSolved = report.solved === true || report.solved === 1 || report.solved === "1";
+    const isOwner = report.user === currentUser;
+    const isRaffaele = report.user === "Raffa21";
+
+    // Debug temporaneo
+    console.log(`Report ${report.id} | solved: ${report.solved} | isSolved: ${isSolved} | user: ${report.user} | currentUser: ${currentUser}`);
+    deleteButton.classList.add("hidden");
+
+      if(isRaffaele){
+      deleteButton.classList.remove("hidden");
+      deleteButton.onclick = () => deleteReport(report.id);
+
+      }
+
+    if (isSolved) {
+      statusSpan.textContent = "Risolto";
+      statusSpan.className = "report-status badge bg-success";
+      solveButton.classList.add("hidden");
+
+
+    } else {
+      statusSpan.textContent = "Aperto";
+      statusSpan.className = "report-status badge bg-warning";
+
+      if (isOwner) {
+        solveButton.classList.remove("d-none");
+        solveButton.onclick = () => solveReport(report.id);
+      } else {
+        solveButton.classList.add("d-none");
+      }
+    }
+
+    tableBody.appendChild(clone);
+  });
+
+  applySearchFilter();
+}
+
+function solveReport(reportId) {
+    if (!confirm("Sei sicuro di voler segnare questa segnalazione come risolta?")) return;
+
+    fetch("/annuncio/solveReport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id: reportId })
+    }).then(res => {
+        if (res.status === 200) {
+            loadReports();
+        } else {
+            alert("Errore nel risolvere la segnalazione.");
+        }
+    });
+}
+
+function applySearchFilter() {
+    const searchTerm = document.getElementById("searchReports").value.toLowerCase();
+    const rows = document.querySelectorAll("#reportTableBody tr");
+
+    rows.forEach(row => {
+        const rowText = row.innerText.toLowerCase();
+        row.style.display = rowText.includes(searchTerm) ? "" : "none";
+    });
+}
+
+async function initPage() {
+  loggedInUser = await getCurrentUser();
+  loadReports();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initPage();
+    document.getElementById("searchReports").addEventListener("input", applySearchFilter);
+    document.getElementById("btnSaveReport").addEventListener("click", addReport); // <-- This line
+
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+
+<head>
+    <link rel="stylesheet" href="/css/annuncio.css">
+    <title>BKY - Annuncio-Trovagnocca</title>
+    <%- include('../../partials/head'); %>
+        <link rel="stylesheet" href="/css/cropper.css" />
+        <script src="/js/cropper.js"></script>
+        <script type="text/javascript"
+            src="/assets/components/common/forms/calendar/jquery.simple-calendar.min.js"></script>
+        <link rel="stylesheet" type="text/css"
+            href="/assets/components/common/forms/calendar/css/simple-calendar.css" />
+        <style>
+            /* Custom Modal Styles */
+            .custom-modal {
+                display: none;
+                /* Hidden by default */
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.5);
+                /* Semi-transparent background */
+            }
+
+            .custom-modal-content {
+                background-color: #fff;
+                margin: 10% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                max-width: 800px;
+                border-radius: 8px;
+            }
+
+            .custom-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+
+            .custom-modal-title {
+                font-size: 1.5em;
+                font-weight: bold;
+            }
+
+            .custom-modal-close {
+                background: none;
+                border: none;
+                font-size: 1.5em;
+                cursor: pointer;
+            }
+
+            .custom-modal-close:hover {
+                color: #f00;
+            }
+
+            .custom-modal-body {
+                margin-bottom: 20px;
+            }
+
+            .custom-modal-footer {
+                text-align: right;
+            }
+
+            .custom-modal-save {
+                background-color: #007bff;
+                color: #fff;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .custom-modal-save:hover {
+                background-color: #0056b3;
+            }
+
+            .promo>.promoPanel,
+            .promo>.videochiamata-promo,
+            .promo>.premium-promo {
+                padding: 12px;
+            }
+
+            .servizi-wrapper {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .servizi-box {
+                width: 33%;
+            }
+
+            .widget-after {
+                display: none;
+            }
+
+            .rptItemStorico:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStorico:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStorico>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStorico>div:first-child {
+                padding: 0 !important;
+            }
+
+            .rptItemStoricoSospesi:nth-child(even) {
+                background: #e3e3e3
+            }
+
+            .rptItemStoricoSospesi:nth-child(odd) {
+                background: transparent
+            }
+
+            .rptItemStoricoSospesi>div {
+                padding: 6px 12px 6px 12px;
+            }
+
+            .rptItemStoricoSospesi>div:first-child {
+                padding: 0 !important;
+            }
+
+            .removed .btn-primary {
+                display: none;
+            }
+
+            .persistent .btn-success {
+                display: none;
+            }
+
+            .persistent .btn-success.img-move-btn {
+                display: inline-block;
+            }
+
+            .pic-panel .btn {
+                width: 37px;
+            }
+
+            .pics.removed {
+                display: none;
+            }
+
+            .widget.widget-tabs>.widget-head ul li.active {
+                background: none !important;
+                font-weight: 700;
+            }
+
+            .rptItemStorico .btn {
+                font-size: 18px;
+            }
+
+            .status-actions {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+
+            .status-actions .btn {
+                font-size: 12px !important;
+                line-height: 1.2;
+            }
+
+            .status-actions h3 {
+                margin: 0;
+            }
+
+            .event-container {
+                display: none !important;
+            }
+
+            .newpost-wrapper>button {
+                margin-left: 12px;
+                height: 34px !important;
+            }
+
+            label.lblDateTime {
+                line-height: 34px;
+                padding-right: 8px;
+            }
+
+            .time-slot .lblDateTime {
+                margin-left: -36px;
+            }
+
+            .gold-posts {
+                margin-top: 12px;
+            }
+
+            .gold-slots {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 12px;
+                margin: 8px 0 14px;
+                padding: 10px;
+                background: #fff;
+            }
+
+            .gold-slot-group {
+                margin-bottom: 0;
+            }
+
+            .gold-slot-options {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-top: 6px;
+            }
+
+            .gold-slot-option {
+                align-items: center;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                display: inline-flex;
+                gap: 5px;
+                margin: 0;
+                padding: 5px 8px;
+                white-space: nowrap;
+            }
+
+            .price-calc-panel {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                margin: 8px 0 18px;
+                padding: 12px;
+                background: #fff;
+            }
+
+            .price-calc-actions {
+                align-items: flex-end;
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .price-calc-actions .form-control {
+                max-width: 120px;
+            }
+
+            .price-calc-result {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .price-calc-value {
+                border: 1px solid #e2e2e2;
+                border-radius: 4px;
+                padding: 8px;
+                min-height: 58px;
+            }
+
+            .price-calc-value strong,
+            .price-calc-value span {
+                display: block;
+            }
+
+            .price-calc-value strong {
+                font-size: 12px;
+                color: #666;
+            }
+
+            .price-calc-value span {
+                font-size: 18px;
+                font-weight: 700;
+            }
+
+            .price-calc-message {
+                margin-top: 10px;
+            }
+
+            .price-calc-table {
+                margin-top: 12px;
+            }
+
+            @media (max-width: 767px) {
+                .gold-slots {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .price-calc-result {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+        </style>
+</head>
+
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <input id="annuncioID" type="hidden" value="new" />
+    <input id="donnaID" type="hidden" name="donnaID" value="new" />
+    <input id="panel" type="hidden" name="panel" value="trovagnocca" />
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../../partials/menu'); %>
+            <div id="content">
+                <%- include('../../partials/header'); %>
+                    <h1>Nuovo Annuncio-Trovagnocca</h1>
+                    <div class="innerLR">
+                        <div class="widget widget-heading-simple widget-body-gray">
+                            <div class="widget-body">
+                                <p>E' servamente vietato inserire foto, testi, titoli con riferimenti a donna incinta o
+                                    foto pornografiche.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="widget widget-heading-simple widget-body-gray">
+                            <div class="widget-head">
+                                <h3 class="heading glyphicons download"><i></i>Carica un annuncio</h3>
+                            </div>
+                            <div class="widget-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="link-to-scrape">Carica da link</label>
+                                        <div id="link-form">
+                                            <input id="link-to-scrape" class="form-control" type="text"
+                                                placeholder="Inserisci URL">
+                                            <button class="btn btn-info" id="caricalink-button"><i
+                                                    class="fa fa-arrow-right"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="phone-to-scrape">Carica ultimo annuncio di:</label>
+                                        <div id="phone-form">
+                                            <select style="width: 100%;" id="select2_3">
+                                                <option>Seleziona cliente</option>
+                                            </select>
+                                            <button class="btn btn-info" id="caricaphone-button"><i
+                                                    class="fa fa-arrow-right"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="widget widget-heading-simple widget-body-gray widget-annuncio">
+                            <div class="widget-head">
+                                <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
+                                <button onclick="startEditPost()" class="input-editor btn btn-success pull-right"><i
+                                        class="fa fa-pen"></i></button>
+                            </div>
+                            <div class="widget-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="innerB">
+                                            <label for="title">Titolo</label>
+                                            <textarea rows="1" type="text" name="title" id="txtTitle"
+                                                class="form-control" placeholder="5 caratteri necessari"
+                                                disabled></textarea>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Descrizione</label>
+                                            <textarea class="form-control" name="description" id="txtDescription"
+                                                cols="30" rows="15" placeholder="20 caratteri necessari"
+                                                disabled></textarea>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="city">Città</label>
+                                                    <input class="form-control" type="text" name="city" disabled>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="location">Posizione</label>
+                                                    <input class="form-control" type="text" name="location" disabled>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="age">Età</label>
+                                                    <input class="form-control" type="text" name="age" disabled>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="name">Nome</label>
+                                                    <input class="form-control" type="text" name="name" disabled>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="categorie">Categoria</label>
+                                                    <select name="categorie" disabled class="form-select form-control"
+                                                        data-common-categories="true" data-category-panel="trovagnocca">
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <div class="phone-panel">
+                                                        <label for="phone">Contatto telefonico</label>
+                                                        <div class="phone-wrapper">
+                                                            <input class="form-control" type="text" name="phone" disabled>
+                                                            <button id="verify-button" class="btn btn-secondary">
+                                                                <span><i class="fa fa-arrow-right"></i></span>
+                                                            </button>
+                                                        </div>
+                                                        <p id="test-label">Verifica</p>
+                                                        <div class="flex-checkbox" style="margin-bottom: 5px;">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                name="whatsapp" id="whatsapp"
+                                                                onclick="enableInfoUpdate();" disabled>
+                                                            <label class="form-check-label"
+                                                                for="whatsapp">Whatsapp</label>
+                                                            <input class="form-check-input" type="checkbox"
+                                                                name="telegram" id="telegram"
+                                                                onclick="enableInfoUpdate();" disabled>
+                                                            <label class="form-check-label"
+                                                                for="telegram">Telegram</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Nazionalitá</label>
+                                            <select name="serviceNazionalita" class="browser-default custom-select">
+                                                <option selected="selected" value=""> Seleziona nazionalità</option>
+                                                <option id="tag-button-nationality_albanian"
+                                                    value="nationality_albanian">🇦🇱 Albanese</option>
+                                                <option id="tag-button-nationality_american"
+                                                    value="nationality_american">🇺🇸 Americana</option>
+                                                <option id="tag-button-nationality_arabic" value="nationality_arabic">
+                                                    🇸🇦 Araba</option>
+                                                <option id="tag-button-nationality_argentinian"
+                                                    value="nationality_argentinian">🇦🇷 Argentina</option>
+                                                <option id="tag-button-nationality_australian"
+                                                    value="nationality_australian">🇦🇺 Australiana</option>
+                                                <option id="tag-button-nationality_austrian"
+                                                    value="nationality_austrian">🇦🇹 Austriaca</option>
+                                                <option id="tag-button-nationality_bangladeshi"
+                                                    value="nationality_bangladeshi">🇧🇩 Bangladese</option>
+                                                <option id="tag-button-nationality_belgian" value="nationality_belgian">
+                                                    🇧🇪 Belga</option>
+                                                <option id="tag-button-nationality_bolivian"
+                                                    value="nationality_bolivian">🇧🇴 Boliviana</option>
+                                                <option id="tag-button-nationality_bosnian" value="nationality_bosnian">
+                                                    🇧🇦 Bosniaca</option>
+                                                <option id="tag-button-nationality_brazilian"
+                                                    value="nationality_brazilian">🇧🇷 Brasiliana</option>
+                                                <option id="tag-button-nationality_bulgarian"
+                                                    value="nationality_bulgarian">🇧🇬 Bulgara</option>
+                                                <option id="tag-button-nationality_canadian"
+                                                    value="nationality_canadian">🇨🇦 Canadese</option>
+                                                <option id="tag-button-nationality_czech" value="nationality_czech">🇨🇿
+                                                    Ceca</option>
+                                                <option id="tag-button-nationality_chilean" value="nationality_chilean">
+                                                    🇨🇱 Cilena</option>
+                                                <option id="tag-button-nationality_chinese" value="nationality_chinese">
+                                                    🇨🇳 Cinese</option>
+                                                <option id="tag-button-nationality_colombian"
+                                                    value="nationality_colombian">🇨🇴 Colombiana</option>
+                                                <option id="tag-button-nationality_costa_rican"
+                                                    value="nationality_costa_rican">🇨🇷 Costaricana</option>
+                                                <option id="tag-button-nationality_croatian"
+                                                    value="nationality_croatian">🇭🇷 Croata</option>
+                                                <option id="tag-button-nationality_cuban" value="nationality_cuban">🇨🇺
+                                                    Cubana</option>
+                                                <option id="tag-button-nationality_danish" value="nationality_danish">
+                                                    🇩🇰 Danese</option>
+                                                <option id="tag-button-nationality_dominican"
+                                                    value="nationality_dominican">🇩🇴 Dominicana</option>
+                                                <option id="tag-button-nationality_ecuadorian"
+                                                    value="nationality_ecuadorian">🇪🇨 Ecuatoriana</option>
+                                                <option id="tag-button-nationality_estonian"
+                                                    value="nationality_estonian">🇪🇪 Estone</option>
+                                                <option id="tag-button-nationality_filipino"
+                                                    value="nationality_filipino">🇵🇭 Filippina</option>
+                                                <option id="tag-button-nationality_finnish" value="nationality_finnish">
+                                                    🇫🇮 Finlandese</option>
+                                                <option id="tag-button-nationality_french" value="nationality_french">
+                                                    🇫🇷 Francese</option>
+                                                <option id="tag-button-nationality_jamaican"
+                                                    value="nationality_jamaican">🇯🇲 Giamaicana</option>
+                                                <option id="tag-button-nationality_japanese"
+                                                    value="nationality_japanese">🇯🇵 Giapponese</option>
+                                                <option id="tag-button-nationality_greek" value="nationality_greek">🇬🇷
+                                                    Greca</option>
+                                                <option id="tag-button-nationality_guatemalan"
+                                                    value="nationality_guatemalan">🇬🇹 Guatemalteca</option>
+                                                <option id="tag-button-nationality_haitian" value="nationality_haitian">
+                                                    🇭🇹 Haitiana</option>
+                                                <option id="tag-button-nationality_honduran"
+                                                    value="nationality_honduran">🇭🇳 Honduregna</option>
+                                                <option id="tag-button-nationality_indian" value="nationality_indian">
+                                                    🇮🇳 Indiana</option>
+                                                <option id="tag-button-nationality_indonesian"
+                                                    value="nationality_indonesian">🇮🇩 Indonesiana</option>
+                                                <option id="tag-button-nationality_english" value="nationality_english">
+                                                    🇬🇧 Inglese</option>
+                                                <option id="tag-button-nationality_irish" value="nationality_irish">🇮🇪
+                                                    Irlandese</option>
+                                                <option id="tag-button-nationality_italian" value="nationality_italian">
+                                                    🇮🇹 Italiana</option>
+                                                <option id="tag-button-nationality_kenyan" value="nationality_kenyan">
+                                                    🇰🇪 Keniota</option>
+                                                <option id="tag-button-nationality_latvian" value="nationality_latvian">
+                                                    🇱🇻 Lettone</option>
+                                                <option id="tag-button-nationality_lithuanian"
+                                                    value="nationality_lithuanian">🇱🇹 Lituana</option>
+                                                <option id="tag-button-nationality_maldivian"
+                                                    value="nationality_maldivian">🇲🇻 Maldivegna</option>
+                                                <option id="tag-button-nationality_malaysian"
+                                                    value="nationality_malaysian">🇲🇾 Malese</option>
+                                                <option id="tag-button-nationality_moroccan"
+                                                    value="nationality_moroccan">🇲🇦 Marocchina</option>
+                                                <option id="tag-button-nationality_mexican" value="nationality_mexican">
+                                                    🇲🇽 Messicana</option>
+                                                <option id="tag-button-nationality_moldovan"
+                                                    value="nationality_moldovan">🇲🇩 Moldava</option>
+                                                <option id="tag-button-nationality_new_zealander"
+                                                    value="nationality_new_zealander">🇳🇿 Neozelandese</option>
+                                                <option id="tag-button-nationality_nicaraguan"
+                                                    value="nationality_nicaraguan">🇳🇮 Nicaraguense</option>
+                                                <option id="tag-button-nationality_nigerian"
+                                                    value="nationality_nigerian">🇳🇬 Nigeriana</option>
+                                                <option id="tag-button-nationality_norwegian"
+                                                    value="nationality_norwegian">🇳🇴 Norvegese</option>
+                                                <option id="tag-button-nationality_dutch" value="nationality_dutch">🇳🇱
+                                                    Olandese</option>
+                                                <option id="tag-button-nationality_pakistani"
+                                                    value="nationality_pakistani">🇵🇰 Pachistana</option>
+                                                <option id="tag-button-nationality_panamanian"
+                                                    value="nationality_panamanian">🇵🇦 Panamense</option>
+                                                <option id="tag-button-nationality_paraguayan"
+                                                    value="nationality_paraguayan">🇵🇾 Paraguayana</option>
+                                                <option id="tag-button-nationality_peruvian"
+                                                    value="nationality_peruvian">🇵🇪 Peruviana</option>
+                                                <option id="tag-button-nationality_polish" value="nationality_polish">
+                                                    🇵🇱 Polacca</option>
+                                                <option id="tag-button-nationality_portuguese"
+                                                    value="nationality_portuguese">🇵🇹 Portoghese</option>
+                                                <option id="tag-button-nationality_romanian"
+                                                    value="nationality_romanian">🇷🇴 Rumena</option>
+                                                <option id="tag-button-nationality_russian" value="nationality_russian">
+                                                    🇷🇺 Russa</option>
+                                                <option id="tag-button-nationality_senegalese"
+                                                    value="nationality_senegalese">🇸🇳 Senegalese</option>
+                                                <option id="tag-button-nationality_serbian" value="nationality_serbian">
+                                                    🇷🇸 Serba</option>
+                                                <option id="tag-button-nationality_singaporean"
+                                                    value="nationality_singaporean">🇸🇬 Singaporese</option>
+                                                <option id="tag-button-nationality_spanish" value="nationality_spanish">
+                                                    🇪🇸 Spagnola</option>
+                                                <option id="tag-button-nationality_south_african"
+                                                    value="nationality_south_african">🇿🇦 Sudafricana</option>
+                                                <option id="tag-button-nationality_swedish" value="nationality_swedish">
+                                                    🇸🇪 Svedese</option>
+                                                <option id="tag-button-nationality_swiss" value="nationality_swiss">🇨🇭
+                                                    Svizzera</option>
+                                                <option id="tag-button-nationality_thai" value="nationality_thai">🇹🇭
+                                                    Tailandese</option>
+                                                <option id="tag-button-nationality_german" value="nationality_german">
+                                                    🇩🇪 Tedesca</option>
+                                                <option id="tag-button-nationality_tunisian"
+                                                    value="nationality_tunisian">🇹🇳 Tunisina</option>
+                                                <option id="tag-button-nationality_turkish" value="nationality_turkish">
+                                                    🇹🇷 Turca</option>
+                                                <option id="tag-button-nationality_ukrainian"
+                                                    value="nationality_ukrainian">🇺🇦 Ucraina</option>
+                                                <option id="tag-button-nationality_hungarian"
+                                                    value="nationality_hungarian">🇭🇺 Ungherese</option>
+                                                <option id="tag-button-nationality_uruguayan"
+                                                    value="nationality_uruguayan">🇺🇾 Uruguaiana</option>
+                                                <option id="tag-button-nationality_venezuelan"
+                                                    value="nationality_venezuelan">🇻🇪 Venezuelana</option>
+                                                <option id="tag-button-nationality_vietnamese"
+                                                    value="nationality_vietnamese">🇻🇳 Vietnamita</option>
+                                            </select>
+                                        </div>
+                                        <div class="innerB">
+                                            <button class="btn btn-info" style="width: 100%;"
+                                                onclick="updateInfo(true);" id="updateInfoBtn"><b>SALVA</b></button>
+                                            <div id="btnUpdateSchedul">
+                                                <div class="separator"></div>
+                                                <div class="center text-muted">
+                                                    <span>------------</span> Oppure <span>------------</span>
+                                                </div>
+                                                <div class="separator"></div>
+                                                <button class="btn btn-warning" style="width: 100%;"
+                                                    id="btnUpdateAnnuncio" onclick="UpdateSchedulazioni()"><b>MODIFICA
+                                                        TUTTI GLI ANNUNCI</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="widget widget-heading-simple widget-body-gray widget-after">
+                                <div class="widget-head">
+                                    <h3 class="heading glyphicons edit"><i></i>Pubblicazioni</h3>
+                                </div>
+                                <div class="widget-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="promo wizard">
+                                                <input id="txtDate" type="date"
+                                                    style="width: 160px; margin-bottom: 25px;"
+                                                    class="form-control hidden">
+                                                <div class="widget widget-tabs widget-tabs-responsive">
+                                                    <div class="widget-body">
+                                                        <div class="row">
+                                                            <div class="col-md-4 col-md-offset-4">
+                                                                <div id="calendarContainer"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="promoType widget-head" style="margin-bottom: 0;">
+                                                        <ul>
+                                                            <li class="active"><a href="#tabFree" data-toggle="tab">
+                                                                    Free</a></li>
+                                                            <li><a href="#tab1x1" data-toggle="tab"
+                                                                    style="background-color: #b1f390;">Top: 1Day</a></li>
+                                                            <li><a href="#tab1x3" data-toggle="tab"
+                                                                    style="background-color: #d0d174;">Top: 3Days</a></li>
+                                                            <li><a href="#tab1x7" data-toggle="tab"
+                                                                    style="background-color: #d47ed4;">Top: 7Days</a></li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="widget-body" id="wizar-body">
+                                                        <div class="tab-content">
+                                                            <div class="promoPanel promoFree tab-pane active animated fadeInUp"
+                                                                id="tabFree">
+                                                                <div class="posts">
+                                                                    <div class="post-list">
+                                                                    </div>
+                                                                    <button type="button"
+                                                                        class="btn btn-primary free-add-schedule"
+                                                                        onclick="addMegaescortFreeTime(this);">
+                                                                        <span><b><i class="fa fa-plus"></i></b></span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="promoPanel promo1x1 tab-pane animated fadeInUp"
+                                                                id="tab1x1">
+                                                                <label for="promo1x1" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria - Top 1Day</label>
+                                                                <div class="wpromo1x1">
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x109001200" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x109001200"
+                                                                                class="form-check-label">09:00-12:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x112001400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x112001400"
+                                                                                class="form-check-label">12:00-14:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x114001600" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x114001600"
+                                                                                class="form-check-label">14:00-16:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x116001800" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x116001800"
+                                                                                class="form-check-label">16:00-18:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x118002100" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x118002100"
+                                                                                class="form-check-label">18:00-21:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x121002400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x121002400"
+                                                                                class="form-check-label">21:00-24:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x124000900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x124000900"
+                                                                                class="form-check-label">24:00-09:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="promoPanel promo1x3 tab-pane animated fadeInUp"
+                                                                id="tab1x3">
+                                                                <label for="promo1x3" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria - Top 3Days</label>
+                                                                <div class="wpromo1x3">
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x309001800" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x309001800"
+                                                                                class="form-check-label">09:00-18:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x310001600" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x310001600"
+                                                                                class="form-check-label">10:00-16:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x314002000" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x314002000"
+                                                                                class="form-check-label">14:00-20:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x318002300" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x318002300"
+                                                                                class="form-check-label">18:00-23:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x323000900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x323000900"
+                                                                                class="form-check-label">23:00-09:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x321002400" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x321002400"
+                                                                                class="form-check-label">21:00-24:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="time-slot">
+                                                                        <div class="flex-checkbox">
+                                                                            <input id="1x324000900" type="checkbox"
+                                                                                class="form-check-input">
+                                                                            <label for="1x324000900"
+                                                                                class="form-check-label">24:00-9:00</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="promoPanel promo1x7 tab-pane animated fadeInUp"
+                                                                id="tab1x7">
+                                                                <label for="promo1x7" class="form-check-label"
+                                                                    style="font-size: 18px;">Fascia oraria - Top 7Days</label>
+                                                                <div class="wpromo1x7">
+                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x709001800" type="checkbox" class="form-check-input"><label for="1x709001800" class="form-check-label">09:00-18:00</label></div></div>
+                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x710001600" type="checkbox" class="form-check-input"><label for="1x710001600" class="form-check-label">10:00-16:00</label></div></div>
+                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x714002000" type="checkbox" class="form-check-input"><label for="1x714002000" class="form-check-label">14:00-20:00</label></div></div>
+                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x718002300" type="checkbox" class="form-check-input"><label for="1x718002300" class="form-check-label">18:00-23:00</label></div></div>
+                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x723000900" type="checkbox" class="form-check-input"><label for="1x723000900" class="form-check-label">23:00-09:00</label></div></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- <div class="total-cost-container">
+                                                    <label for="totalCost">Totale da spendere:</label>
+                                                    <span id="totalCost">0 €</span>
+                                                </div>
+                                                <div class="separator"></div> -->
+
+                                                <!-- Dropdown button -->
+                                                <!-- <button id="toggleTableBtn" class="btn btn-info">Mostra dettagli per più
+                                                    giorni</button> -->
+
+                                                <!-- Hidden table -->
+                                                <div class="total-cost-container">
+                                                    <label for="totalCost">Totale da spendere:</label>
+                                                    <span id="totalCost">0 €</span>
+                                                    <span class="text-muted">
+                                                        (<span id="totalCredits">0</span> crediti)
+                                                    </span>
+                                                </div>
+                                                <div class="separator"></div>
+
+                                                <div id="costTableContainer" style="display: none;">
+                                                    <table class="table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Giorni</th>
+                                                                <th>Totale</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="costTableBody">
+                                                            <!-- Rows will be dynamically added here -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="price-calc-panel">
+                                                    <div class="price-calc-actions">
+                                                        <button type="button" class="btn btn-info"
+                                                            id="btnCalculateTrovagnoccaPrice">
+                                                            <i class="fa fa-calculator"></i> Calcola prezzo
+                                                        </button>
+                                                    </div>
+                                                    <div class="price-calc-result">
+                                                        <div class="price-calc-value">
+                                                            <strong>Totale prezzo base</strong>
+                                                            <span id="trovagnoccaTotalBasePrice">-</span>
+                                                        </div>
+                                                        <div class="price-calc-value">
+                                                            <strong>Totale crediti base</strong>
+                                                            <span id="trovagnoccaTotalBaseCredits">-</span>
+                                                        </div>
+                                                        <div class="price-calc-value">
+                                                            <strong>Totale crediti finali</strong>
+                                                            <span id="trovagnoccaTotalCredits">-</span>
+                                                        </div>
+                                                        <div class="price-calc-value">
+                                                            <strong>Totale prezzo</strong>
+                                                            <span id="trovagnoccaTotalFinalPrice">-</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="price-calc-table">
+                                                        <table class="table table-striped table-condensed">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Annuncio / fasce</th>
+                                                                    <th>Giorni</th>
+                                                                    <th>Prezzo base</th>
+                                                                    <th>Crediti base</th>
+                                                                    <th>Crediti sconto</th>
+                                                                    <th>Prezzo sconto</th>
+                                                                    <th>Sconto</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="trovagnoccaPriceRows">
+                                                                <tr>
+                                                                    <td colspan="7" class="text-muted">Nessuna fascia calcolata</td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div id="trovagnoccaPriceMessage"
+                                                        class="price-calc-message text-muted"></div>
+                                                </div>
+                                                <div class="separator"></div>
+                                                <button type="button" class="btn btn-success" style="width: 100%;"
+                                                    onclick="updateSchedule();"
+                                                    id="updateScheduleBtn"><b>PUBBLICA/MODIFICA TUTTI I TOP</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="widget widget-heading-simple widget-body-gray widget-after">
+                                <div class="widget-head">
+                                    <h3 class="heading glyphicons edit"><i></i>Immagini</h3>
+                                    <button class="input-editor btn btn-success pull-right" id="btnShowImg"><i
+                                            class="fa fa-eye"></i></button>
+                                </div>
+                                <div class="widget-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="pics-section">
+                                                <div class="pics persistent">
+                                                    <div class="dragHere"
+                                                        style="position: absolute; width: 100%; height: 100%; background-color: #8597d8; opacity: 0.8; display: none; z-index: 1000;">
+                                                        <div
+                                                            style="position: relative;width: calc(100% - 20px);height: calc(100% - 20px);border: dashed 10px #ddd;border-radius: 50px;margin: 10px;">
+                                                            <div
+                                                                style="font-size: 5em; text-align: center; padding: 80px 0 0 0">
+                                                                <span class="fa fa-cloud-upload"
+                                                                    style="color:white; "></span>
+                                                            </div>
+                                                            <h1
+                                                                style="color: white; font-size: 3em; text-align: center; padding: 30px;">
+                                                                Trascina Qui</h1>
+                                                        </div>
+                                                    </div>
+                                                    <input type="file" onchange="loadImage(event);" accept="image/*"
+                                                        name="image" id="file-upload" multiple style="display: none;">
+                                                    <label for="file-upload">
+                                                        <div class="add-pic"><b><i class="fa fa-plus"></i></b></div>
+                                                    </label>
+                                                    <!--<div class="pic-panel">
+                                                <div class="pic-operations">
+                                                    <button class="btn btn-danger">
+                                                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" fill="white" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="25px" height="25px" viewBox="0 0 503.021 503.021" style="enable-background:new 0 0 503.021 503.021;" xml:space="preserve"><g><g><path d="M491.613,75.643l-64.235-64.235c-15.202-15.202-39.854-15.202-55.056,0L251.507,132.222L130.686,11.407 c-15.202-15.202-39.853-15.202-55.055,0L11.401,75.643c-15.202,15.202-15.202,39.854,0,55.056l120.821,120.815L11.401,372.328 c-15.202,15.202-15.202,39.854,0,55.056l64.235,64.229c15.202,15.202,39.854,15.202,55.056,0l120.815-120.814l120.822,120.814 c15.202,15.202,39.854,15.202,55.056,0l64.235-64.229c15.202-15.202,15.202-39.854,0-55.056L370.793,251.514l120.82-120.815 C506.815,115.49,506.815,90.845,491.613,75.643z"/></g></g></svg>
+                                                    </button>
+                                                    <button class="btn btn-primary">
+                                                        <svg style="transform: scale(1.35);" width="25px" height="25px" fill="white" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 488.788 488.788" style="enable-background:new 0 0 488.788 488.788;" xml:space="preserve"><g><path d="M462.882,325.833H401.6v51.832h61.281c14.307,0,25.906-11.604,25.906-25.919 C488.788,337.428,477.188,325.833,462.882,325.833z"/><path d="M164.965,27.908c0-14.315-11.609-25.913-25.919-25.913c-14.326,0-25.92,11.598-25.92,25.913V85.22h51.839V27.908z"/><path d="M457.953,51.833c6.749-6.747,6.749-17.666,0-24.42c-6.761-6.747-17.673-6.747-24.439,0l-83.708,83.719 c-0.018,0-0.018,0-0.031,0H25.905C11.6,111.133,0,122.728,0,137.045c0,14.315,11.6,25.92,25.905,25.92h272.059L164.965,295.973 V188.877h-51.839v162.869c0,14.315,11.594,25.919,25.92,25.919h158.887v-51.832H183.949l139.921-139.9v274.94 c0,14.315,11.596,25.919,25.905,25.919c14.306,0,25.919-11.604,25.919-25.919c0,0-0.16-325.615-0.269-326.501L457.953,51.833z"/></g></svg>
+                                                    </button>
+                                                </div>
+                                                <div class="pic-wrapper">
+                                                    <img src="">
+                                                </div>
+                                            </div>-->
+                                                </div>
+                                                <div class="pics removed"></div>
+                                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;"
+                                                    onclick="updateImages();" id="updatePicsBtn"><b>MODIFICA LE
+                                                        IMMAGINI</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Custom Modal -->
+                            <div id="customModal" class="custom-modal">
+                                <div class="custom-modal-content">
+                                    <div class="custom-modal-header">
+                                        <span class="custom-modal-title">Edit Image</span>
+                                        <button id="closeModalButton" class="custom-modal-close">&times;</button>
+                                    </div>
+                                    <div class="custom-modal-body">
+                                        <!-- Image Container for Cropper.js -->
+                                        <img id="modalImage" src="" alt="Image to Edit" style="max-width: 100%;">
+                                    </div>
+                                    <div class="custom-modal-footer">
+                                        <button id="saveCropButton" class="custom-modal-save">Salva Anteprima
+                                            Bakeca</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="widget widget-body-gray widget-after">
+                                <div class="widget-head" style="background: #eaeaea;">
+                                    <h3 class="heading glyphicons edit" style="margin-left: -10px;"><i></i>Storico
+                                        Pubblicazioni</h3>
+                                    <span class="text-default pull-right btnCopy">Copia le uscite</span> <a
+                                        class="btn btn-xs pull-right btnCopy"><i class="fa fa-copy"
+                                            style="font-size: 27px; line-height: 27px;"></i></a>
+                                    <span class="text-default pull-right btnCopy">Condividi</span> <a id="btnWhatapp"
+                                        class="btn btn-xs pull-right" href="whatsapp://send?text=" target="_blank"><i
+                                            class="fa fa-whatsapp" style="font-size: 27px; line-height: 27px;"></i></a>
+                                </div>
+                                <div class="widget-head">
+                                    <div class="col-md-2 col-sm-2">
+                                        <div class="row">
+                                            <h4 class="heading"> </h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-sm-4">
+                                        <div class="row">
+                                            <h4 class="heading">Descrizione (città)</h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-sm-4">
+                                        <div class="row">
+                                            <h4 class="heading" style="float: none;">Stato</h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 col-sm-1">
+                                        <div class="row">
+                                            <h4 class="heading" style="float: none;">Pagati Cliente</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="widget-body" style="padding-top: 0;">
+                                    <div class="row">
+                                        <div id="rptStorico" class="col-md-12">
+                                            <div class="row center rptNoData">Nessun dato rilevato</div>
+                                            <div class="rptItemStorico row" data-id="@id@" style="display: none;">
+                                                <div class="col-md-2 col-sm-2">
+                                                    <a class="btn" onclick="deleteStorico(this, '@id@')"><i
+                                                            class="fa fa-times text-danger"></i></a>
+                                                    <a class="btn" onclick="copyStorico(this, '@id@')"><i
+                                                            class="fa fa-copy text-primary"></i></a>
+                                                    <a class="btn btnCondividi" data-id="@id@"
+                                                        href="whatsapp://send?text=" target="_blank"><i
+                                                            class="fa fa-whatsapp text-primary"></i></a>
+                                                </div>
+                                                <div class="rptDescription col-md-4 col-sm-4">
+                                                    <b>@descrizione@</b> (@città@)
+                                                    <div class="col-md-12 dateTimeTop">@orari@</div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4">
+                                                    <div class="status-actions">
+                                                        @stato@
+                                                        <a class="btn btn-success btn-xs btnPublishState"
+                                                            data-id="@id@">PUBBLICATO</a>
+                                                        <a class="btn btn-danger btn-xs btnSuspend"
+                                                            onclick="suspendAds(this, '@id@')"
+                                                            data-id="@id@">SOSPENDI</a>
+                                                        <a class="btn btn-default btn-xs btnDeleteState"
+                                                            onclick="deleteAds(this, '@id@')" data-id="@id@">DELETE</a>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-1 col-sm-1">
+                                                    @pagato@
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="lblTitleStorico col-md-12 text-danger"
+                                            style="display: none; text-align: center;">
+                                            <div class="separator"></div>
+                                            <h5 class="strong">Pubblicazioni Sospese</h5>
+                                        </div>
+                                        <div id="rptStoricoSospesi" class="col-md-12">
+                                            <div class="row center rptNoData">Nessun dato rilevato</div>
+                                            <div class="rptItemStoricoSospesi row" data-id="@id@"
+                                                style="display: none;">
+                                                <div class="col-md-2 col-sm-2">
+                                                    <a class="btn" onclick="deleteStorico(this, '@id@')"><i
+                                                            class="fa fa-times text-danger"></i></a>
+                                                </div>
+                                                <div class="rptDescription col-md-4 col-sm-4">
+                                                    <b>@descrizione@</b> (@città@)
+                                                    <div class="col-md-12 dateTimeTop">@orari@</div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4">
+                                                    <div class="status-actions">
+                                                        @stato@
+                                                        <a class="btn btn-danger btn-xs btnPublishState"
+                                                            data-id="@id@">SOSPESO</a>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-1 col-sm-1">
+                                                    @pagato@
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-primary" style="width: 100%; margin-top: 20px;"
+                                                onclick="toggleSuspended();" id="btnShowSuspended"><b>MOSTRA
+                                                    SOSPESI</b></button>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <a class="btn btn-danger strong" style="width: 100%; margin-top: 20px;"
+                                                onclick="suspendPublishedAds(this)"><b>SOSPENDI PUBBLICATI</b></a>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <a class="btn btn-default strong" style="width: 100%; margin-top: 20px;"
+                                                onclick="deletePublishedAds(this)"><b>DELETE PUBBLICATI</b></a>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <a class="btn btn-danger btnSuspendAll strong"
+                                                style="width: 100%; margin-top: 20px;"
+                                                onclick="suspendOldAds(this)">SOSPENDI SCADUTI</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <footer>
+                        <%- include('../../partials/footer'); %>
+                    </footer>
+            </div>
+    </div>
+
+    <div class="loader">
+        <img src="/assets/loader.gif" />
+    </div>
+    <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
+    <script src="/js/panels/categoryConstants.js"></script>
+    <script src="/js/panels/trovagnocca/main.js"></script>
+    <script src="/js/panels/trovagnocca/calendar.js"></script>
+    <script src="/js/panels/trovagnocca/images.js?v=20260527-image-arrows"></script>
+    <script src="/js/panels/trovagnocca/timeslot.js"></script>
+    <script src="/js/panels/trovagnocca/price.js"></script>
+    <script>
+        window.addMegaescortFreeTime = function (button) {
+            if (typeof window.addFreeSchedule === "function") {
+                window.addFreeSchedule(button);
+            }
+            return false;
+        };
+    </script>
+    <script src="/js/panels/trovagnocca/ajax.js"></script>
+    <script src="/js/panels/trovagnocca/history.js"></script>
+    <script src="/js/panels/trovagnocca/utils.js"></script>
+</body>
+
+</html>

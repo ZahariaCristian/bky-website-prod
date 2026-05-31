@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <link rel="stylesheet" href="/css/listaAnnunci.css">
+    <title>BKY - Annunci</title>
+    <%- include('../partials/head'); %>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Elenco Pubblicazioni</h1>
+            <div class="innerLR">
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="widget widget-3">
+                            <div class="widget-head">
+                                <h4 class="heading">
+                                    <span class="glyphicons coins"><i></i>
+                                    </span>Totale Crediti</h4>
+                            </div>
+                            <div class="widget-body large cancellations">
+                                <div id="txtTotaleCrediti">0</div>
+                                <div>
+                                    <span>
+                                    <span>Restanti Stimati</span>
+                                    <div id="txtTotaleCreditiRimanenti" style="text-align: center;">0</div>
+                                </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="widget widget-3">
+                            <div class="widget-head">
+                                <h4 class="heading">
+                                    <span class="glyphicons pie_chart"><i></i>
+                                    </span>Totale annunci</h4>
+                            </div>
+                            <div class="widget-body large cancellations">
+                                <div id="txtAnnunci">0</div>
+                                <div>
+                                    <span>
+                                    <span>Da pubblicare</span>
+                                    <div style="text-align: center;" id="txtAnnunciDaPub">0</div>
+                                </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="widget widget-3">
+                            <div class="widget-head">
+                                <h4 class="heading">
+                                    <span style="padding-top: 32px;" class="glyphicons charts"><i></i>
+                                    </span>Tipo annunci</h4>
+                            </div>
+                            <div class="widget-body large cancellations">
+                                <div id="txtAnnunciTop">0 TOP</div>
+                                <div>
+                                    <span>
+                                    <span>Free</span>
+                                    <div id="txtAnnunciFree" style="text-align: center;">0</div>
+                                </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dateSelector">
+                <input class="form-control" type="date" id="dateSelector">
+            </div>
+            <div class="separator-h"></div>
+            <div id="current-ads" class="advertisementsWrapper">
+
+            </div>
+            <div id="warning-ads" class="advertisementsWrapper">
+
+            </div>
+            <div id="ads" class="advertisementsWrapper">
+                <!--<div class="advertisement onlineAdv">
+                    <img src="/images/get?donna=321&index=0">
+                    <div class="adInfo">
+                        <h5>NOVITA A LIVORNO</h5>
+                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores optio ratione similique nobis! Dicta provident facilis dolores rem necessitatibus? Minus.</p>
+                    </div>
+                    <div class="editPanel">
+                        <h5><u>3215486124</u></h5>
+                        <h6>17:35</h6>
+                        <h6>Livorno</h6>
+                        <h6>Free</h6>
+                        <button class="btn btn-primary">Gestisci</button>
+                    </div>
+                </div>-->
+            </div>
+            </div>            
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+            
+    <script src="/js/listaAnnunci.js"></script>
+</body>
+</html>

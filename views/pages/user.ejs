@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Utente</title>
+    <%- include('../partials/head'); %>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 id="lblUser" style="margin-bottom: 20px;">Utente</h1>
+            <div class="innerLR">
+                <div class="widget widget-heading-simple widget-body-gray widget-after">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserName">Nome Utente</label>
+                                    <input type="text" id="inputUserName" class="form-control" value="" placeholder="nome" autocomplete="new-name">
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserPassword">Password</label>
+                                    <input type="password" id="inputUserPassword" class="form-control" value="" placeholder="****" autocomplete="new-password">
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label" for="inputUserMail">Mail</label>
+                                    <input type="text" id="inputUserMail" class="form-control" value="" placeholder="example@mail.com" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="chkForceChangePass">Foza Cambio Password</label>
+                                <div>
+                                    <div class="make-switch" data-on="primary" data-off="default"><input id="chkForceChangePass" type="checkbox" checked></div>
+                                </div>
+                                <div class="separator"></div>
+                                <label for="chkActive">Attivo</label>
+                                    <div>
+                                        <div class="make-switch" data-on="primary" data-off="default"><input id="chkActive" type="checkbox" checked></div>
+                                    </div>
+                                <div class="separator"></div>
+                                <label for="cmbRole">Ruolo</label>
+                                <select id="cmbRole" class="form-control">
+                                </select>
+                                <div class="separator"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnCreaUtente"><b>SALVA</b></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>          
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+    <script src="/js/user.js"></script>
+</body>
+</html>

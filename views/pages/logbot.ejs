@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <title>BKY - Bot</title>
+    <%- include('../partials/head'); %>
+    <style>
+        .truncate{
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="Title text-large text-center innerAll">
+        <h1>Log File</h1>
+        <div class="separator"></div>
+    </div>
+    <div class="container">
+        <div class="row row-app">
+            <div class="col-separator col-unscrollable box">
+                <div class="col-table">
+                    <div class="panel panel-default col-md-offset-2 col-sm-offset-3 col-md-8 col-sm-6">
+                        <div class="panel-body" id="rptLog">
+                            <div class="row" id="rptRow" style="display: none">
+                                <div class="col-md-12">
+                                    <p class="innerB border-bottom truncate"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <%- include('../partials/footer'); %>
+      </footer>
+      <script src="/js/logbot.js"></script>
+</body>
+</html>

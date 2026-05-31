@@ -1,0 +1,45 @@
+.advertisementsWrapper {
+    padding-bottom: 10px;
+}
+.advertisementsWrapper h3 {
+    text-align: center;
+}
+.OKAdv .editPanel {
+    background-color: rgba(89, 255, 47, 0.7) !important;
+}
+.ALERTAdv .editPanel {
+    background-color: rgba(255, 158, 47, 0.7) !important;
+}
+.KOdAdv .editPanel {
+    background-color: rgba(255, 47, 47, 0.7) !important;
+}
+.advertisement {
+    display: flex;
+    margin-bottom: 5px;
+}
+.advertisement img {
+    max-height: 150px;
+    max-width: 100px;
+    transform: scale(.9);
+    border: dashed white 1px;
+}
+.adInfoo {
+    width: 81%;
+}
+.adInfoo, .editPanel {
+    padding: 15px;
+}
+.adInfoo p {
+    margin-bottom: 5px;
+    text-align: justify;
+}
+.editPanel {
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+.editPanel h6 {
+    margin-bottom: 0px;
+}
+.editPanel button {
+    transform: translateY(7px);
+}

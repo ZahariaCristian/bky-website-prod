@@ -1,0 +1,36 @@
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<link rel="stylesheet" href="/css/style.css">
+<script src="/jsr/061f99efb1.js" crossorigin="anonymous"></script>
+<script src="/jsr/jquery-3.6.0.min.js"></script>
+<script src="/assets/components/library/modernizr/modernizr.js?v=v1.0.3-rc2&sv=v0.0.1.1"></script>
+<script src="/assets/components/plugins/less-js/less.min.js?v=v1.0.3-rc2&sv=v0.0.1.1"></script>
+<style>
+    .loader{
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        width: 100vw;
+        height: 100vh;
+        top:0;
+        background: white;
+        opacity: 0.5;
+    }
+    .loader > img{
+        position: fixed;
+        z-index: 1001;
+        top: calc(50% - 58px);
+        left: calc(50% - 58px);
+    }
+</style>
+<script>
+    function toggleLoader(){
+        if($(".loader").is(":visible")){
+          $(".loader").hide();
+        }else{
+          $(".loader").show();
+        }    
+      } 
+</script>

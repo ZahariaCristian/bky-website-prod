@@ -1,0 +1,77 @@
+<style>
+.flashing-label {
+  animation: flash 1s infinite;
+}
+
+@keyframes flash {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+</style>
+<nav class="navbar hidden-print main  animated fadeInUp" role="navigation" style="visibility: visible;">
+    <div class="navbar-header pull-left">
+        <div class="user-action user-action-btn-navbar pull-left border-right">
+            <button class="btn btn-sm btn-navbar btn-inverse btn-stroke"><i class="fa fa-bars fa-2x"></i>
+            </button>
+        </div>
+    </div>
+    <ul class="main pull-right ">
+        <li class="notifications">
+            <span class="text-default strong" style="font-size: 100%;">BK:</span>
+            <span id="lblBKCredit" class="label label-success">0</span>
+            <span id="couponNotice" class="label label-warning flashing-label" style="margin-left: 10px; display:none;">Coupon Disponibili</span>
+        </li>
+        <li class="notifications">
+            <span class="text-default strong" style="font-size: 100%;">Bakeca:</span> <span id="bakecaCredit" class="label label-success">0</span>
+        </li>
+        <li class="notifications">
+            <span class="text-default strong" style="font-size: 100%;">Megaescort:</span> <span id="megaescortCredit" class="label label-success">0</span>
+        </li>
+        <li class="notifications">
+            <span class="text-default strong" style="font-size: 100%;">Trovagnocca:</span> <span id="trovagnoccaCredit" class="label label-success">0</span>
+        </li>
+        <!--<li class="dropdown notif notifications hidden-xs">
+            <a href="" class="dropdown-toggle" data-toggle="dropdown"><i class="icon-bell-fill"></i> <span class="label label-danger">5</span></a>
+            <ul class="dropdown-menu chat media-list pull-right">
+                <li class="media">
+                    <div class="media-body">
+                        <span class="label label-default pull-right">5 min</span>
+                        <h5 class="media-heading">Adrian D.</h5>
+                        <p class="margin-none"><a href="" style="font-weight: normal;">Lorem ipsum dolor sit amet, consectetur adipisicing
+                            elit.</a>
+                        </p>
+                    </div>
+                </li>
+                <li class="media">
+                    <div class="media-body">
+                        <span class="label label-default pull-right">5 min</span>
+                        <h5 class="media-heading">Adrian D.</h5>
+                        <p class="margin-none"><a href="" style="font-weight: normal;">Lorem ipsum dolor sit amet, consectetur adipisicing
+                            elit.</a>
+                        </p>
+                    </div>
+                </li>
+                <li class="media">
+                    <div class="media-body">
+                        <span class="label label-default pull-right">5 min</span>
+                        <h5 class="media-heading">Adrian D.</h5>
+                        <p class="margin-none"><a href="" style="font-weight: normal;">Lorem ipsum dolor sit amet, consectetur adipisicing
+                            elit.</a>
+                        </p>
+                    </div>
+                </li>
+            </ul>
+        </li>-->
+        <li class="username notifications">
+            <a href="/logout" class=""><i class="fa fa-door-open"></i><span>Log Out</span></a>
+        </li>
+    </ul>
+    <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+            <li class="text-medium text-primary">
+                BKY - <span id="lblBKCredit2">0</span>
+            </li>
+        </ul>
+    </div>
+</nav>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+<head>
+    <title>BKY - Gruppo di lavoro</title>
+    <%- include('../partials/head'); %>
+</head>
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../partials/menu'); %>
+        <div id="content">
+            <%- include('../partials/header'); %>
+            <h1 style="margin-bottom: 20px;">Il tuo gruppo di lavoro</h1>
+            <div class="innerLR">
+                <div class="row" id="rptContainer">
+                    <div id="pnlMe" class="col-md-3">
+                        <div class="widget widget-heading-simple widget-body-gray">
+                            <div class="widget-body">
+                                <div class="innerLR form-horizontal">
+                                    <div class="form-group">
+                                        <h4 id="lblUserName" class="text-primary strong">@nomeUtente@</h4>
+                                        <h5>Mail: <a id="btnMail" target="_blank" href="mailTo:@mail@">@mail@</a></h5>
+                                        <h5>Annunci Gestiti (7 gg): <span id="lblNumeroAnnunci">@annunci@</span></h5>
+                                    </div>
+                                    <div class="form-group center pnlGestione">
+                                        <div class="separator" style="margin-bottom:17px"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="rptTemplate" class="col-md-3 rptRows" style="display: none;">
+                        <div class="widget widget-heading-simple widget-body-gray" data-user="@OID@">
+                            <div class="widget-body">
+                                <div class="innerLR form-horizontal">
+                                    <div class="form-group">
+                                        <h4 class="text-primary strong lblUserName">@nomeUtente@</h4>
+                                        <h5>Mail: <a class="btnMail" target="_blank" href="mailTo:@mail@">@mail@</a></h5>
+                                        <h5>Annunci Gestiti (7 gg): <span class="lblNumeroAnnunci">@annunci@</span></h5>
+                                    </div>
+                                    <div class="form-group center pnlGestione">
+                                        <button class="btn btn-danger btnDeleteMember" data-user="@OID@">Rimuovi</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>            
+            <footer>
+                <%- include('../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+            
+    <script src="/js/team.js"></script>
+</body>
+</html>
