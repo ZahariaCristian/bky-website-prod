@@ -149,7 +149,7 @@ function requestStorico(annuncio, suspended) {
                     addRptStorico(schedule, i);
                     i++;
                 });
-                $(".btnCondividi").on("mouseover", () => {
+                $(".btnCondividi").off("mouseover.trovagnoccaHistory").on("mouseover.trovagnoccaHistory", (event) => {
                     var text = "";
                     var id = $(event.currentTarget).data("id");
                     $(event.currentTarget).attr("href", text);
@@ -173,18 +173,32 @@ var clearStorico = () => {
     $(".oldStorico").remove();
 };
 
-function copyStorico(btn, id) {
+function getHistoryRowText(row) {
+    return $(row).find(".rptDescription").text().replace(/\s+/g, " ").trim();
+}
+
+function copyTextToClipboard(value) {
     var text = $("#txtCopy");
-    text.val("");
-
-    $(`.rptItemStorico[data-id='${id}']`).each((idx, x) => {
-        $(text).val($(text).val() + $(x).find(".rptDescription").text().trim() + "\n");
-    });
-
+    text.val(value);
     text.focus();
     text[0].select();
     text[0].setSelectionRange(0, 99999);
-    navigator.clipboard.writeText($(text).val());
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(value).catch(() => document.execCommand("copy"));
+    } else {
+        document.execCommand("copy");
+    }
+}
+
+function copyStorico(btn, id) {
+    let value = "";
+
+    $(`.rptItemStorico[data-id='${id}']`).each((idx, x) => {
+        value += `${getHistoryRowText(x)}\n`;
+    });
+
+    copyTextToClipboard(value);
     ShowAlert("lblCopied");
 }
 
@@ -242,11 +256,13 @@ function getPublishStateButtonHtml(schedule) {
 
 function configureSuspendedHistoryPublishButton(row, schedule) {
     const publishBtn = row.find(".btnPublishState");
-    const publishState = getPublishStateConfig(schedule);
+    const deleteBtn = row.find(".btnDeleteState");
 
-    publishBtn.text(publishState.label);
-    publishBtn.removeClass("btn-success btn-danger btn-default btn-warning").addClass(publishState.className);
-    publishBtn.show();
+    publishBtn.hide();
+    deleteBtn.text("DELETE");
+    deleteBtn.removeClass("btn-danger btn-success btn-warning").addClass("btn-default");
+    deleteBtn.attr("onclick", `deleteAds(this, '${schedule.id}')`);
+    deleteBtn.show();
 }
 
 function replaceCityPlaceholder(html, city) {
@@ -276,9 +292,32 @@ function configureHistoryActionButtons(row, schedule) {
 }
 
 function formatScheduleTopTimes(schedule, withClockIcon = false) {
-    if (!schedule?.dateTimeTop) return "";
+    const getTrovagnoccaClimbingCalendarText = () => {
+        if (schedule?.dateTimeTop) return `${schedule.dateTimeTop}`;
 
-    const cleanText = `${schedule.dateTimeTop}`.replace(/ ,/g, ", ").replace(/,/g, ", ");
+        try {
+            const parsed = JSON.parse(schedule?.period || "[]");
+            if (!Array.isArray(parsed)) return "";
+
+            const item = parsed.find((entry) => entry?.dateTimeTop || entry?.climbingCalendar?.length);
+            if (!item) return "";
+
+            if (item.dateTimeTop) return `${item.dateTimeTop}`;
+            if (Array.isArray(item.climbingCalendar)) return item.climbingCalendar.filter(Boolean).join(" - ");
+        } catch {
+            return "";
+        }
+
+        return "";
+    };
+
+    const sourceText = PANEL_PLATFORM === "trovagnocca"
+        ? getTrovagnoccaClimbingCalendarText()
+        : `${schedule?.dateTimeTop || ""}`;
+
+    if (!sourceText) return "";
+
+    const cleanText = sourceText.replace(/ ,/g, ", ").replace(/,/g, ", ");
     if (PANEL_PLATFORM === "trovagnocca") {
         return `<strong>Orari risalite</strong> ${cleanText}`;
     }
@@ -287,6 +326,23 @@ function formatScheduleTopTimes(schedule, withClockIcon = false) {
         const text = value.replace(/ ,/g, ", ").replace(/,/g, ", ");
         return withClockIcon ? `<p class="fa fa-clock"> ${text}</p> ` : `${text} `;
     }).join("");
+}
+
+function formatTrovagnoccaPlanLabel(typeAnnuncio) {
+    if (PANEL_PLATFORM !== "trovagnocca") return typeAnnuncio;
+
+    switch (`${typeAnnuncio || ""}`.trim().toLowerCase()) {
+        case "1x1":
+            return "1Day";
+        case "1x3":
+            return "3Days";
+        case "1x7":
+            return "7Days";
+        case "free":
+            return "Free";
+        default:
+            return typeAnnuncio;
+    }
 }
 
 function updateScheduleStateAction(e, ids, options) {
@@ -359,13 +415,15 @@ var addRptStorico = (sxhedule, i) => {
         premium = " + VIDEO";
     }
 
-    var text = `[TOP ${sxhedule.typeAnnuncio}${premium}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
+    var planLabel = formatTrovagnoccaPlanLabel(sxhedule.typeAnnuncio);
+    var text = `[TOP ${planLabel}${premium}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
     newRow.html(newRow.html().replace(/@id@/g, sxhedule.id));
     newRow.html(newRow.html().replace(/@descrizione@/g, text));
     newRow.html(replaceCityPlaceholder(newRow.html(), sxhedule.city));
 
-    if (sxhedule.dateTimeTop) {
-        newRow.html(newRow.html().replace(/@orari@/g, formatScheduleTopTimes(sxhedule)));
+    const topTimes = formatScheduleTopTimes(sxhedule);
+    if (topTimes) {
+        newRow.html(newRow.html().replace(/@orari@/g, topTimes));
     } else {
         newRow.find(".dateTimeTop").remove();
     }
@@ -404,7 +462,8 @@ var addRptStorico = (sxhedule, i) => {
 
     newRow.appendTo(root);
 
-    $("#btnWhatapp").attr("href", $("#btnWhatapp").attr("href") + encodeURIComponent(text) + "%0a" + out + "%0a");
+    const rowText = getHistoryRowText(newRow);
+    $("#btnWhatapp").attr("href", $("#btnWhatapp").attr("href") + encodeURIComponent(rowText) + "%0a");
 };
 
 function suspendAds(e, ids) {
@@ -441,13 +500,15 @@ function addRptStoricoSus(sxhedule) {
     newRow.attr("data-id", sxhedule.id);
     newRow.data("id", sxhedule.id);
 
-    var text = `[TOP ${sxhedule.typeAnnuncio}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
+    var planLabel = formatTrovagnoccaPlanLabel(sxhedule.typeAnnuncio);
+    var text = `[TOP ${planLabel}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
     newRow.html(newRow.html().replace(/@id@/g, sxhedule.id));
     newRow.html(newRow.html().replace(/@descrizione@/g, text));
     newRow.html(replaceCityPlaceholder(newRow.html(), sxhedule.city));
 
-    if (sxhedule.dateTimeTop) {
-        newRow.html(newRow.html().replace(/@orari@/g, formatScheduleTopTimes(sxhedule, true)));
+    const topTimes = formatScheduleTopTimes(sxhedule, true);
+    if (topTimes) {
+        newRow.html(newRow.html().replace(/@orari@/g, topTimes));
     } else {
         newRow.find(".dateTimeTop").remove();
     }
@@ -495,3 +556,14 @@ function deleteStorico(me, idString) {
         });
     }
 }
+
+$(".btnCopy").off("click.trovagnoccaHistory").on("click.trovagnoccaHistory", () => {
+    let value = "";
+
+    $(".rptItemStorico.oldStorico").each((idx, row) => {
+        value += `${getHistoryRowText(row)}\n`;
+    });
+
+    copyTextToClipboard(value);
+    ShowAlert("lblCopied");
+});

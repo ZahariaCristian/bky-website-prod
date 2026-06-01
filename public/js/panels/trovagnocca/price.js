@@ -19,6 +19,25 @@ const setText = (selector, value) => {
     if (element) element.textContent = value;
 };
 
+let trovagnoccaPriceCalculateTimer = null;
+let trovagnoccaPriceIsCalculating = false;
+
+const isTrovagnoccaPriceDetailsVisible = () => {
+    const details = document.querySelector("#trovagnoccaPriceDetails");
+    return Boolean(details && details.style.display !== "none");
+};
+
+const setTrovagnoccaPriceDetailsVisible = (visible) => {
+    const details = document.querySelector("#trovagnoccaPriceDetails");
+    const button = document.querySelector("#btnToggleTrovagnoccaPrice");
+    if (!details || !button) return;
+
+    details.style.display = visible ? "" : "none";
+    button.innerHTML = visible
+        ? "<i class='fa fa-eye-slash'></i> Nascondi calcolo prezzo"
+        : "<i class='fa fa-eye'></i> Mostra calcolo prezzo";
+};
+
 const formatEuroCents = (cents) => {
     const value = Number(cents || 0) / 100;
     return `${value.toFixed(2).replace(".", ",")} €`;
@@ -237,6 +256,7 @@ const updateTrovagnoccaCostTable = (dailyCents) => {
 };
 
 const calculateTrovagnoccaPrice = async () => {
+    if (trovagnoccaPriceIsCalculating) return;
     const selectedAds = getSelectedTrovagnoccaPriceAds();
     updateTrovagnoccaSelectedSlotCount();
 
@@ -246,6 +266,7 @@ const calculateTrovagnoccaPrice = async () => {
         return;
     }
 
+    trovagnoccaPriceIsCalculating = true;
     setTrovagnoccaPriceLoading(true);
     setTrovagnoccaPriceMessage("");
 
@@ -269,20 +290,77 @@ const calculateTrovagnoccaPrice = async () => {
         resetTrovagnoccaPriceResult();
         setTrovagnoccaPriceMessage(error.message || "Errore durante il calcolo del prezzo.", true);
     } finally {
+        trovagnoccaPriceIsCalculating = false;
         setTrovagnoccaPriceLoading(false);
     }
 };
 
-document.querySelector("#btnCalculateTrovagnoccaPrice")?.addEventListener("click", calculateTrovagnoccaPrice);
+const scheduleTrovagnoccaPriceCalculation = () => {
+    updateTrovagnoccaSelectedSlotCount();
+
+    clearTimeout(trovagnoccaPriceCalculateTimer);
+    trovagnoccaPriceCalculateTimer = setTimeout(() => {
+        calculateTrovagnoccaPrice();
+    }, 400);
+};
+
+const observeTrovagnoccaScheduleChanges = () => {
+    const promoContainer = document.querySelector(".promo");
+    if (!promoContainer || !window.MutationObserver) return;
+
+    const observer = new MutationObserver((mutations) => {
+        const hasScheduleChange = mutations.some((mutation) => {
+            if (mutation.type === "childList") {
+                return Array.from(mutation.addedNodes).concat(Array.from(mutation.removedNodes))
+                    .some((node) => node.nodeType === 1 && (
+                        node.matches?.(".newpost-panel, .newpost-wrapper, .time-slot") ||
+                        node.querySelector?.(".newpost-panel, .newpost-wrapper, .time-slot")
+                    ));
+            }
+
+            if (mutation.type === "attributes") {
+                return mutation.target?.classList?.contains("newpost-panel") ||
+                    mutation.target?.classList?.contains("time-slot");
+            }
+
+            return false;
+        });
+
+        if (hasScheduleChange) scheduleTrovagnoccaPriceCalculation();
+    });
+
+    observer.observe(promoContainer, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style", "data-GCRecord", "data-state", "data-promo-type"]
+    });
+};
+
+document.querySelector("#btnToggleTrovagnoccaPrice")?.addEventListener("click", () => {
+    const nextVisible = !isTrovagnoccaPriceDetailsVisible();
+    setTrovagnoccaPriceDetailsVisible(nextVisible);
+    if (nextVisible) {
+        scheduleTrovagnoccaPriceCalculation();
+    }
+});
 document.addEventListener("change", (event) => {
     if (
         event.target?.classList?.contains("gold-slot-input") ||
-        event.target?.closest?.(".time-slot > .flex-checkbox")
+        event.target?.closest?.(".time-slot > .flex-checkbox") ||
+        event.target?.closest?.(".newpost-panel")
     ) {
-        updateTrovagnoccaSelectedSlotCount();
-        resetTrovagnoccaPriceResult();
+        scheduleTrovagnoccaPriceCalculation();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    if (event.target?.closest?.(".newpost-panel .btn-danger, .promoPanel .top-add-schedule, .promoPanel .free-add-schedule")) {
+        setTimeout(scheduleTrovagnoccaPriceCalculation, 0);
     }
 });
 
 resetTrovagnoccaPriceResult();
 updateTrovagnoccaSelectedSlotCount();
+setTrovagnoccaPriceDetailsVisible(false);
+observeTrovagnoccaScheduleChanges();

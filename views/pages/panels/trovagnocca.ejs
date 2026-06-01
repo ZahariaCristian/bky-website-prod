@@ -864,51 +864,53 @@
                                                 </div>
                                                 <div class="price-calc-panel">
                                                     <div class="price-calc-actions">
-                                                        <button type="button" class="btn btn-info"
-                                                            id="btnCalculateTrovagnoccaPrice">
-                                                            <i class="fa fa-calculator"></i> Calcola prezzo
+                                                        <button type="button" class="btn btn-default"
+                                                            id="btnToggleTrovagnoccaPrice">
+                                                            <i class="fa fa-eye"></i> Mostra calcolo prezzo
                                                         </button>
                                                     </div>
-                                                    <div class="price-calc-result">
-                                                        <div class="price-calc-value">
-                                                            <strong>Totale prezzo base</strong>
-                                                            <span id="trovagnoccaTotalBasePrice">-</span>
+                                                    <div id="trovagnoccaPriceDetails" style="display: none;">
+                                                        <div class="price-calc-result">
+                                                            <div class="price-calc-value">
+                                                                <strong>Totale prezzo base</strong>
+                                                                <span id="trovagnoccaTotalBasePrice">-</span>
+                                                            </div>
+                                                            <div class="price-calc-value">
+                                                                <strong>Totale crediti base</strong>
+                                                                <span id="trovagnoccaTotalBaseCredits">-</span>
+                                                            </div>
+                                                            <div class="price-calc-value">
+                                                                <strong>Totale crediti finali</strong>
+                                                                <span id="trovagnoccaTotalCredits">-</span>
+                                                            </div>
+                                                            <div class="price-calc-value">
+                                                                <strong>Totale prezzo</strong>
+                                                                <span id="trovagnoccaTotalFinalPrice">-</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="price-calc-value">
-                                                            <strong>Totale crediti base</strong>
-                                                            <span id="trovagnoccaTotalBaseCredits">-</span>
+                                                        <div class="price-calc-table">
+                                                            <table class="table table-striped table-condensed">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Annuncio / fasce</th>
+                                                                        <th>Giorni</th>
+                                                                        <th>Prezzo base</th>
+                                                                        <th>Crediti base</th>
+                                                                        <th>Crediti sconto</th>
+                                                                        <th>Prezzo sconto</th>
+                                                                        <th>Sconto</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody id="trovagnoccaPriceRows">
+                                                                    <tr>
+                                                                        <td colspan="7" class="text-muted">Nessuna fascia calcolata</td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
                                                         </div>
-                                                        <div class="price-calc-value">
-                                                            <strong>Totale crediti finali</strong>
-                                                            <span id="trovagnoccaTotalCredits">-</span>
-                                                        </div>
-                                                        <div class="price-calc-value">
-                                                            <strong>Totale prezzo</strong>
-                                                            <span id="trovagnoccaTotalFinalPrice">-</span>
-                                                        </div>
+                                                        <div id="trovagnoccaPriceMessage"
+                                                            class="price-calc-message text-muted"></div>
                                                     </div>
-                                                    <div class="price-calc-table">
-                                                        <table class="table table-striped table-condensed">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Annuncio / fasce</th>
-                                                                    <th>Giorni</th>
-                                                                    <th>Prezzo base</th>
-                                                                    <th>Crediti base</th>
-                                                                    <th>Crediti sconto</th>
-                                                                    <th>Prezzo sconto</th>
-                                                                    <th>Sconto</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody id="trovagnoccaPriceRows">
-                                                                <tr>
-                                                                    <td colspan="7" class="text-muted">Nessuna fascia calcolata</td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                    <div id="trovagnoccaPriceMessage"
-                                                        class="price-calc-message text-muted"></div>
                                                 </div>
                                                 <div class="separator"></div>
                                                 <button type="button" class="btn btn-success" style="width: 100%;"
@@ -1083,6 +1085,8 @@
                                                         @stato@
                                                         <a class="btn btn-danger btn-xs btnPublishState"
                                                             data-id="@id@">SOSPESO</a>
+                                                        <a class="btn btn-default btn-xs btnDeleteState"
+                                                            onclick="deleteAds(this, '@id@')" data-id="@id@">DELETE</a>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-1 col-sm-1">
