@@ -198,8 +198,42 @@
                 margin-left: -36px;
             }
 
+            .promoPanel:not(.promoFree) .time-slot {
+                min-width: 100%;
+                padding: 3px 6px 4px;
+            }
+
+            .promoPanel.promo1x1 .time-slot {
+                background: #b1f390;
+            }
+
+            .promoPanel.promo1x3 .time-slot {
+                background: #d0d174;
+            }
+
+            .promoPanel.promo1x7 .time-slot {
+                background: #d47ed4;
+            }
+
+            .promoPanel:not(.promoFree) .time-slot>.flex-checkbox {
+                align-items: center;
+                display: flex;
+                gap: 6px;
+                margin-bottom: 3px;
+            }
+
+            .promoPanel:not(.promoFree) .time-slot>.flex-checkbox .form-check-label {
+                font-size: 14px;
+                font-weight: 700;
+                line-height: 1.42857143;
+            }
+
+            .promoPanel:not(.promoFree) .time-slot .posts {
+                margin-left: 16px;
+            }
+
             .gold-posts {
-                margin-top: 12px;
+                margin-top: 4px;
             }
 
             .gold-slots {

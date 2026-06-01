@@ -1259,6 +1259,7 @@ router.post("/scrapeTrovagnocca", authenticateKey, async (req, res) => {
 
 router.post("/trovagnoccaPrice", authenticateKey, async (req, res) => {
     const numberDays = parseInt(req.body.numberDays, 10) || 1;
+    const productId = parseInt(req.body.productId, 10) || 300;
     const timeSlots = Array.isArray(req.body.timeSlots)
         ? [...new Set(req.body.timeSlots.map((slot) => parseInt(slot, 10)).filter(Number.isFinite))]
         : [];
@@ -1267,42 +1268,40 @@ router.post("/trovagnoccaPrice", authenticateKey, async (req, res) => {
         return res.status(400).json({ error: "At least one time slot is required." });
     }
 
-    const params = new URLSearchParams();
-    params.set("number_days", `${numberDays}`);
-    timeSlots.forEach((slot) => params.append("timeSlots[]", `${slot}`));
-
-    let lastError = null;
+    const publisherPriceUrl = process.env.TROVAGNOCCA_PRICE_API_URL
+        || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/trovagnocca/price`;
 
     try {
-        const response = await axios.get(
-            `https://www.trovagnocca.com/api/v1/custom/product/get-price?${params.toString()}`,
+        const response = await axios.post(
+            publisherPriceUrl,
+            {
+                numberDays,
+                productId,
+                timeSlots,
+                username: req.body.username
+            },
             {
                 headers: {
                     accept: "application/json",
-                    "accept-language": "en-US,en;q=0.9",
-                    authorization: req.body.authorization || "Bearer undefined",
-                    referer: `https://www.trovagnocca.com/dmc/account`,
-                    ...(req.body.csrfToken ? { "x-csrf-token": req.body.csrfToken } : {})
+                    "content-type": "application/json"
                 },
-                timeout: 15000
+                timeout: 60000
             }
         );
-        console.log(response.data, 'get-price response');
+
         return res.status(response.status).json(response.data);
     } catch (error) {
-        lastError = error;
         console.log({
-            csrfToken: req.body.csrfToken, 
+            publisherPriceUrl,
             status: error.response?.status,
             details: error.response?.data || error.message
-        }, 'get-price error');
-    }
+        }, 'publisher get-price error');
 
-    const status = lastError?.response?.status || 500;
-    return res.status(status).json({
-        error: "Unable to calculate Trovagnocca price.",
-        details: lastError?.response?.data || lastError?.message
-    });
+        return res.status(error.response?.status || 500).json({
+            error: "Unable to calculate Trovagnocca price.",
+            details: error.response?.data?.details || error.response?.data || error.message
+        });
+    }
 });
 
 var deleteFolderRecursive = function (path) {

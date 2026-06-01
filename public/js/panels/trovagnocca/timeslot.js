@@ -103,6 +103,19 @@ const getGoldPeriodFromPanel = (panel) => {
     return groups.length ? JSON.stringify(groups) : "";
 };
 
+const getSingleGoldPeriodsFromPanel = (panel) => {
+    const periods = [];
+    TROVAGNOCCA_GOLD_SLOTS.forEach((group) => {
+        panel.querySelectorAll(`.gold-slot-input[data-group="${group.group}"]:checked`).forEach((input) => {
+            periods.push(JSON.stringify([{
+                group: group.group,
+                slots: [input.value]
+            }]));
+        });
+    });
+    return periods;
+};
+
 const applyGoldPeriodToPanel = (panel, period) => {
     const groups = parseGoldPeriod(period);
     const selected = new Set();
@@ -181,6 +194,76 @@ var dropPromoDuration = (selected) => {
     });
     return dropBox;
 }
+
+const getGoldSlotLabel = (slot = "") => {
+    const match = `${slot || ""}`.match(/(\d{2}):00-(\d{2}):00/);
+    if (!match) return `${slot || ""}`;
+    return `${match[1]}:00 - ${match[2]}:00`;
+};
+
+const buildSingleGoldPeriod = (group, slot) => JSON.stringify([{
+    group,
+    slots: [slot]
+}]);
+
+const getGoldPeriodEntries = (period = "") => {
+    return parseGoldPeriod(period)
+        .flatMap((group) => group.slots.map((slot) => ({
+            group: group.group,
+            slot
+        })))
+        .filter((entry) => entry.group && entry.slot);
+};
+
+const getGoldPeriodFromTimeSlot = (timeslot) => {
+    const group = timeslot?.dataset?.group || "";
+    const slot = timeslot?.dataset?.slot || "";
+    return group && slot ? buildSingleGoldPeriod(group, slot) : "";
+};
+
+const findPremiumTimeSlotForPeriod = (promoType, period) => {
+    const entry = getGoldPeriodEntries(period)[0];
+    if (!entry) return null;
+    return document.querySelector(`.promo${promoType} .time-slot[data-group="${entry.group}"][data-slot="${entry.slot}"]`);
+};
+
+const rebuildPremiumTimeSlots = () => {
+    ["1x1", "1x3", "1x7"].forEach((promoType) => {
+        const container = document.querySelector(`.wpromo${promoType}`);
+        if (!container) return;
+        container.innerHTML = "";
+
+        TROVAGNOCCA_GOLD_SLOTS.forEach((group) => {
+            group.slots.forEach((slot) => {
+                const id = `${promoType}_${group.group}_${slot.replace(/[^0-9]/g, "")}`;
+                const timeslot = document.createElement("div");
+                timeslot.className = "time-slot trovagnocca-time-slot";
+                timeslot.dataset.group = group.group;
+                timeslot.dataset.slot = slot;
+
+                const checkboxWrapper = document.createElement("div");
+                checkboxWrapper.className = "flex-checkbox";
+
+                const checkbox = document.createElement("input");
+                checkbox.id = id;
+                checkbox.type = "checkbox";
+                checkbox.className = "form-check-input";
+
+                const label = document.createElement("label");
+                label.htmlFor = id;
+                label.className = "form-check-label";
+                label.textContent = getGoldSlotLabel(slot);
+
+                checkboxWrapper.appendChild(checkbox);
+                checkboxWrapper.appendChild(label);
+                timeslot.appendChild(checkboxWrapper);
+                container.appendChild(timeslot);
+            });
+        });
+    });
+};
+
+rebuildPremiumTimeSlots();
 
 
 // Add sub timeslot when click checkbox
@@ -343,46 +426,52 @@ function getSelectedDayPubs(currentDate) {
     });
 
     ["1x1", "1x3", "1x7"].forEach(promoType => {
-        document.querySelectorAll(`.promo${promoType} > .posts .newpost-panel`).forEach(panel => {
-            if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
-            const timeInput = panel.querySelector("input[type='time']");
-            const selectedTime = timeInput ? timeInput.value : "";
-            if (!selectedTime) return;
-            const goldPeriod = getGoldPeriodFromPanel(panel);
-            if (!goldPeriod && !$(panel).data("GCRecord")) return;
+        document.querySelectorAll(`.promo${promoType} .time-slot`).forEach(timeslot => {
+            const checkbox = timeslot.querySelector(".flex-checkbox input");
+            if (!checkbox?.checked && !$(timeslot).find(".newpost-panel").toArray().some((panel) => $(panel).data("GCRecord"))) return;
 
-            let typeData = {};
-            typeData.typeAnnuncio = promoType;
-            typeData.typePeriodic = "Top";
-            typeData.period = goldPeriod;
-            typeData.city = document.querySelector("input[name='city']").value;
+            const period = getGoldPeriodFromTimeSlot(timeslot);
+            if (!period) return;
 
-            let images = [];
-            typeData.id = "";
-            if ($(panel).data("id")) typeData.id = $(panel).data("id");
-            if ($(panel).data("relativeID")) typeData.relativeID = $(panel).data("relativeID");
-            if ($(panel).data("state")) typeData.state = $(panel).data("state");
-            typeData.GCRecord = null;
-            if ($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
+            timeslot.querySelectorAll(".newpost-panel").forEach(panel => {
+                if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
+                const timeInput = panel.querySelector("input[type='time']");
+                const selectedTime = timeInput ? timeInput.value : "";
+                if (!selectedTime) return;
 
-            if ($(panel).find(".btnPhoto").hasClass("btn-success")) {
-                panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
-                    if (p.querySelector("button").classList.contains("btn-warning")) {
-                        images.unshift({ galleria: $(p).find("input").data("id"), isAnteprima: true });
-                        return images;
-                    }
-                    if (p.querySelector("input").checked) {
-                        images.push({ galleria: $(p).find("input").data("id"), isAnteprima: false });
-                        return images;
-                    }
-                });
-            }
+                let typeData = {};
+                typeData.typeAnnuncio = promoType;
+                typeData.typePeriodic = "Top";
+                typeData.period = period;
+                typeData.city = document.querySelector("input[name='city']").value;
 
-            typeData.data = `${currentDate || $("#txtDate").val()}T${selectedTime}:00.000Z`;
-            typeData.images = images;
-            if (typeData.id == undefined) return;
-            result[i] = typeData;
-            i++;
+                let images = [];
+                typeData.id = "";
+                if ($(panel).data("id")) typeData.id = $(panel).data("id");
+                if ($(panel).data("relativeID")) typeData.relativeID = $(panel).data("relativeID");
+                if ($(panel).data("state")) typeData.state = $(panel).data("state");
+                typeData.GCRecord = null;
+                if ($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
+
+                if ($(panel).find(".btnPhoto").hasClass("btn-success")) {
+                    panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
+                        if (p.querySelector("button").classList.contains("btn-warning")) {
+                            images.unshift({ galleria: $(p).find("input").data("id"), isAnteprima: true });
+                            return images;
+                        }
+                        if (p.querySelector("input").checked) {
+                            images.push({ galleria: $(p).find("input").data("id"), isAnteprima: false });
+                            return images;
+                        }
+                    });
+                }
+
+                typeData.data = `${currentDate || $("#txtDate").val()}T${selectedTime}:00.000Z`;
+                typeData.images = images;
+                if (typeData.id == undefined) return;
+                result[i] = typeData;
+                i++;
+            });
         });
     });
 
@@ -391,6 +480,7 @@ function getSelectedDayPubs(currentDate) {
 
 function loadDay(date) {
     clearPubsViews();
+    console.log(date, 'load date timeslots')
     if (!pubs[date]) return;
     loadDayData(pubs[date]);
 };
@@ -432,14 +522,22 @@ function loadDayData(pubs) {
     ["1x1", "1x3", "1x7"].forEach(promoType => {
         pubs.filter((typer) => { if (typer.typeAnnuncio && typer.typeAnnuncio.includes(promoType)) return typer }, promoType).forEach(announcement => {
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
-            addPremiumSchedule(document.querySelector(`.promo${promoType} > .posts .top-add-schedule`), promoType);
+            const timeslot = findPremiumTimeSlotForPeriod(promoType, announcement.period);
+            if (!timeslot) return;
 
-            const currentPanel = document.querySelector(`.promo${promoType} > .posts .newpost-panel:last-child`);
+            const checkbox = timeslot.querySelector(".flex-checkbox input");
+            if (checkbox && !checkbox.checked) {
+                checkbox.click();
+            } else {
+                const addButton = timeslot.querySelector(":scope > .posts > .btn-primary");
+                if (addButton) addButton.click();
+            }
+
+            const currentPanel = timeslot.querySelector(".newpost-panel:last-child");
             if (!currentPanel) return;
             $(currentPanel).attr("data-id", announcement.id);
             $(currentPanel).data("id", announcement.id);
             currentPanel.querySelector("input[type='time']").value = announcement.time;
-            applyGoldPeriodToPanel(currentPanel, announcement.period);
             applyScheduleImages(currentPanel, announcement.images);
             $(currentPanel).attr("data-state", announcement.state || "");
             $(currentPanel).data("state", announcement.state || "");
@@ -750,38 +848,6 @@ function addPremiumSchedule(button, promoType) {
     createPremiumSchedulePanel(panel, promoType);
 }
 window.addPremiumSchedule = addPremiumSchedule;
-
-const initializePremiumGoldPanels = () => {
-    ["1x1", "1x3", "1x7"].forEach((promoType) => {
-        const promoPanel = document.querySelector(`.promo${promoType}`);
-        if (!promoPanel || promoPanel.querySelector(":scope > .posts")) return;
-
-        promoPanel.querySelectorAll(".time-slot").forEach((node) => {
-            node.style.display = "none";
-        });
-
-        const postsDiv = document.createElement("div");
-        postsDiv.className = "posts gold-posts";
-
-        const postsListDiv = document.createElement("div");
-        postsListDiv.className = "post-list";
-
-        const addButton = document.createElement("button");
-        addButton.type = "button";
-        addButton.className = "btn btn-primary top-add-schedule";
-        addButton.innerHTML = "<b>+</b>";
-        addButton.addEventListener("click", (event) => {
-            event.preventDefault();
-            addPremiumSchedule(addButton, promoType);
-        });
-
-        postsDiv.appendChild(postsListDiv);
-        postsDiv.appendChild(addButton);
-        promoPanel.appendChild(postsDiv);
-    });
-};
-
-initializePremiumGoldPanels();
 
 const togglePremiumCam = (btn, premium, highlight, etichetta) => {
     const postPanel = $(btn).parents(".newpost-panel");

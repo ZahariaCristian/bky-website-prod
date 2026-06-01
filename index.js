@@ -9,6 +9,7 @@ const ctx = require("./ctx/model");
 const salt = require("./lib/salt");
 const logger = require("./lib/logger")
 const fs = require("fs");
+const path = require("path");
 const geoip = require('geoip-lite');
 const FileStore = require('session-file-store')(sessions);
 
@@ -43,14 +44,71 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.set('trust proxy', 1) // trust first proxy
+function isWindowsSessionRenameError(err) {
+    return err && err.code === "EPERM" && err.syscall === "rename" && String(err.path || "").includes(`${path.sep}sessions${path.sep}`);
+}
+
+function createSessionStore() {
+    const store = new FileStore({
+        path: path.join(__dirname, "sessions"),
+        ttl: 60 * 60 * 24,  // time-to-live in seconds (default is 1 day)
+        logFn: (message) => {
+            if (process.env.SESSION_FILE_STORE_DEBUG === "1") {
+                console.log(message);
+            }
+        },
+    });
+
+    const pendingWrites = new Map();
+    const serializeWrite = (methodName) => {
+        const original = store[methodName].bind(store);
+
+        store[methodName] = (sessionId, ...args) => {
+            const callback = typeof args[args.length - 1] === "function" ? args.pop() : null;
+            const previous = pendingWrites.get(sessionId) || Promise.resolve();
+
+            const next = previous.catch(() => null).then(() => new Promise((resolve) => {
+                let attempts = 0;
+                const run = () => {
+                    original(sessionId, ...args, (err, ...results) => {
+                        if (isWindowsSessionRenameError(err) && attempts < 5) {
+                            attempts += 1;
+                            setTimeout(run, 80 * attempts);
+                            return;
+                        }
+
+                        if (callback) {
+                            callback(err, ...results);
+                        }
+                        resolve();
+                    });
+                };
+
+                run();
+            })).finally(() => {
+                if (pendingWrites.get(sessionId) === next) {
+                    pendingWrites.delete(sessionId);
+                }
+            });
+
+            pendingWrites.set(sessionId, next);
+        };
+    };
+
+    serializeWrite("set");
+    serializeWrite("touch");
+    serializeWrite("destroy");
+
+    return store;
+}
+
+const sessionStore = createSessionStore();
+
 app.use(sessions({
-                store: new FileStore({
-                path: './sessions', // folder where session files are stored
-                ttl: 60 * 60 * 24,  // time-to-live in seconds (default is 1 day)
-                }),
+                store: sessionStore,
                 secret: '563338751698',
                 resave: false,
-                saveUninitialized: true,
+                saveUninitialized: false,
                 cookie: { maxAge: 60000 * 720 }
                 }));
 

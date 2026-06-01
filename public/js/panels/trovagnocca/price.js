@@ -109,6 +109,12 @@ const getSelectedTrovagnoccaPriceAds = () => {
                 const slotId = TROVAGNOCCA_PRICE_SLOT_IDS[input.value];
                 if (slotId !== undefined) slotMap.set(slotId, input.value);
             });
+            const parentTimeSlot = panel.closest(".time-slot");
+            const parentSlotLabel = parentTimeSlot?.dataset?.slot || "";
+            if (parentSlotLabel) {
+                const slotId = TROVAGNOCCA_PRICE_SLOT_IDS[parentSlotLabel];
+                if (slotId !== undefined) slotMap.set(slotId, parentSlotLabel);
+            }
 
             const time = panel.querySelector("input[type='time']")?.value || "";
             return {
@@ -141,6 +147,7 @@ const fetchTrovagnoccaAdPrice = async (ad) => {
             key: localStorage.getItem("key"),
             csrfToken: getTrovagnoccaCsrfToken(),
             numberDays: ad.days,
+            productId: 300,
             timeSlots: ad.timeSlots
         }),
     });
@@ -268,7 +275,10 @@ const calculateTrovagnoccaPrice = async () => {
 
 document.querySelector("#btnCalculateTrovagnoccaPrice")?.addEventListener("click", calculateTrovagnoccaPrice);
 document.addEventListener("change", (event) => {
-    if (event.target?.classList?.contains("gold-slot-input")) {
+    if (
+        event.target?.classList?.contains("gold-slot-input") ||
+        event.target?.closest?.(".time-slot > .flex-checkbox")
+    ) {
         updateTrovagnoccaSelectedSlotCount();
         resetTrovagnoccaPriceResult();
     }

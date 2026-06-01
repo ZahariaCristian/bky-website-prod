@@ -352,9 +352,11 @@ const loadAdvertisement = async (res) => {
     pubs = res.schedule !== undefined ? res.schedule : {};
     console.log(pubs, currentDay, "loadAdvertisement")
     if (JSON.stringify(pubs) !== "{}") {
-        const scheduleDays = Object.keys(pubs).sort();
-        const dayToLoad = pubs[currentDay] ? currentDay : scheduleDays[0];
+        // const scheduleDays = Object.keys(pubs).sort();
+        // const dayToLoad = pubs[currentDay] ? currentDay : scheduleDays[0];
+        const dayToLoad = currentDay;
         currentDay = dayToLoad;
+        console.log(currentDay, dayToLoad, pubs,  'currentDay in loadAdvertisement')
         $("#txtDate").val(dayToLoad);
         loadDay(dayToLoad);
     }
