@@ -275,6 +275,20 @@ function configureHistoryActionButtons(row, schedule) {
     }
 }
 
+function formatScheduleTopTimes(schedule, withClockIcon = false) {
+    if (!schedule?.dateTimeTop) return "";
+
+    const cleanText = `${schedule.dateTimeTop}`.replace(/ ,/g, ", ").replace(/,/g, ", ");
+    if (PANEL_PLATFORM === "trovagnocca") {
+        return `<strong>Orari risalite</strong> ${cleanText}`;
+    }
+
+    return cleanText.split(" - ").map((value) => {
+        const text = value.replace(/ ,/g, ", ").replace(/,/g, ", ");
+        return withClockIcon ? `<p class="fa fa-clock"> ${text}</p> ` : `${text} `;
+    }).join("");
+}
+
 function updateScheduleStateAction(e, ids, options) {
     if (!confirm(options.confirmText)) {
         return;
@@ -350,13 +364,8 @@ var addRptStorico = (sxhedule, i) => {
     newRow.html(newRow.html().replace(/@descrizione@/g, text));
     newRow.html(replaceCityPlaceholder(newRow.html(), sxhedule.city));
 
-    var out = "";
     if (sxhedule.dateTimeTop) {
-        var oPub = sxhedule.dateTimeTop.split(" - ");
-        for (oP of oPub) {
-            out = out + `${oP.replace(/ ,/g, ", ").replace(/,/g, ", ")} `;
-        }
-        newRow.html(newRow.html().replace(/@orari@/g, out));
+        newRow.html(newRow.html().replace(/@orari@/g, formatScheduleTopTimes(sxhedule)));
     } else {
         newRow.find(".dateTimeTop").remove();
     }
@@ -438,12 +447,7 @@ function addRptStoricoSus(sxhedule) {
     newRow.html(replaceCityPlaceholder(newRow.html(), sxhedule.city));
 
     if (sxhedule.dateTimeTop) {
-        var out = "";
-        var oPub = sxhedule.dateTimeTop.split(" - ");
-        for (oP of oPub) {
-            out = out + `<p class="fa fa-clock"> ${oP.replace(/ ,/g, ", ").replace(/,/g, ", ")}</p> `;
-        }
-        newRow.html(newRow.html().replace(/@orari@/g, out));
+        newRow.html(newRow.html().replace(/@orari@/g, formatScheduleTopTimes(sxhedule, true)));
     } else {
         newRow.find(".dateTimeTop").remove();
     }
