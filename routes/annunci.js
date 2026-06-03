@@ -563,12 +563,108 @@ const findTrovagnoccaNationalityCandidate = (attributes = {}) => {
     return values.find((value) => normalizeTrovagnoccaNationality(value)) || "";
 };
 
+const normalizeTrovagnoccaTagText = (value = "") => `${value || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const extractTrovagnoccaAboutTags = (attributes = {}) => {
+    const values = [];
+    const collect = (value) => {
+        if (Array.isArray(value)) {
+            value.forEach(collect);
+            return;
+        }
+        if (value && typeof value === "object") {
+            Object.values(value).forEach(collect);
+            return;
+        }
+        if (value !== null && value !== undefined) values.push(normalizeTrovagnoccaTagText(value));
+    };
+
+    collect(attributes.aboutMe || attributes["su di me"] || attributes.tags || attributes);
+    const has = (...needles) => values.some((value) => needles.some((needle) => value.includes(needle)));
+    const collectArray = (value) => {
+        if (Array.isArray(value)) return value.map((item) => `${item || ""}`.trim()).filter(Boolean);
+        if (value) return [`${value}`.trim()].filter(Boolean);
+        return [];
+    };
+    const findAttributeByKey = (...needles) => {
+        for (const [key, value] of Object.entries(attributes)) {
+            const normalizedKey = normalizeTrovagnoccaTagText(key);
+            if (needles.some((needle) => normalizedKey.includes(needle))) return value;
+        }
+        return "";
+    };
+    const serviceFor = collectArray(
+        attributes.serviceFor ||
+        attributes["servizi destinati a"] ||
+        findAttributeByKey("servizi destinati", "destinati a")
+    );
+
+    return {
+        ethnicity: [
+            has("africana", "african") ? "Africana" : "",
+            has("araba", "arab") ? "Araba" : "",
+            has("asiatica", "asian") ? "Asiatica" : "",
+            has("caucasica", "caucasian") ? "Caucasica" : "",
+            has("europea", "european", "italiana", "italian") ? "Europea" : "",
+            has("latina", "latin") ? "Latina" : ""
+        ].filter(Boolean),
+        breast: [
+            has("seno naturale", "natural breast") ? "Seno Naturale" : "",
+            has("seno rifatto", "breast reconstruction", "rifatto") ? "Seno Rifatto" : ""
+        ].filter(Boolean),
+        hair: [
+            has("capelli biondi", "blonde hair", "biondi") ? "Capelli Biondi" : "",
+            has("capelli marroni", "brown hair", "marroni") ? "Capelli Marroni" : "",
+            has("capelli neri", "black hair", "neri") ? "Capelli Neri" : "",
+            has("capelli rossi", "red hair", "rossi") ? "Capelli Rossi" : ""
+        ].filter(Boolean),
+        body: [
+            has("formoso", "formosa", "shapely") ? "Formoso" : "",
+            has("magro", "magra", "thin") ? "Magro" : ""
+        ].filter(Boolean),
+        services: collectArray(attributes.services),
+        serviceFor,
+        servicePlace: collectArray(attributes.serviceLocations)
+    };
+};
+
+const sanitizeTrovagnoccaTags = (tags = {}) => {
+    const arrayValue = (value) => Array.isArray(value)
+        ? [...new Set(value.map((item) => `${item || ""}`.trim()).filter(Boolean))]
+        : [];
+
+    const clean = {
+        ethnicity: arrayValue(tags.ethnicity),
+        nationality: `${tags.nationality || ""}`.trim(),
+        breast: arrayValue(tags.breast),
+        hair: arrayValue(tags.hair),
+        body: arrayValue(tags.body),
+        services: arrayValue(tags.services),
+        serviceFor: arrayValue(tags.serviceFor),
+        servicePlace: arrayValue(tags.servicePlace)
+    };
+
+    Object.keys(clean).forEach((key) => {
+        if (Array.isArray(clean[key]) && clean[key].length === 0) delete clean[key];
+        if (typeof clean[key] === "string" && !clean[key]) delete clean[key];
+    });
+
+    return clean;
+};
+
 const buildTrovagnoccaContactNote = (data = {}) => {
     return JSON.stringify({
         trovagnocca: {
             telegram: Boolean(data.telegram || data.telegramUrl),
             telegramNumber: data.telegram || "",
-            telegramUrl: data.telegramUrl || ""
+            telegramUrl: data.telegramUrl || "",
+            tags: sanitizeTrovagnoccaTags(data.trovagnoccaTags || data.tags)
         }
     });
 };
@@ -1202,8 +1298,15 @@ router.post("/scrapeTrovagnocca", authenticateKey, async (req, res) => {
             normalizeTrovagnoccaNationality(scrapingResult.nationality) ||
             normalizeTrovagnoccaNationality(getMegaescortAttribute(scrapingResult.attributes, ["nazionalit\u00e0", "nazionalita", "nationality"])) ||
             normalizeTrovagnoccaNationality(findTrovagnoccaNationalityCandidate(scrapingResult.attributes));
+        const trovagnoccaTags = {
+            ...extractTrovagnoccaAboutTags(scrapingResult.attributes),
+            nationality: serviceNazionalita
+        };
 
-        const trovagnoccaNote = buildTrovagnoccaContactNote(scrapingResult);
+        const trovagnoccaNote = buildTrovagnoccaContactNote({
+            ...scrapingResult,
+            trovagnoccaTags
+        });
 
         if (!annuncio) {
             annuncio = await ctx.tblAnnunci.create({
@@ -1213,6 +1316,7 @@ router.post("/scrapeTrovagnocca", authenticateKey, async (req, res) => {
                 description: scrapingResult.description,
                 donna: donna.id,
                 hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
                 categorie,
                 sono: categorie,
                 serviceNazionalita,
@@ -1227,6 +1331,7 @@ router.post("/scrapeTrovagnocca", authenticateKey, async (req, res) => {
                 location: scrapingResult.location,
                 description: scrapingResult.description,
                 hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
                 categorie,
                 sono: categorie,
                 serviceNazionalita,
@@ -1379,6 +1484,10 @@ router.post("/getByID", authenticateKey, async (req, res) => {
             scrapingResult.hasTelegram = Boolean(contactNote.telegram || contactNote.telegramNumber || contactNote.telegramUrl);
             scrapingResult.telegram = contactNote.telegramNumber || "";
             scrapingResult.telegramUrl = contactNote.telegramUrl || "";
+            scrapingResult.trovagnoccaTags = contactNote.tags || {};
+            if (!scrapingResult.serviceNazionalita && contactNote.tags?.nationality) {
+                scrapingResult.serviceNazionalita = contactNote.tags.nationality;
+            }
         }
         var donna = await annuncio.getTblDonne();
         if (donna) {
@@ -1486,10 +1595,18 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
     }
 
     if (panel == "trovagnocca") {
-        info.note = buildTrovagnoccaContactNote({ telegram: info.telegram });
+        if (info.trovagnoccaTags) {
+            info.trovagnoccaTags.nationality = info.serviceNazionalita || info.trovagnoccaTags.nationality || "";
+        }
+        info.note = buildTrovagnoccaContactNote({
+            telegram: info.telegram,
+            trovagnoccaTags: info.trovagnoccaTags
+        });
         info.hasWhatapp = Boolean(info.whatsapp);
+        info.hasTelegram = Boolean(info.telegram);
         delete info.whatsapp;
         delete info.telegram;
+        delete info.trovagnoccaTags;
     }
 
     if (info.categorie) {
@@ -1943,7 +2060,13 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         var previousCategory = normalizeMegaescortCategory(annuncio.categorie);
         var shouldRepublishBakeca = panel == "bakeca" && nextCategory != previousCategory;
         const nextNote = panel == "trovagnocca"
-            ? buildTrovagnoccaContactNote({ telegram: req.body.info.telegram })
+            ? buildTrovagnoccaContactNote({
+                telegram: req.body.info.telegram,
+                trovagnoccaTags: {
+                    ...(req.body.info.trovagnoccaTags || {}),
+                    nationality: req.body.info.serviceNazionalita || req.body.info.trovagnoccaTags?.nationality || ""
+                }
+            })
             : (req.body.info.note || annuncio.note);
 
         await annuncio.update({
@@ -1953,6 +2076,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
             description: req.body.info.description,
             categorie: nextCategory,
             hasWhatapp: req.body.info.whatsapp,
+            hasTelegram: req.body.info.telegram,
             serviceNazionalita: req.body.info.serviceNazionalita,
             note: nextNote,
             editedBy: userid

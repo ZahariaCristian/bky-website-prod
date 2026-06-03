@@ -32,6 +32,11 @@ const TROVAGNOCCA_GOLD_SLOTS = [
     { group: "NOTTE", label: "Notte", slots: ["00:00-06:00"] },
 ];
 
+const TROVAGNOCCA_TURBO_OPTIONS = [
+    { value: "307", text: "1 Ora" },
+    { value: "308", text: "2 Ore" }
+];
+
 const normalizeGoldGroup = (value = "") => {
     const text = `${value || ""}`.toUpperCase();
     if (text.includes("MATT")) return "MATTINA";
@@ -101,6 +106,51 @@ const getGoldPeriodFromPanel = (panel) => {
         if (slots.length) groups.push({ group: group.group, slots });
     });
     return groups.length ? JSON.stringify(groups) : "";
+};
+
+const buildTurboPeriod = (value = "") => {
+    const option = TROVAGNOCCA_TURBO_OPTIONS.find((item) => item.value === `${value || ""}`) || TROVAGNOCCA_TURBO_OPTIONS[0];
+    return JSON.stringify({
+        productId: "301",
+        durationProductId: option.value,
+        label: option.text
+    });
+};
+
+const parseTurboPeriod = (period = "") => {
+    try {
+        const parsed = JSON.parse(period || "{}");
+        if (parsed && parsed.durationProductId) return `${parsed.durationProductId}`;
+        if (parsed && parsed.productId && `${parsed.productId}` !== "301") return `${parsed.productId}`;
+    } catch {
+        // Legacy/plain values fall through.
+    }
+    const text = `${period || ""}`.trim();
+    return text || TROVAGNOCCA_TURBO_OPTIONS[0].value;
+};
+
+const createTurboOptionSelect = (selected = "") => {
+    const select = document.createElement("select");
+    select.className = "form-control turbo-option-select";
+    TROVAGNOCCA_TURBO_OPTIONS.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.text;
+        if (`${selected || ""}` === item.value) option.selected = true;
+        select.appendChild(option);
+    });
+    if (!select.value && TROVAGNOCCA_TURBO_OPTIONS[0]) {
+        select.value = TROVAGNOCCA_TURBO_OPTIONS[0].value;
+    }
+    select.addEventListener("change", () => {
+        markSchedulePanelEdited(select);
+        safeEnableScheduleUpdate();
+    });
+    return select;
+};
+
+const getTurboOptionFromPanel = (panel) => {
+    return panel?.querySelector(".turbo-option-select")?.value || TROVAGNOCCA_TURBO_OPTIONS[0]?.value || "";
 };
 
 const getSingleGoldPeriodsFromPanel = (panel) => {
@@ -375,14 +425,14 @@ async function updateSchedule() {
 function getSelectedDayPubs(currentDate) {
     let result = [];
     let i = 0;
-    ["Free"].forEach(promoType => {
+    ["Free", "Turbo"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
             let typeData = {};
             typeData.typeAnnuncio = promoType;
             typeData.typePeriodic = "Top";
 
-            typeData.period = "";
+            typeData.period = promoType === "Turbo" ? buildTurboPeriod(getTurboOptionFromPanel(panel)) : "";
             typeData.city = document.querySelector("input[name='city']").value
 
             let images = [];
@@ -497,13 +547,18 @@ function clearPubsViews() {
 };
 
 function loadDayData(pubs) {
-    ["Free"].forEach(promoType => {
+    ["Free", "Turbo"].forEach(promoType => {
         pubs.filter((typer) => { if (typer.typeAnnuncio == promoType) return typer }, promoType).forEach(announcement => {
             console.log(announcement, 'announcement in loadDayData')
             if (announcement.status !== undefined && announcement.status !== "pending") return;
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
 
-            addFreeSchedule(document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .top-add-schedule`));
+            const addButton = document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .turbo-add-schedule, .promo${promoType} .top-add-schedule`);
+            if (promoType === "Turbo") {
+                addTurboSchedule(addButton);
+            } else {
+                addFreeSchedule(addButton);
+            }
 
             const currentPanel = $(`.promo${promoType} .newpost-panel:last-child`);
             currentPanel.attr("data-id", announcement.id);
@@ -513,6 +568,9 @@ function loadDayData(pubs) {
             currentPanel.attr("data-city", announcement.city);
             currentPanel.data("city", announcement.city);
             currentPanel.find("input[type='time']").val(announcement.time);
+            if (promoType === "Turbo") {
+                currentPanel.find(".turbo-option-select").val(parseTurboPeriod(announcement.period));
+            }
             applyScheduleImages(currentPanel[0], announcement.images);
             currentPanel.attr("data-state", announcement.state || "");
             currentPanel.data("state", announcement.state || "");
@@ -721,11 +779,12 @@ const applyScheduleImages = (panel, images = []) => {
     });
 };
 
-const createFreeSchedulePanel = (panel) => {
+const createFreeSchedulePanel = (panel, promoType = "Free") => {
     safeEnableScheduleUpdate();
     if (!panel) return;
     const newPostPanel = document.createElement("div");
     newPostPanel.classList.add("newpost-panel");
+    newPostPanel.dataset.promoType = promoType;
 
     tmpID = tmpID + 1;
     $(newPostPanel).data("relativeID", tmpID);
@@ -759,9 +818,11 @@ const createFreeSchedulePanel = (panel) => {
     });
 
     const picsButton = createPhotoButton();
+    const turboSelect = promoType === "Turbo" ? createTurboOptionSelect() : null;
 
     newPost.appendChild(dateTime);
     newPost.appendChild(timeInput);
+    if (turboSelect) newPost.appendChild(turboSelect);
     newPost.appendChild(delButton);
     newPost.appendChild(picsButton);
     newPostPanel.appendChild(newPost);
@@ -780,14 +841,21 @@ const postsPanelOperations = (panel) => {
         addFreeSchedule(addButton);
     });
 }
-document.querySelectorAll(".promoFree > .posts").forEach(postsPanelOperations);
+document.querySelectorAll(".promoFree > .posts, .promoTurbo > .posts").forEach(postsPanelOperations);
 
 function addFreeSchedule(button) {
     const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoFree > .posts");
     if (!panel) return;
-    createFreeSchedulePanel(panel);
+    createFreeSchedulePanel(panel, "Free");
 }
 window.addFreeSchedule = addFreeSchedule;
+
+function addTurboSchedule(button) {
+    const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoTurbo > .posts");
+    if (!panel) return;
+    createFreeSchedulePanel(panel, "Turbo");
+}
+window.addTurboSchedule = addTurboSchedule;
 
 const createPremiumSchedulePanel = (panel, promoType) => {
     safeEnableScheduleUpdate();

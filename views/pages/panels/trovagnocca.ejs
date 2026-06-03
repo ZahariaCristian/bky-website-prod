@@ -215,6 +215,18 @@
                 background: #d47ed4;
             }
 
+            .promoPanel.promoTurbo {
+                background: #f1c979;
+                padding: 12px;
+            }
+
+            .turbo-option-select {
+                display: inline-block;
+                max-width: 180px;
+                margin-left: 8px;
+                vertical-align: middle;
+            }
+
             .promoPanel:not(.promoFree) .time-slot>.flex-checkbox {
                 align-items: center;
                 display: flex;
@@ -467,6 +479,47 @@
                                             </div>
                                         </div>
                                         <div class="innerB">
+                                            <label for="description">Etnia</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAfricana"
+                                                        name="serviceAfricana" value="serviceAfricana"
+                                                        data-trovagnocca-tag="Africana" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceAfricana">Africana</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAraba"
+                                                        name="serviceAraba" value="serviceAraba"
+                                                        data-trovagnocca-tag="Araba" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceAraba">Araba</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceAsiatica"
+                                                        name="serviceAsiatica" value="serviceAsiatica"
+                                                        data-trovagnocca-tag="Asiatica" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceAsiatica">Asiatica</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCaucasica"
+                                                        name="serviceCaucasica" value="serviceCaucasica"
+                                                        data-trovagnocca-tag="Caucasica" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceCaucasica">Caucasica</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceItaliana"
+                                                        name="serviceItaliana" value="serviceItaliana"
+                                                        data-trovagnocca-tag="Europea" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceItaliana">Europea</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceLatina"
+                                                        name="serviceLatina" value="serviceLatina"
+                                                        data-trovagnocca-tag="Latina" data-trovagnocca-tag-group="ethnicity">
+                                                    <label for="serviceLatina">Latina</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
                                             <label for="description">Nazionalitá</label>
                                             <select name="serviceNazionalita" class="browser-default custom-select">
                                                 <option selected="selected" value=""> Seleziona nazionalità</option>
@@ -623,6 +676,126 @@
                                             </select>
                                         </div>
                                         <div class="innerB">
+                                            <label for="description">Seno</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSNaturale"
+                                                        name="serviceSNaturale" value="serviceSNaturale"
+                                                        data-trovagnocca-tag="Seno Naturale" data-trovagnocca-tag-group="breast">
+                                                    <label for="serviceSNaturale">Seno Naturale</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceSRifatto"
+                                                        name="serviceSRifatto" value="serviceSRifatto"
+                                                        data-trovagnocca-tag="Seno Rifatto" data-trovagnocca-tag-group="breast">
+                                                    <label for="serviceSRifatto">Seno Rifatto</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Capelli</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCBiondi"
+                                                        name="serviceCBiondi" value="serviceCBiondi"
+                                                        data-trovagnocca-tag="Capelli Biondi" data-trovagnocca-tag-group="hair">
+                                                    <label for="serviceCBiondi">Capelli Biondi</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCMarroni"
+                                                        name="serviceCMarroni" value="serviceCMarroni"
+                                                        data-trovagnocca-tag="Capelli Marroni" data-trovagnocca-tag-group="hair">
+                                                    <label for="serviceCMarroni">Capelli Marroni</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCNeri"
+                                                        name="serviceCNeri" value="serviceCNeri"
+                                                        data-trovagnocca-tag="Capelli Neri" data-trovagnocca-tag-group="hair">
+                                                    <label for="serviceCNeri">Capelli Neri</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceCRossi"
+                                                        name="serviceCRossi" value="serviceCRossi"
+                                                        data-trovagnocca-tag="Capelli Rossi" data-trovagnocca-tag-group="hair">
+                                                    <label for="serviceCRossi">Capelli Rossi</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
+                                            <label for="description">Tipo di corpo</label>
+                                            <div class="servizi-wrapper">
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceFormoso"
+                                                        name="serviceFormoso" value="serviceFormoso"
+                                                        data-trovagnocca-tag="Formoso" data-trovagnocca-tag-group="body">
+                                                    <label for="serviceFormoso">Formoso</label><br>
+                                                </div>
+                                                <div class="servizi-box">
+                                                    <input disabled type="checkbox" id="serviceMagro"
+                                                        name="serviceMagro" value="serviceMagro"
+                                                        data-trovagnocca-tag="Magro" data-trovagnocca-tag-group="body">
+                                                    <label for="serviceMagro">Magro</label><br>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="innerB trovagnocca-tags-section">
+                                            <label>Servizi</label>
+                                            <div class="servizi-wrapper" data-trovagnocca-tag-group="services">
+                                                <% [
+                                                    '69', 'Anale', 'Attrici porno', 'Bacio alla francese',
+                                                    'Biancheria intima', 'Biancheria Sexy', 'Car Sex',
+                                                    'Coccole appassionate', 'Corpo a Corpo', 'Doccia Insieme',
+                                                    'Dominatrice', 'Eiaculazione sul corpo', 'Esperienza fidanzata',
+                                                    'Fetish', 'Giochi Erotici', 'Gioco di ruolo', 'Gola profonda',
+                                                    'Ingoio', 'Latex', 'Lato b stretto', 'Massaggio anale',
+                                                    'Massaggio erotico', 'Massaggio Prostatico', 'Massaggio tantrico',
+                                                    'multiorgasmica', 'Orale', 'Padrona', 'Pecorina',
+                                                    'Pioggia dorata', 'Pompino in Macchina', 'Pompino scoperto',
+                                                    'Preliminari', 'Rimming', 'Sadomaso', 'Sega', 'Sega a 2 mani',
+                                                    'Senza limiti', 'Senza tabu', 'Sex Toys', 'SexChat', 'Sexting',
+                                                    'spagnola', 'Spogliarello/lapdance', 'Squirting', 'Strapon',
+                                                    'Tacchi', 'Trio', 'Tutte le posizioni', 'Vagina Stretta',
+                                                    'Vagina succosa', 'Video chiamata'
+                                                ].forEach(function(tag, index) { %>
+                                                    <div class="servizi-box">
+                                                        <input disabled type="checkbox"
+                                                            id="trovagnoccaService_<%= index %>"
+                                                            data-trovagnocca-tag="<%= tag %>"
+                                                            data-trovagnocca-tag-group="services">
+                                                        <label for="trovagnoccaService_<%= index %>"><%= tag %></label><br>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        </div>
+                                        <div class="innerB trovagnocca-tags-section">
+                                            <label>Servizi destinati a</label>
+                                            <div class="servizi-wrapper" data-trovagnocca-tag-group="serviceFor">
+                                                <% ['Coppie', 'Disabili', 'Donne', 'Uomini'].forEach(function(tag, index) { %>
+                                                    <div class="servizi-box">
+                                                        <input disabled type="checkbox"
+                                                            id="trovagnoccaServiceFor_<%= index %>"
+                                                            data-trovagnocca-tag="<%= tag %>"
+                                                            data-trovagnocca-tag-group="serviceFor">
+                                                        <label for="trovagnoccaServiceFor_<%= index %>"><%= tag %></label><br>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        </div>
+                                        <div class="innerB trovagnocca-tags-section">
+                                            <label>Luogo di servizio</label>
+                                            <div class="servizi-wrapper" data-trovagnocca-tag-group="servicePlace">
+                                                <% ['A casa', 'Albergo/Motel', 'Clubs', 'Eventi e feste', 'Visita a domicilio'].forEach(function(tag, index) { %>
+                                                    <div class="servizi-box">
+                                                        <input disabled type="checkbox"
+                                                            id="trovagnoccaServicePlace_<%= index %>"
+                                                            data-trovagnocca-tag="<%= tag %>"
+                                                            data-trovagnocca-tag-group="servicePlace">
+                                                        <label for="trovagnoccaServicePlace_<%= index %>"><%= tag %></label><br>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        </div>
+                                        <div class="innerB">
                                             <button class="btn btn-info" style="width: 100%;"
                                                 onclick="updateInfo(true);" id="updateInfoBtn"><b>SALVA</b></button>
                                             <div id="btnUpdateSchedul">
@@ -670,6 +843,8 @@
                                                                     style="background-color: #d0d174;">Top: 3Days</a></li>
                                                             <li><a href="#tab1x7" data-toggle="tab"
                                                                     style="background-color: #d47ed4;">Top: 7Days</a></li>
+                                                            <li><a href="#tabTurbo" data-toggle="tab"
+                                                                    style="background-color: #f1c979;">TOP: TURBO</a></li>
                                                         </ul>
                                                     </div>
                                                     <div class="widget-body" id="wizar-body">
@@ -682,6 +857,19 @@
                                                                     <button type="button"
                                                                         class="btn btn-primary free-add-schedule"
                                                                         onclick="addMegaescortFreeTime(this);">
+                                                                        <span><b><i class="fa fa-plus"></i></b></span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="promoPanel promoTurbo tab-pane animated fadeInUp"
+                                                                id="tabTurbo">
+                                                                <div class="posts">
+                                                                    <div class="post-list">
+                                                                    </div>
+                                                                    <button type="button"
+                                                                        class="btn btn-primary turbo-add-schedule"
+                                                                        onclick="addTrovagnoccaTurboTime(this);">
                                                                         <span><b><i class="fa fa-plus"></i></b></span>
                                                                     </button>
                                                                 </div>
@@ -1139,6 +1327,12 @@
         window.addMegaescortFreeTime = function (button) {
             if (typeof window.addFreeSchedule === "function") {
                 window.addFreeSchedule(button);
+            }
+            return false;
+        };
+        window.addTrovagnoccaTurboTime = function (button) {
+            if (typeof window.addTurboSchedule === "function") {
+                window.addTurboSchedule(button);
             }
             return false;
         };

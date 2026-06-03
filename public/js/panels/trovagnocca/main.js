@@ -21,7 +21,7 @@ var currentDay = new Date().toLocaleDateString("zh-hans-cn", {
 $(() => {
     //This is New Panel
     if (QUERY_NEW == "new") {
-        $(".widget-annuncio .form-control, .widget-annuncio .form-check-input").prop('disabled', false);
+        $(".widget-annuncio .form-control, .widget-annuncio .form-check-input, .widget-annuncio .custom-select, .servizi-box input, .trovagnocca-tags-section input").prop('disabled', false);
     } else {
         if (QUERY_DAY) {
             currentDay = QUERY_DAY;
@@ -272,6 +272,29 @@ const setFieldValue = (selector, value) => {
     if (field) field.value = (value === null || value === undefined) ? "" : value;
 };
 
+const setCheckboxValue = (name, value) => {
+    const field = document.querySelector(`input[name='${name}']`);
+    if (field) field.checked = Boolean(value);
+};
+
+const normalizeTrovagnoccaTagValue = (value) => `${value || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const setTrovagnoccaTagGroupValues = (group, values = []) => {
+    const wanted = new Set((Array.isArray(values) ? values : [])
+        .map(normalizeTrovagnoccaTagValue)
+        .filter(Boolean));
+
+    document.querySelectorAll(`input[data-trovagnocca-tag-group='${group}']`).forEach((input) => {
+        input.checked = wanted.has(normalizeTrovagnoccaTagValue(input.dataset.trovagnoccaTag));
+    });
+};
+
 const setSelectValueByValueOrText = (selector, value) => {
     const select = document.querySelector(selector);
     if (!select || !value) return;
@@ -323,6 +346,44 @@ const loadAdvertisement = async (res) => {
     const telegramInput = document.querySelector("input[name='telegram']");
     if (whatsappInput) whatsappInput.checked = Boolean(res.hasWhatapp);
     if (telegramInput) telegramInput.checked = Boolean(res.hasTelegram);
+    const tags = res.trovagnoccaTags || {};
+    if (!tags.ethnicity) {
+        tags.ethnicity = [
+            res.serviceAfricana ? "Africana" : "",
+            res.serviceAraba ? "Araba" : "",
+            res.serviceAsiatica ? "Asiatica" : "",
+            res.serviceCaucasica ? "Caucasica" : "",
+            res.serviceItaliana ? "Europea" : "",
+            res.serviceLatina ? "Latina" : ""
+        ].filter(Boolean);
+    }
+    if (!tags.breast) {
+        tags.breast = [
+            res.serviceSNaturale ? "Seno Naturale" : "",
+            res.serviceSRifatto ? "Seno Rifatto" : ""
+        ].filter(Boolean);
+    }
+    if (!tags.hair) {
+        tags.hair = [
+            res.serviceCBiondi ? "Capelli Biondi" : "",
+            res.serviceCMarroni ? "Capelli Marroni" : "",
+            res.serviceCNeri ? "Capelli Neri" : "",
+            res.serviceCRossi ? "Capelli Rossi" : ""
+        ].filter(Boolean);
+    }
+    if (!tags.body) {
+        tags.body = [
+            res.serviceFormoso ? "Formoso" : "",
+            res.serviceMagro ? "Magro" : ""
+        ].filter(Boolean);
+    }
+    setTrovagnoccaTagGroupValues("ethnicity", tags.ethnicity);
+    setTrovagnoccaTagGroupValues("breast", tags.breast);
+    setTrovagnoccaTagGroupValues("hair", tags.hair);
+    setTrovagnoccaTagGroupValues("body", tags.body);
+    setTrovagnoccaTagGroupValues("services", tags.services);
+    setTrovagnoccaTagGroupValues("serviceFor", tags.serviceFor);
+    setTrovagnoccaTagGroupValues("servicePlace", tags.servicePlace);
     if (res.phone) setPhoneVerified();
 
     // if (EDIT == "true") {

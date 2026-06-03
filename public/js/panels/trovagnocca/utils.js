@@ -17,6 +17,28 @@ const selectInputValue = (name) => {
     return input ? input.value : "";
 };
 
+const checkboxInputValue = (name) => {
+    const input = document.querySelector(`input[name='${name}']`);
+    return input ? input.checked : false;
+};
+
+const checkedTrovagnoccaTags = (group) => {
+    return Array.from(document.querySelectorAll(`input[data-trovagnocca-tag-group='${group}']:checked`))
+        .map((input) => input.dataset.trovagnoccaTag || "")
+        .filter(Boolean);
+};
+
+const getTrovagnoccaTagsData = () => ({
+    ethnicity: checkedTrovagnoccaTags("ethnicity"),
+    nationality: selectInputValue("serviceNazionalita"),
+    breast: checkedTrovagnoccaTags("breast"),
+    hair: checkedTrovagnoccaTags("hair"),
+    body: checkedTrovagnoccaTags("body"),
+    services: checkedTrovagnoccaTags("services"),
+    serviceFor: checkedTrovagnoccaTags("serviceFor"),
+    servicePlace: checkedTrovagnoccaTags("servicePlace")
+});
+
 const normalizeTrovagnoccaInfoCategoryValue = (value) => {
     if (window.normalizePanelCategoryValue) return window.normalizePanelCategoryValue(value);
     const normalized = `${value || ""}`.toLowerCase();
@@ -48,7 +70,8 @@ const getInfoData = () => {
         location: locationInput ? locationInput.value : "",
         whatsapp: whatsappInput ? whatsappInput.checked : false,
         telegram: telegramInput ? telegramInput.checked : false,
-        serviceNazionalita: selectInputValue("serviceNazionalita")
+        serviceNazionalita: selectInputValue("serviceNazionalita"),
+        trovagnoccaTags: getTrovagnoccaTagsData()
     };
 
     return data;

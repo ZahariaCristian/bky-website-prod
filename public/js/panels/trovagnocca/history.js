@@ -340,6 +340,8 @@ function formatTrovagnoccaPlanLabel(typeAnnuncio) {
             return "7Days";
         case "free":
             return "Free";
+        case "turbo":
+            return "Turbo";
         default:
             return typeAnnuncio;
     }

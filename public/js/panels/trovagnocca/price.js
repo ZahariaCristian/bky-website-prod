@@ -14,6 +14,11 @@ const TROVAGNOCCA_PRICE_SLOT_LABELS = Object.entries(TROVAGNOCCA_PRICE_SLOT_IDS)
         return labels;
     }, {});
 
+const TROVAGNOCCA_TURBO_SLOT_LABELS = {
+    307: "Turbo 1 Ora",
+    308: "Turbo 2 Ore"
+};
+
 const setText = (selector, value) => {
     const element = document.querySelector(selector);
     if (element) element.textContent = value;
@@ -107,11 +112,13 @@ const isRemovedTrovagnoccaPricePanel = (panel) => {
 
 const getTrovagnoccaAdDays = (panel) => {
     const promoType = `${panel.dataset.promoType || ""}`.toLowerCase();
+    if (promoType.includes("turbo")) return 1;
     if (promoType.includes("1x7")) return 7;
     if (promoType.includes("1x3")) return 3;
     if (promoType.includes("1x1")) return 1;
 
     const promoPanel = panel.closest(".promoPanel");
+    if (promoPanel?.classList.contains("promoTurbo")) return 1;
     if (promoPanel?.classList.contains("promo1x7")) return 7;
     if (promoPanel?.classList.contains("promo1x3")) return 3;
     if (promoPanel?.classList.contains("promo1x1")) return 1;
@@ -119,10 +126,46 @@ const getTrovagnoccaAdDays = (panel) => {
     return 1;
 };
 
+const getTrovagnoccaPromoType = (panel) => {
+    if (panel.dataset.promoType) return panel.dataset.promoType;
+
+    const promoPanel = panel.closest(".promoPanel");
+    if (promoPanel?.classList.contains("promoTurbo")) return "Turbo";
+    if (promoPanel?.classList.contains("promo1x7")) return "1x7";
+    if (promoPanel?.classList.contains("promo1x3")) return "1x3";
+    if (promoPanel?.classList.contains("promo1x1")) return "1x1";
+    if (promoPanel?.classList.contains("promoFree")) return "Free";
+    return "";
+};
+
+const getTrovagnoccaTurboDuration = (panel) => {
+    const selected = panel.querySelector(".turbo-option-select")?.value;
+    const durationId = parseInt(selected, 10);
+    if (Number.isFinite(durationId)) return durationId;
+    return 307;
+};
+
 const getSelectedTrovagnoccaPriceAds = () => {
     return Array.from(document.querySelectorAll(".newpost-panel"))
         .filter((panel) => !isRemovedTrovagnoccaPricePanel(panel))
         .map((panel, index) => {
+            const promoType = getTrovagnoccaPromoType(panel);
+            const isTurbo = `${promoType || ""}`.toLowerCase() === "turbo";
+            if (isTurbo) {
+                const durationId = getTrovagnoccaTurboDuration(panel);
+                const time = panel.querySelector("input[type='time']")?.value || "";
+                return {
+                    index: index + 1,
+                    panel,
+                    time,
+                    promoType,
+                    productId: 301,
+                    days: getTrovagnoccaAdDays(panel),
+                    timeSlots: [durationId],
+                    slotLabels: [TROVAGNOCCA_TURBO_SLOT_LABELS[durationId] || `Turbo ${durationId}`]
+                };
+            }
+
             const slotMap = new Map();
             panel.querySelectorAll(".gold-slot-input:checked").forEach((input) => {
                 const slotId = TROVAGNOCCA_PRICE_SLOT_IDS[input.value];
@@ -140,7 +183,8 @@ const getSelectedTrovagnoccaPriceAds = () => {
                 index: index + 1,
                 panel,
                 time,
-                promoType: panel.dataset.promoType || "",
+                promoType,
+                productId: 300,
                 days: getTrovagnoccaAdDays(panel),
                 timeSlots: Array.from(slotMap.keys()).sort((a, b) => a - b),
                 slotLabels: Array.from(slotMap.entries())
@@ -166,7 +210,7 @@ const fetchTrovagnoccaAdPrice = async (ad) => {
             key: localStorage.getItem("key"),
             csrfToken: getTrovagnoccaCsrfToken(),
             numberDays: ad.days,
-            productId: 300,
+            productId: ad.productId || 300,
             timeSlots: ad.timeSlots
         }),
     });
@@ -355,7 +399,7 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("click", (event) => {
-    if (event.target?.closest?.(".newpost-panel .btn-danger, .promoPanel .top-add-schedule, .promoPanel .free-add-schedule")) {
+    if (event.target?.closest?.(".newpost-panel .btn-danger, .promoPanel .top-add-schedule, .promoPanel .free-add-schedule, .promoPanel .turbo-add-schedule")) {
         setTimeout(scheduleTrovagnoccaPriceCalculation, 0);
     }
 });
