@@ -105,116 +105,116 @@ function createSessionStore() {
 const sessionStore = createSessionStore();
 
 app.use(sessions({
-                store: sessionStore,
-                secret: '563338751698',
-                resave: false,
-                saveUninitialized: false,
-                cookie: { maxAge: 60000 * 720 }
-                }));
+    store: sessionStore,
+    secret: '563338751698',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 60000 * 720 }
+}));
 
-                const activeSessions = {}; // Track active sessions by user ID, with up to two sessions per user
+const activeSessions = {}; // Track active sessions by user ID, with up to two sessions per user
 
-                app.post("/login", async (req, res) => {
-                    try {
-                        await ctx.model.authenticate();
-                    } catch (error) {
-                        return res.json({ err: `Unable to connect to the database: ${error}` });
-                    }
-                
-                    const { username, password } = req.body;
-                    const userAgent = req.headers['user-agent'];
-                    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-                    const browser = parseBrowser(userAgent);
-                    const device = parseDevice(userAgent);
-                    
-                    ctx.tblUser.findAll({ where: { userName: username, GCRecord: null } })
-                        .then(async (result) => {
-                            if (result.length !== 0) {
-                                const user = result[0];
-                                if (user.isActive) {
-                                    salt.ComparePassword(password, user.password, async (err, match) => {
-                                        if (err) {
-                                            await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, `Compare error: ${err}`);
-                                            return res.json({ err: `Compare error: ${err}` });
-                                        }
-                                        
-                                        if (match) {
-                                            // Initialize session array if not present
-                                            if (!activeSessions[user.OID]) {
-                                                activeSessions[user.OID] = [];
-                                            }
-                                            
-                                            // Remove the oldest session if two active sessions already exist
-                                            if (activeSessions[user.OID].length >= 2) {
-                                                const oldestSession = activeSessions[user.OID].shift();
-                                                oldestSession.destroy();
-                                            }
-                
-                                            // Create new session
-                                            req.session.userid = user.OID;
-                                            req.session.token = generateAccessToken(username);
-                                            activeSessions[user.OID].push(req.session);
-                
-                                            await logLoginAttempt(user.OID, username, "success", userAgent, browser, device, ip, "Login successful");
-                                            return res.json({ firstTime: user.firstTime });
-                                        } else {
-                                            await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, "Password mismatch");
-                                            return res.json({ err: `Password non riconosciuta` });
-                                        }
-                                    });
-                                } else {
-                                    await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, "User is banned");
-                                    return res.json({ err: `L'utente risulta bandito.` });
-                                }
-                            } else {
-                                await logLoginAttempt(null, username, "failure", userAgent, browser, device, ip, "User not found");
-                                return res.json({ err: `Utente non presente` });
+app.post("/login", async (req, res) => {
+    try {
+        await ctx.model.authenticate();
+    } catch (error) {
+        return res.json({ err: `Unable to connect to the database: ${error}` });
+    }
+
+    const { username, password } = req.body;
+    const userAgent = req.headers['user-agent'];
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browser = parseBrowser(userAgent);
+    const device = parseDevice(userAgent);
+
+    ctx.tblUser.findAll({ where: { userName: username, GCRecord: null } })
+        .then(async (result) => {
+            if (result.length !== 0) {
+                const user = result[0];
+                if (user.isActive) {
+                    salt.ComparePassword(password, user.password, async (err, match) => {
+                        if (err) {
+                            await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, `Compare error: ${err}`);
+                            return res.json({ err: `Compare error: ${err}` });
+                        }
+
+                        if (match) {
+                            // Initialize session array if not present
+                            if (!activeSessions[user.OID]) {
+                                activeSessions[user.OID] = [];
                             }
-                        })
-                        .catch(async (err) => {
-                            console.error(err);
-                            await logLoginAttempt(null, username, "failure", userAgent, browser, device, ip, `Database error: ${err}`);
-                            return res.json({ err: `Unable to connect to the database: ${err}` });
-                        });
-                });
-                
-                function parseBrowser(userAgent) {
-                    // Implement browser parsing logic here
-                    return "parsedBrowserInfo"; // Replace with actual parsing logic
-                }
-                
-                function parseDevice(userAgent) {
-                    // Implement device parsing logic here
-                    return "parsedDeviceInfo"; // Replace with actual parsing logic
-                }
-                
-                async function logLoginAttempt(userId, username, status, userAgent, browser, device, ip, message) {
-                    if (!ctx.tblLogs) {
-                        console.error('tblLogs model is not defined in ctx');
-                        return; // Exit if tblLogs is not available
-                    }
-                
-                    // Get current timestamp with date and time
-                    const timestamp = new Date(); // This will include the current date and time
-                
-                    try {
-                        await ctx.tblLogs.create({
-                            userId: userId,
-                            username: username,
-                            status: status,
-                            userAgent: userAgent,
-                            browser: browser,
-                            device: device,
-                            ipAddress: ip,
-                            message: message,
-                            timestamp: timestamp // Include the timestamp directly
-                        });
-                    } catch (error) {
-                        console.error('Failed to log login attempt:', error);
-                    }
-                }
 
-app.get("/logout", (req, res) =>{
+                            // Remove the oldest session if two active sessions already exist
+                            if (activeSessions[user.OID].length >= 2) {
+                                const oldestSession = activeSessions[user.OID].shift();
+                                oldestSession.destroy();
+                            }
+
+                            // Create new session
+                            req.session.userid = user.OID;
+                            req.session.token = generateAccessToken(username);
+                            activeSessions[user.OID].push(req.session);
+
+                            await logLoginAttempt(user.OID, username, "success", userAgent, browser, device, ip, "Login successful");
+                            return res.json({ firstTime: user.firstTime });
+                        } else {
+                            await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, "Password mismatch");
+                            return res.json({ err: `Password non riconosciuta` });
+                        }
+                    });
+                } else {
+                    await logLoginAttempt(user.OID, username, "failure", userAgent, browser, device, ip, "User is banned");
+                    return res.json({ err: `L'utente risulta bandito.` });
+                }
+            } else {
+                await logLoginAttempt(null, username, "failure", userAgent, browser, device, ip, "User not found");
+                return res.json({ err: `Utente non presente` });
+            }
+        })
+        .catch(async (err) => {
+            console.error(err);
+            await logLoginAttempt(null, username, "failure", userAgent, browser, device, ip, `Database error: ${err}`);
+            return res.json({ err: `Unable to connect to the database: ${err}` });
+        });
+});
+
+function parseBrowser(userAgent) {
+    // Implement browser parsing logic here
+    return "parsedBrowserInfo"; // Replace with actual parsing logic
+}
+
+function parseDevice(userAgent) {
+    // Implement device parsing logic here
+    return "parsedDeviceInfo"; // Replace with actual parsing logic
+}
+
+async function logLoginAttempt(userId, username, status, userAgent, browser, device, ip, message) {
+    if (!ctx.tblLogs) {
+        console.error('tblLogs model is not defined in ctx');
+        return; // Exit if tblLogs is not available
+    }
+
+    // Get current timestamp with date and time
+    const timestamp = new Date(); // This will include the current date and time
+
+    try {
+        await ctx.tblLogs.create({
+            userId: userId,
+            username: username,
+            status: status,
+            userAgent: userAgent,
+            browser: browser,
+            device: device,
+            ipAddress: ip,
+            message: message,
+            timestamp: timestamp // Include the timestamp directly
+        });
+    } catch (error) {
+        console.error('Failed to log login attempt:', error);
+    }
+}
+
+app.get("/logout", (req, res) => {
     req.session.destroy();
     res.redirect("/");
 });
@@ -222,10 +222,10 @@ app.get("/logout", (req, res) =>{
 app.get("/", (req, res) => {
     res.render("pages/index");
 });
-app.get("/listaAnnunci.html", (req, res) =>{
+app.get("/listaAnnunci.html", (req, res) => {
     res.render('pages/listaAnnunci');
 });
-app.get("/annuncio.html", (req, res) =>{
+app.get("/annuncio.html", (req, res) => {
     const { panel } = req.query;
 
     switch (panel) {
@@ -256,40 +256,40 @@ app.get("/annuncio.html", (req, res) =>{
             break;
     }
 });
-app.get("/logbot.html", (req, res)=>{
+app.get("/logbot.html", (req, res) => {
     res.render('pages/logbot');
 });
-app.get("/team.html", (req, res)=>{
+app.get("/team.html", (req, res) => {
     res.render('pages/team');
 });
-app.get("/gestPagamenti.html", (req, res)=>{
+app.get("/gestPagamenti.html", (req, res) => {
     res.render('pages/gestPagamenti');
 });
-app.get("/newuser.html", (req, res)=>{
+app.get("/newuser.html", (req, res) => {
     res.render('pages/newuser');
 });
-app.get("/users.html", (req, res)=>{
+app.get("/users.html", (req, res) => {
     res.render('pages/users');
 });
-app.get("/profile.html", (req, res)=>{
+app.get("/profile.html", (req, res) => {
     res.render('pages/profile');
 });
-app.get("/user.html", (req, res)=>{
+app.get("/user.html", (req, res) => {
     res.render('pages/user');
 });
-app.get("/blacklist.html", (req, res)=>{
+app.get("/blacklist.html", (req, res) => {
     res.render('pages/blacklist');
 });
-app.get("/comunicazioni.html", (req, res)=>{
+app.get("/comunicazioni.html", (req, res) => {
     res.render('pages/comunicazioni');
 });
-app.get("/addbook.html", (req, res)=>{
+app.get("/addbook.html", (req, res) => {
     res.render('pages/addbook');
 });
-app.get("/deadline.html", (req, res)=>{
+app.get("/deadline.html", (req, res) => {
     res.render('pages/deadline');
 });
-app.get("/segnalazioni.html", (req, res)=>{
+app.get("/segnalazioni.html", (req, res) => {
     res.render('pages/segnalazioni');
 });
 
@@ -312,8 +312,8 @@ app.use("/segnalazioni", segnalazioniRoute);
 
 app.use(express.static("public"));
 
-app.all("*", (req, res) =>{
-    res.status(404).sendFile("notfound.html", {root: __dirname + "/public"});
+app.all("*", (req, res) => {
+    res.status(404).sendFile("notfound.html", { root: __dirname + "/public" });
 })
 
 const PORT = 3001;
