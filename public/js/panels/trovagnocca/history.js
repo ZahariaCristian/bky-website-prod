@@ -254,11 +254,36 @@ function getPublishStateButtonHtml(schedule) {
     return `<span class="btn btn-xs ${publishState.className} btnPublishState">${publishState.label}</span>`;
 }
 
+function getHistoryStatusIconHtml(schedule) {
+    switch (schedule?.state) {
+        case "OK":
+            if (hasPublishedRemotePost(schedule)) {
+                return getBakecaStatusAction(schedule);
+            }
+            return "<h3 class='fa fa-check-square text-success'><i></i></h3>";
+        case "KO":
+            return "<h3 class='fa fa-times text-danger'><i></i></h3>";
+        case "ALERT":
+            return "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>";
+        case "CLOSE":
+        case "CLOSED":
+            return "<h3 class='fa fa-ban text-danger'><i></i></h3>";
+        case "DELETE":
+        case "DELETED":
+            return "<h3 class='fa fa-trash text-danger'><i></i></h3>";
+        default:
+            return "<h3 class='fa fa-clock-o text-default'><i></i></h3>";
+    }
+}
+
 function configureSuspendedHistoryPublishButton(row, schedule) {
     const publishBtn = row.find(".btnPublishState");
     const deleteBtn = row.find(".btnDeleteState");
 
-    publishBtn.hide();
+    publishBtn.text("PUBBLICA");
+    publishBtn.removeClass("btn-success btn-danger btn-default btn-warning").addClass("btn-danger");
+    publishBtn.attr("onclick", `republishAds(this, '${schedule.id}', 'btn-danger', 'PUBBLICA')`);
+    publishBtn.show();
     deleteBtn.text("DELETE");
     deleteBtn.removeClass("btn-danger btn-success btn-warning").addClass("btn-default");
     deleteBtn.attr("onclick", `deleteAds(this, '${schedule.id}')`);
@@ -285,7 +310,6 @@ function configureHistoryActionButtons(row, schedule) {
     deleteBtn.attr("onclick", `deleteAds(this, '${schedule.id}')`);
 
     if (canManageHistorySchedule(schedule)) {
-        publishBtn.show();
         suspendBtn.show();
         deleteBtn.show();
     }
@@ -430,23 +454,7 @@ var addRptStorico = (sxhedule, i) => {
         newRow.find(".dateTimeTop").remove();
     }
 
-    switch (sxhedule.state) {
-        case "OK":
-            if (hasPublishedRemotePost(sxhedule)) {
-                newRow.html(newRow.html().replace(/@stato@/g, getBakecaStatusAction(sxhedule)));
-            } else {
-                newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-check-square text-success'><i></i></h3>"));
-            }
-            break;
-        case "KO":
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-times text-danger'><i></i></h3>"));
-            break;
-        case "ALERT":
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>"));
-            break;
-        default:
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-clock-o text-default'><i></i></h3>"));
-    }
+    newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
 
     switch (sxhedule.payed) {
         case true:
@@ -477,6 +485,18 @@ function suspendAds(e, ids) {
         endpoint: "/annuncio/suspend",
         onclick: `suspendAds(this, '${ids}')`,
         errorText: "Si e verificato un errore durante la sospensione dell'annuncio."
+    });
+}
+
+function republishAds(e, ids, idleClass = "btn-success", defaultText = "PUBBLICATO") {
+    updateScheduleStateAction(e, ids, {
+        confirmText: "Sicuro di voler ripubblicare questo annuncio?",
+        pendingText: "In Ripubblicazione..",
+        defaultText: defaultText,
+        idleClass: idleClass,
+        endpoint: "/annuncio/republishSchedule",
+        onclick: `republishAds(this, '${ids}', '${idleClass}', '${defaultText}')`,
+        errorText: "Si e verificato un errore durante l'aggiornamento dello stato REPUBLISH."
     });
 }
 
@@ -515,7 +535,7 @@ function addRptStoricoSus(sxhedule) {
         newRow.find(".dateTimeTop").remove();
     }
 
-    newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-check-square text-success'><i></i></h3>"));
+    newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
     configureSuspendedHistoryPublishButton(newRow, sxhedule);
     switch (sxhedule.payed) {
         case true:
