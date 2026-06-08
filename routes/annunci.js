@@ -259,12 +259,12 @@ const getGalleryPhoneImageSrc = (phone, origin) => {
 };
 
 const getGalleryOrderIndex = (gallery) => {
-    const originIndex = parseInt(`${gallery.origin || ""}`.split(".")[0], 10);
-    if (!Number.isNaN(originIndex)) return originIndex;
-
     const srcMatch = `${gallery.src || ""}`.match(/[?&]index=([^&]+)/);
     const srcIndex = srcMatch ? parseInt(srcMatch[1], 10) : NaN;
-    return Number.isNaN(srcIndex) ? Number.MAX_SAFE_INTEGER : srcIndex;
+    if (!Number.isNaN(srcIndex)) return srcIndex;
+
+    const originIndex = parseInt(`${gallery.origin || ""}`.split(".")[0], 10);
+    return Number.isNaN(originIndex) ? Number.MAX_SAFE_INTEGER : originIndex;
 };
 
 const moveGalleryFileToPhone = (oldPhone, newPhone, origin) => {
