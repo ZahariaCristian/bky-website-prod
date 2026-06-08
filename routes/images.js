@@ -22,11 +22,6 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     if (!req.query.phone) return res.sendStatus(400);
     if (!req.query.ann) return res.sendStatus(400);
 
-    const bodyArray = (value) => Array.isArray(value) ? value : (value === undefined ? [] : [value]);
-    const origins = bodyArray(req.body.origin);
-    const hiddenFlags = bodyArray(req.body.hidden);
-    const isNewFlags = bodyArray(req.body.isNew);
-
     // Creating the folder if it does not exist
     if (!fs.existsSync(`${rootPath}/girls/${req.query.phone}`))
         fs.mkdirSync(`${rootPath}/girls/${req.query.phone}`);
@@ -49,37 +44,24 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
         }
         // Writing the image files
         for (let i = 0; i < req.files.length; i++){
-            const galleryId = origins[i];
-            if (!galleryId) continue;
-
-            if (isNewFlags[i] == "true") {
-                await writeImgFile(req.files[i], i, galleryId, req.query.phone);
-            } else {
-                await ctx.tblGalleria.update({
-                    src: `/images/get?phone=${req.query.phone}&index=${i}`,
-                    GCRecord: null
-                }, {
-                    where: { id: galleryId }
-                });
-            }
-
+            if (req.body.isNew[i] == "true") await writeImgFile(req.files[i], i, req.body.origin[i], req.query.phone);
             for(s of scheduled){
                 var anteprima = true;
-                var gS = await ctx.tblGalleriaAnnuncio.findOne({where:{galleria: galleryId, schedulazione: s.id}});
+                var gS = await ctx.tblGalleriaAnnuncio.findOne({where:{galleria: req.body.origin[i], schedulazione: s.id}});
                 if (!gS){
-                    if (hiddenFlags[i] == "true"){
-                        await ctx.tblGalleriaAnnuncio.create({galleria: galleryId, schedulazione: s.id, GCRecord: ctx.newGCRecord()});
+                    if (req.body.hidden[i] == "true"){
+                        await ctx.tblGalleriaAnnuncio.create({galleria: req.body.origin[i], schedulazione: s.id, GCRecord: ctx.newGCRecord()});
                     }else{
                         if (s.anteprimas) anteprima = false;
-                        await ctx.tblGalleriaAnnuncio.create({galleria: galleryId, schedulazione: s.id, isAnteprima: anteprima});
+                        await ctx.tblGalleriaAnnuncio.create({galleria: req.body.origin[i], schedulazione: s.id, isAnteprima: anteprima});
                         s.anteprimas = true;
                     }
                 }else{
-                    if (hiddenFlags[i] == "true"){
-                        if(!gS.GCRecord) await gS.update({galleria: galleryId, schedulazione: s.id, GCRecord: ctx.newGCRecord()});
+                    if (req.body.hidden[i] == "true"){
+                        if(!gS.GCRecord) await gS.update({galleria: req.body.origin[i], schedulazione: s.id, GCRecord: ctx.newGCRecord()});
                     }else{
                         if (s.anteprimas) anteprima = false;
-                        await gS.update({galleria: galleryId, schedulazione: s.id, GCRecord: null, isAnteprima: anteprima});
+                        await gS.update({galleria: req.body.origin[i], schedulazione: s.id, GCRecord: null, isAnteprima: anteprima});
                         s.anteprimas = true;
                     }                    
                 }
