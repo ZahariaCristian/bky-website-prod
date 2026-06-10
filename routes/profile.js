@@ -38,6 +38,7 @@ router.post("/edit", authenticateKey, async (req, res) => {
     var bakecaGroup = req.body.bakecaGroup;
     var megaescortGroup = req.body.megaescortGroup;
     var trovagnoccaGroup = req.body.trovagnoccaGroup;
+    var incontriamociGroup = req.body.incontriamociGroup;
     if(!user.password || user.password.length == 0){
         user.storedPassword = utente.password;
     }else{
@@ -70,6 +71,9 @@ router.post("/edit", authenticateKey, async (req, res) => {
     }
     if (ctx.tblPlatform && trovagnoccaGroup) {
         await upsertPlatform(gruppo.id, "trovagnocca", trovagnoccaGroup, true);
+    }
+    if (ctx.tblPlatform && incontriamociGroup) {
+        await upsertPlatform(gruppo.id, "incontriamoci", incontriamociGroup, true);
     }
 
     res.sendStatus(200);

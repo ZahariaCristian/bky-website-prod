@@ -26,6 +26,7 @@ $(()=>{
                     $("#inputBakecaUserName").val(res.group?.bakeca?.username);
                     $("#inputMegaescortUserName").val(res.group?.megaescort?.username);
                     $("#inputTrovagnoccaUserName").val(res.group?.trovagnocca?.username);
+                    $("#inputIncontriamociUserName").val(res.group?.incontriamoci?.username);
                 });
             });
     },100);
@@ -44,7 +45,7 @@ $("#btnCreaUtente").on("click",()=>{
             },
             redirect: "follow",
             referrerPolicy: "no-referrer",
-            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca()})
+            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca(), incontriamociGroup: getInfoDataIncontriamoci()})
         }).then((r) => {
             toggleLoader();
             if(r.status !== 200){
@@ -85,6 +86,12 @@ var getInfoDataTrovagnocca = ()=>{
     return {
         username: $("#inputTrovagnoccaUserName").val(),
         password: $("#inputTrovagnoccaUserPassword").val()
+    }
+}
+var getInfoDataIncontriamoci = ()=>{
+    return {
+        username: $("#inputIncontriamociUserName").val(),
+        password: $("#inputIncontriamociUserPassword").val()
     }
 }
 
