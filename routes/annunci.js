@@ -3,6 +3,7 @@ const scraper = require("../lib/scraper/bakecaincontrii");
 const scrapeBakeca = require("../lib/scraper/backer");
 const scrapeMegaescort = require("../lib/scraper/me");
 const scrapeTrovagnocca = require("../lib/scraper/trovagnocca");
+const scrapeIncontriamoci = require("../lib/scraper/incontriamoci");
 const axios = require("axios");
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
@@ -295,6 +296,14 @@ const normalizeMegaescortCategory = (category = "") => {
     if (normalized.includes("amici") || normalized.includes("cerco amici")) return "AMICI";
     if (normalized.includes("anima gemella") || normalized.includes("animagemella")) return "ANIMAGEMELLA";
     if (normalized.includes("massaggi") || normalized.includes("benessere")) return "MASSAGGI";
+    return "DONNAUOMO";
+};
+
+const normalizeIncontriamociCategory = (category = "") => {
+    const normalized = normalizeMegaescortCategory(category);
+    if (normalized === "TRANS" || normalized === "COPPIE" || normalized === "UOMOUOMO") {
+        return normalized;
+    }
     return "DONNAUOMO";
 };
 
@@ -634,6 +643,41 @@ const extractTrovagnoccaAboutTags = (attributes = {}) => {
     };
 };
 
+const normalizeIncontriamociScrapedTags = (tags = {}) => {
+    const normalizeList = (values = []) => Array.isArray(values) ? values : [];
+    const remap = (values, map) => normalizeList(values)
+        .map((value) => map[value] || value)
+        .filter(Boolean);
+
+    return {
+        ethnicity: remap(tags.ethnicity, {
+            Asiatica: "Orientale",
+            Europea: "Italiana"
+        }),
+        nationality: tags.nationality || "",
+        eye: normalizeList(tags.eye),
+        hair: remap(tags.hair, {
+            "Capelli Biondi": "Biondi",
+            "Capelli Marroni": "Castani",
+            "Capelli Neri": "Neri",
+            "Capelli Rossi": "Rossi"
+        }),
+        body: normalizeList(tags.body),
+        particularSigns: [
+            ...normalizeList(tags.particularSigns),
+            ...remap(tags.breast, {
+                "Seno Rifatto": "Seno Rifatto"
+            })
+        ],
+        services: normalizeList(tags.services),
+        serviceFor: normalizeList(tags.serviceFor),
+        servicePlace: remap(tags.servicePlace, {
+            "Albergo/Motel": "Albergo / motel"
+        }),
+        paymentMethods: normalizeList(tags.paymentMethods)
+    };
+};
+
 const sanitizeTrovagnoccaTags = (tags = {}) => {
     const arrayValue = (value) => Array.isArray(value)
         ? [...new Set(value.map((item) => `${item || ""}`.trim()).filter(Boolean))]
@@ -643,11 +687,14 @@ const sanitizeTrovagnoccaTags = (tags = {}) => {
         ethnicity: arrayValue(tags.ethnicity),
         nationality: `${tags.nationality || ""}`.trim(),
         breast: arrayValue(tags.breast),
+        eye: arrayValue(tags.eye),
         hair: arrayValue(tags.hair),
         body: arrayValue(tags.body),
+        particularSigns: arrayValue(tags.particularSigns),
         services: arrayValue(tags.services),
         serviceFor: arrayValue(tags.serviceFor),
-        servicePlace: arrayValue(tags.servicePlace)
+        servicePlace: arrayValue(tags.servicePlace),
+        paymentMethods: arrayValue(tags.paymentMethods)
     };
 
     Object.keys(clean).forEach((key) => {
@@ -1362,6 +1409,180 @@ router.post("/scrapeTrovagnocca", authenticateKey, async (req, res) => {
     }
 });
 
+router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
+    try {
+        if (!req.body.url) {
+            console.error("Error: Missing URL in request body.");
+            return res.status(400).json({ error: "Missing URL in request body." });
+        }
+
+        const userid = req.session.userid;
+        if (!userid) {
+            console.error("Error: User not authenticated.");
+            return res.status(401).json({ error: "User not authenticated." });
+        }
+
+        const user = await ctx.tblUser.findOne({ where: { OID: userid } });
+        if (!user) {
+            console.error(`Error: User with ID ${userid} not found.`);
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        const groupM = await user.getGroup();
+
+        console.log(req.body.url, "scrape incontriamoci");
+
+        const MAX_RETRIES = 3;
+        let scrapingResult = null;
+        for (let i = 1; i <= MAX_RETRIES; i++) {
+            try {
+                console.log(`Incontriamoci scraping attempt ${i}...`);
+                const result = await scrapeIncontriamoci.scrape(req.body.url);
+                if (result) {
+                    scrapingResult = {
+                        adId: result.adId || "",
+                        title: result.title || "",
+                        description: result.description || "",
+                        age: result.age || result.attributes?.age || "",
+                        city: result.city || "",
+                        location: result.location || result.area || "",
+                        zone: result.zone || result.area || "",
+                        name: result.name || "",
+                        phone: result.phone || "",
+                        whatsapp: Boolean(result.whatsapp),
+                        telegram: result.telegram || "",
+                        telegramUrl: result.telegramUrl || "",
+                        hasTelegram: Boolean(result.telegram || result.telegramUrl),
+                        category: result.category || "",
+                        nationality: result.nationality || "",
+                        attributes: result.attributes || {},
+                        images: Array.isArray(result.images) ? result.images : [],
+                        imageFiles: Array.isArray(result.imageFiles) ? result.imageFiles : []
+                    };
+
+                    if (scrapingResult.phone && scrapingResult.imageFiles.length > 0) {
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error(`Incontriamoci attempt ${i} error:`, err.message);
+            }
+
+            if (i < MAX_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, 2000 * i));
+            }
+        }
+
+        if (!scrapingResult) {
+            console.error("Error: Incontriamoci scraping failed, no data returned.");
+            return res.status(400).json({ error: "Scraping failed." });
+        }
+
+        if (!scrapingResult.phone) {
+            console.error("Error: Incontriamoci scraping failed, no phone returned.");
+            return res.status(500).json({ error: "Missing phone number." });
+        }
+
+        let donna = await ctx.tblDonne.findOne({
+            where: { phone: scrapingResult.phone, GCRecord: null }
+        });
+
+        if (!donna) {
+            donna = await ctx.tblDonne.create({
+                name: scrapingResult.name || "NUOVA CLIENTE CAMBIARE NOME",
+                city: scrapingResult.city,
+                phone: scrapingResult.phone,
+                years: parseAgeValue(scrapingResult.age),
+                groupOwner: groupM.group
+            });
+        } else {
+            const donnaUpdates = {};
+            const parsedAge = parseAgeValue(scrapingResult.age);
+            if (scrapingResult.name) donnaUpdates.name = scrapingResult.name;
+            if (scrapingResult.city) donnaUpdates.city = scrapingResult.city;
+            if (parsedAge) donnaUpdates.years = parsedAge;
+            if (Object.keys(donnaUpdates).length > 0) {
+                await donna.update(donnaUpdates);
+            }
+        }
+
+        const phoneDir = `${rootPath}/girls/${donna.phone}`;
+        const picsDir = `${phoneDir}/pics`;
+        if (!fs.existsSync(picsDir)) fs.mkdirSync(picsDir, { recursive: true });
+
+        let annuncio = await ctx.tblAnnunci.findOne({
+            where: { donna: donna.id, title: scrapingResult.title }
+        });
+
+        const categorie = normalizeIncontriamociCategory(scrapingResult.category);
+        const serviceNazionalita =
+            normalizeTrovagnoccaNationality(scrapingResult.nationality) ||
+            normalizeTrovagnoccaNationality(getMegaescortAttribute(scrapingResult.attributes, ["nazionalit\u00e0", "nazionalita", "nationality"])) ||
+            normalizeTrovagnoccaNationality(findTrovagnoccaNationalityCandidate(scrapingResult.attributes));
+        const incontriamociTags = normalizeIncontriamociScrapedTags({
+            ...extractTrovagnoccaAboutTags(scrapingResult.attributes),
+            nationality: serviceNazionalita
+        });
+
+        const note = buildTrovagnoccaContactNote({
+            ...scrapingResult,
+            trovagnoccaTags: incontriamociTags
+        });
+
+        if (!annuncio) {
+            annuncio = await ctx.tblAnnunci.create({
+                title: scrapingResult.title,
+                city: scrapingResult.city,
+                location: scrapingResult.location,
+                description: scrapingResult.description,
+                donna: donna.id,
+                hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
+                categorie,
+                sono: categorie,
+                serviceNazionalita,
+                note,
+                groupOwner: groupM.group,
+                editedBy: userid,
+                cost: 0
+            });
+        } else {
+            await annuncio.update({
+                city: scrapingResult.city,
+                location: scrapingResult.location,
+                description: scrapingResult.description,
+                hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
+                categorie,
+                sono: categorie,
+                serviceNazionalita,
+                note,
+                editedBy: userid
+            });
+        }
+
+        if (scrapingResult.imageFiles && scrapingResult.imageFiles.length > 0) {
+            for (let i = 0; i < scrapingResult.imageFiles.length; i++) {
+                const fileName = scrapingResult.imageFiles[i];
+                await ctx.tblGalleria.create({
+                    donna: donna.id,
+                    src: `/images/get?phone=${donna.phone}&index=${i}`,
+                    GCRecord: null,
+                    origin: basename(fileName),
+                    isHidden: false,
+                });
+            }
+        } else {
+            console.error("No Incontriamoci images found in scraping result.");
+        }
+
+        return res.json({ id: annuncio.id, donna: donna.id });
+    } catch (error) {
+        console.error("Error in /scrapeincontriamoci route:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+});
+
 router.post("/trovagnoccaPrice", authenticateKey, async (req, res) => {
     const numberDays = parseInt(req.body.numberDays, 10) || 1;
     const productId = parseInt(req.body.productId, 10) || 300;
@@ -1473,18 +1694,21 @@ router.post("/getByID", authenticateKey, async (req, res) => {
             ...annuncio.get({ plain: true })
         };
 
+        const panel = normalizePanelPlatform(req.body.panel);
         if (!annuncio.categorie) {
             scrapingResult.categorie = "DONNAUOMO";
+        } else if (panel == "incontriamoci") {
+            scrapingResult.categorie = normalizeIncontriamociCategory(annuncio.categorie);
         } else {
             scrapingResult.categorie = normalizeMegaescortCategory(annuncio.categorie);
         }
-        const panel = normalizePanelPlatform(req.body.panel);
-        if (panel == "trovagnocca") {
+        if (panel == "trovagnocca" || panel == "incontriamoci") {
             const contactNote = parseTrovagnoccaContactNote(annuncio.note);
+            const tagsField = panel == "incontriamoci" ? "incontriamociTags" : "trovagnoccaTags";
             scrapingResult.hasTelegram = Boolean(contactNote.telegram || contactNote.telegramNumber || contactNote.telegramUrl);
             scrapingResult.telegram = contactNote.telegramNumber || "";
             scrapingResult.telegramUrl = contactNote.telegramUrl || "";
-            scrapingResult.trovagnoccaTags = contactNote.tags || {};
+            scrapingResult[tagsField] = contactNote.tags || {};
             if (!scrapingResult.serviceNazionalita && contactNote.tags?.nationality) {
                 scrapingResult.serviceNazionalita = contactNote.tags.nationality;
             }
@@ -1594,7 +1818,11 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         }
     }
 
-    if (panel == "trovagnocca") {
+    if (panel == "incontriamoci" && info.incontriamociTags) {
+        info.trovagnoccaTags = info.incontriamociTags;
+    }
+
+    if (panel == "trovagnocca" || panel == "incontriamoci") {
         if (info.trovagnoccaTags) {
             info.trovagnoccaTags.nationality = info.serviceNazionalita || info.trovagnoccaTags.nationality || "";
         }
@@ -1607,13 +1835,18 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         delete info.whatsapp;
         delete info.telegram;
         delete info.trovagnoccaTags;
+        delete info.incontriamociTags;
     }
 
     if (info.categorie) {
-        info.categorie = normalizeMegaescortCategory(info.categorie);
+        info.categorie = panel == "incontriamoci"
+            ? normalizeIncontriamociCategory(info.categorie)
+            : normalizeMegaescortCategory(info.categorie);
     }
     if (info.sono && panel !== "bakeca") {
-        info.sono = normalizeMegaescortCategory(info.sono);
+        info.sono = panel == "incontriamoci"
+            ? normalizeIncontriamociCategory(info.sono)
+            : normalizeMegaescortCategory(info.sono);
     }
 
     var userid = req.session.userid;
@@ -1739,7 +1972,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     });
                     s.id = schedulato.id;
                     if (s.images) {
-                        const imageLimit = platform === "trovagnocca" ? 6 : 5;
+                        const imageLimit = ["trovagnocca", "incontriamoci"].includes(platform) ? 6 : 5;
                         if (s.images.length == 0) {
                             let anteprima = true;
                             var donna = await girl.getTblDonne()
@@ -1786,7 +2019,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     for (r of Object.keys(rImgs)) rImgs[r].update({ GCRecord: ctx.newGCRecord() });
                     var i = 0;
                     const platform = normalizePanelPlatform(req.body.panel);
-                    const imageLimit = platform === "trovagnocca" ? 6 : 5;
+                    const imageLimit = ["trovagnocca", "incontriamoci"].includes(platform) ? 6 : 5;
                     let scheduleImages = Array.isArray(s.images) ? s.images : [];
                     if (scheduleImages.length == 0) {
                         var donna = await girl.getTblDonne();
@@ -2056,15 +2289,20 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
     const panel = normalizePanelPlatform(req.body.panel);
     var annuncio = await ctx.tblAnnunci.findOne({ where: { id: req.body.id } });
     if (annuncio) {
-        var nextCategory = normalizeMegaescortCategory(req.body.info.categorie || annuncio.categorie);
-        var previousCategory = normalizeMegaescortCategory(annuncio.categorie);
+        var nextCategory = panel == "incontriamoci"
+            ? normalizeIncontriamociCategory(req.body.info.categorie || annuncio.categorie)
+            : normalizeMegaescortCategory(req.body.info.categorie || annuncio.categorie);
+        var previousCategory = panel == "incontriamoci"
+            ? normalizeIncontriamociCategory(annuncio.categorie)
+            : normalizeMegaescortCategory(annuncio.categorie);
         var shouldRepublishBakeca = panel == "bakeca" && nextCategory != previousCategory;
-        const nextNote = panel == "trovagnocca"
+        const panelTags = req.body.info.trovagnoccaTags || req.body.info.incontriamociTags || {};
+        const nextNote = (panel == "trovagnocca" || panel == "incontriamoci")
             ? buildTrovagnoccaContactNote({
                 telegram: req.body.info.telegram,
                 trovagnoccaTags: {
-                    ...(req.body.info.trovagnoccaTags || {}),
-                    nationality: req.body.info.serviceNazionalita || req.body.info.trovagnoccaTags?.nationality || ""
+                    ...panelTags,
+                    nationality: req.body.info.serviceNazionalita || panelTags.nationality || ""
                 }
             })
             : (req.body.info.note || annuncio.note);

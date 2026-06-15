@@ -24,9 +24,13 @@ $(()=>{
                     $("#inputUserMail").val(res.user?.mail)
                     $("#inputBKUserName").val(res.group?.bkUserName);
                     $("#inputBakecaUserName").val(res.group?.bakeca?.username);
+                    setPlatformStatus("Bakeca", res.group?.bakeca?.status);
                     $("#inputMegaescortUserName").val(res.group?.megaescort?.username);
+                    setPlatformStatus("Megaescort", res.group?.megaescort?.status);
                     $("#inputTrovagnoccaUserName").val(res.group?.trovagnocca?.username);
+                    setPlatformStatus("Trovagnocca", res.group?.trovagnocca?.status);
                     $("#inputIncontriamociUserName").val(res.group?.incontriamoci?.username);
+                    setPlatformStatus("Incontriamoci", res.group?.incontriamoci?.status);
                 });
             });
     },100);
@@ -74,25 +78,37 @@ var getInfoDataBK = ()=>{
 var getInfoDataBakeca = ()=>{
     return {
         username: $("#inputBakecaUserName").val(),
-        password: $("#inputBakecaUserPassword").val()
+        password: $("#inputBakecaUserPassword").val(),
+        status: getPlatformStatus("Bakeca")
     }
 }
 var getInfoDataMegaescort = ()=>{
     return {
-        username: $("#inputMegaescortUserName").val()
+        username: $("#inputMegaescortUserName").val(),
+        status: getPlatformStatus("Megaescort")
     }
 }
 var getInfoDataTrovagnocca = ()=>{
     return {
         username: $("#inputTrovagnoccaUserName").val(),
-        password: $("#inputTrovagnoccaUserPassword").val()
+        password: $("#inputTrovagnoccaUserPassword").val(),
+        status: getPlatformStatus("Trovagnocca")
     }
 }
 var getInfoDataIncontriamoci = ()=>{
     return {
         username: $("#inputIncontriamociUserName").val(),
-        password: $("#inputIncontriamociUserPassword").val()
+        password: $("#inputIncontriamociUserPassword").val(),
+        status: getPlatformStatus("Incontriamoci")
     }
+}
+
+var setPlatformStatus = (platformName, status)=>{
+    $(`#input${platformName}Status`).prop("checked", (status || "active") === "active");
+}
+
+var getPlatformStatus = (platformName)=>{
+    return $(`#input${platformName}Status`).is(":checked") ? "active" : "inactive";
 }
 
 var customValidation = ()=>{

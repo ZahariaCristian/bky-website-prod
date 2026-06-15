@@ -21,7 +21,7 @@ router.get("/getCreditBK", authenticateKey, async (req, res) => {
             ? await ctx.tblPlatform.findAll({
                 where: {
                     gruppi: group.id,
-                    platform: ["bakeca", "megaescort", "trovagnocca"]
+                    platform: ["bakeca", "megaescort", "trovagnocca", "incontriamoci"]
                 }
             })
             : [];
@@ -37,7 +37,8 @@ router.get("/getCreditBK", authenticateKey, async (req, res) => {
             coupon: couponAvailable,
             bakeca: platformCredits.bakeca,
             megaescort: platformCredits.megaescort,
-            trovagnocca: platformCredits.trovagnocca
+            trovagnocca: platformCredits.trovagnocca,
+            incontriamoci: platformCredits.incontriamoci
         });
 
     } catch (error) {

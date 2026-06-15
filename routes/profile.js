@@ -82,6 +82,10 @@ router.post("/edit", authenticateKey, async (req, res) => {
 async function upsertPlatform(groupId, platform, data, encryptPassword) {
     let platformInfo = await ctx.tblPlatform.findOne({ where: { gruppi: groupId, platform } });
     let password = platformInfo ? platformInfo.password : "";
+    const allowedStatuses = ["active", "inactive", "suspended"];
+    const status = allowedStatuses.includes(data.status)
+        ? data.status
+        : (platformInfo ? platformInfo.status : "active");
 
     if (encryptPassword && data.password && data.password.length > 0) {
         password = encryptPass(data.password);
@@ -89,7 +93,8 @@ async function upsertPlatform(groupId, platform, data, encryptPassword) {
 
     const payload = {
         username: data.username || "",
-        password
+        password,
+        status
     };
 
     if (platformInfo) {

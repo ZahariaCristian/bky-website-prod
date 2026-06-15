@@ -171,6 +171,7 @@ function GetBKCredit() {
       $("#bakecaCredit").text(formatNumber(res.bakeca));
       $("#megaescortCredit").text(formatNumber(res.megaescort));
       $("#trovagnoccaCredit").text(formatNumber(res.trovagnocca));
+      $("#incontriamociCredit").text(formatNumber(res.incontriamoci));
 
       // Flash red if below 500
       if (parseInt(res.bk.replace(".", "")) < 500) {
