@@ -678,6 +678,14 @@ const normalizeIncontriamociScrapedTags = (tags = {}) => {
     };
 };
 
+const splitIncontriamociScrapedList = (value = "") => {
+    if (Array.isArray(value)) return value.map((item) => `${item || ""}`.trim()).filter(Boolean);
+    return `${value || ""}`
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+};
+
 const sanitizeTrovagnoccaTags = (tags = {}) => {
     const arrayValue = (value) => Array.isArray(value)
         ? [...new Set(value.map((item) => `${item || ""}`.trim()).filter(Boolean))]
@@ -714,6 +722,50 @@ const buildTrovagnoccaContactNote = (data = {}) => {
             tags: sanitizeTrovagnoccaTags(data.trovagnoccaTags || data.tags)
         }
     });
+};
+
+const buildIncontriamociContactNote = (data = {}) => {
+    const baseNote = JSON.parse(buildTrovagnoccaContactNote({
+        ...data,
+        trovagnoccaTags: data.incontriamociTags || data.trovagnoccaTags || data.tags
+    }));
+
+    const scrape = {
+        remotePostID: data.remotePostID || "",
+        phoneFromUrl: data.phoneFromUrl || "",
+        adId: data.adId || "",
+        sourceUrl: data.url || "",
+        whatsappNumber: data.whatsappNumber || data.whatsapp || "",
+        ageText: data.ageText || "",
+        ethnicity: data.ethnicity || "",
+        breastSize: data.breastSize || "",
+        height: data.height || "",
+        eyes: data.eyes || "",
+        hair: data.hair || "",
+        bodyType: data.bodyType || "",
+        hourlyPrice: data.hourlyPrice || "",
+        specialSigns: data.specialSigns || "",
+        services: data.services || "",
+        servicesFor: data.servicesFor || "",
+        servicePlace: data.servicePlace || "",
+        paymentMethod: data.paymentMethod || "",
+        info: data.info || data.attributes || {},
+        phoneLinks: Array.isArray(data.phoneLinks) ? data.phoneLinks : [],
+        whatsappLinks: Array.isArray(data.whatsappLinks) ? data.whatsappLinks : []
+    };
+
+    Object.keys(scrape).forEach((key) => {
+        if (Array.isArray(scrape[key]) && scrape[key].length === 0) delete scrape[key];
+        if (scrape[key] && typeof scrape[key] === "object" && !Array.isArray(scrape[key]) && Object.keys(scrape[key]).length === 0) delete scrape[key];
+        if (typeof scrape[key] === "string" && !scrape[key]) delete scrape[key];
+    });
+
+    baseNote.incontriamoci = {
+        scrape,
+        tags: sanitizeTrovagnoccaTags(data.incontriamociTags || data.tags)
+    };
+
+    return JSON.stringify(baseNote);
 };
 
 const parseTrovagnoccaContactNote = (note) => {
@@ -1438,12 +1490,17 @@ router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
             try {
                 console.log(`Incontriamoci scraping attempt ${i}...`);
                 const result = await scrapeIncontriamoci.scrape(req.body.url);
+                console.log("Incontriamoci scraping result:", result);
+
                 if (result) {
                     scrapingResult = {
+                        remotePostID: result.remotePostID || "",
+                        phoneFromUrl: result.phoneFromUrl || "",
                         adId: result.adId || "",
                         title: result.title || "",
                         description: result.description || "",
                         age: result.age || result.attributes?.age || "",
+                        ageText: result.ageText || "",
                         city: result.city || "",
                         location: result.location || result.area || "",
                         zone: result.zone || result.area || "",
@@ -1455,7 +1512,20 @@ router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
                         hasTelegram: Boolean(result.telegram || result.telegramUrl),
                         category: result.category || "",
                         nationality: result.nationality || "",
-                        attributes: result.attributes || {},
+                        ethnicity: result.ethnicity || "",
+                        breastSize: result.breastSize || "",
+                        height: result.height || "",
+                        eyes: result.eyes || "",
+                        hair: result.hair || "",
+                        bodyType: result.bodyType || "",
+                        hourlyPrice: result.hourlyPrice || "",
+                        specialSigns: result.specialSigns || "",
+                        services: result.services || "",
+                        servicesFor: result.servicesFor || "",
+                        servicePlace: result.servicePlace || "",
+                        paymentMethod: result.paymentMethod || "",
+                        info: result.info || {},
+                        attributes: result.attributes || result.info || {},
                         images: Array.isArray(result.images) ? result.images : [],
                         imageFiles: Array.isArray(result.imageFiles) ? result.imageFiles : []
                     };
@@ -1521,12 +1591,21 @@ router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
             normalizeTrovagnoccaNationality(findTrovagnoccaNationalityCandidate(scrapingResult.attributes));
         const incontriamociTags = normalizeIncontriamociScrapedTags({
             ...extractTrovagnoccaAboutTags(scrapingResult.attributes),
+            ethnicity: splitIncontriamociScrapedList(scrapingResult.ethnicity),
+            eye: splitIncontriamociScrapedList(scrapingResult.eyes),
+            hair: splitIncontriamociScrapedList(scrapingResult.hair),
+            body: splitIncontriamociScrapedList(scrapingResult.bodyType),
+            particularSigns: splitIncontriamociScrapedList(scrapingResult.specialSigns),
+            services: splitIncontriamociScrapedList(scrapingResult.services),
+            serviceFor: splitIncontriamociScrapedList(scrapingResult.servicesFor),
+            servicePlace: splitIncontriamociScrapedList(scrapingResult.servicePlace),
+            paymentMethods: splitIncontriamociScrapedList(scrapingResult.paymentMethod),
             nationality: serviceNazionalita
         });
 
-        const note = buildTrovagnoccaContactNote({
+        const note = buildIncontriamociContactNote({
             ...scrapingResult,
-            trovagnoccaTags: incontriamociTags
+            incontriamociTags
         });
 
         if (!annuncio) {

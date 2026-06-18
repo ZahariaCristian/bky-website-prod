@@ -425,6 +425,11 @@ async function updateSchedule() {
 function getSelectedDayPubs(currentDate) {
     let result = [];
     let i = 0;
+    const currentCity = () => {
+        const cityField = document.querySelector("select[name='city'], input[name='city'], [name='city']");
+        return cityField ? `${cityField.value || ""}`.trim() : "";
+    };
+
     ["Free", "Turbo"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
@@ -433,7 +438,7 @@ function getSelectedDayPubs(currentDate) {
             typeData.typePeriodic = "Top";
 
             typeData.period = promoType === "Turbo" ? buildTurboPeriod(getTurboOptionFromPanel(panel)) : "";
-            typeData.city = document.querySelector("input[name='city']").value
+            typeData.city = currentCity();
 
             let images = [];
             typeData.id = "";
@@ -493,7 +498,7 @@ function getSelectedDayPubs(currentDate) {
                 typeData.typeAnnuncio = promoType;
                 typeData.typePeriodic = "Top";
                 typeData.period = period;
-                typeData.city = document.querySelector("input[name='city']").value;
+                typeData.city = currentCity();
 
                 let images = [];
                 typeData.id = "";
