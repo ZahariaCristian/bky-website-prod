@@ -203,24 +203,17 @@
                 padding: 3px 6px 4px;
             }
 
-            .promoPanel.promo1x1 .time-slot {
-                background: #b1f390;
-            }
-
-            .promoPanel.promo1x3 .time-slot {
+            .promoPanel.promoTopList {
                 background: #d0d174;
-            }
-
-            .promoPanel.promo1x7 .time-slot {
-                background: #d47ed4;
-            }
-
-            .promoPanel.promoTurbo {
-                background: #f1c979;
                 padding: 12px;
             }
 
-            .turbo-option-select {
+            .promoPanel.promoVetrina {
+                background: #d47ed4;
+                padding: 12px;
+            }
+
+            .incontriamoci-premium-select {
                 display: inline-block;
                 max-width: 180px;
                 margin-left: 8px;
@@ -809,14 +802,10 @@
                                                         <ul>
                                                             <li class="active"><a href="#tabFree" data-toggle="tab">
                                                                     Free</a></li>
-                                                            <li><a href="#tab1x1" data-toggle="tab"
-                                                                    style="background-color: #b1f390;">Top: 1Day</a></li>
-                                                            <li><a href="#tab1x3" data-toggle="tab"
-                                                                    style="background-color: #d0d174;">Top: 3Days</a></li>
-                                                            <li><a href="#tab1x7" data-toggle="tab"
-                                                                    style="background-color: #d47ed4;">Top: 7Days</a></li>
-                                                            <li><a href="#tabTurbo" data-toggle="tab"
-                                                                    style="background-color: #f1c979;">TOP: TURBO</a></li>
+                                                            <li><a href="#tabTopList" data-toggle="tab"
+                                                                    style="background-color: #d0d174;">TopList</a></li>
+                                                            <li><a href="#tabVetrina" data-toggle="tab"
+                                                                    style="background-color: #d47ed4;">TopVertrina</a></li>
                                                         </ul>
                                                     </div>
                                                     <div class="widget-body" id="wizar-body">
@@ -834,156 +823,29 @@
                                                                 </div>
                                                             </div>
 
-                                                            <div class="promoPanel promoTurbo tab-pane animated fadeInUp"
-                                                                id="tabTurbo">
+                                                            <div class="promoPanel promoTopList tab-pane animated fadeInUp"
+                                                                id="tabTopList">
                                                                 <div class="posts">
                                                                     <div class="post-list">
                                                                     </div>
                                                                     <button type="button"
-                                                                        class="btn btn-primary turbo-add-schedule"
-                                                                        onclick="addincontriamociTurboTime(this);">
+                                                                        class="btn btn-primary toplist-add-schedule"
+                                                                        onclick="addIncontriamociTopListTime(this);">
                                                                         <span><b><i class="fa fa-plus"></i></b></span>
                                                                     </button>
                                                                 </div>
                                                             </div>
 
-                                                            <div class="promoPanel promo1x1 tab-pane animated fadeInUp"
-                                                                id="tab1x1">
-                                                                <label for="promo1x1" class="form-check-label"
-                                                                    style="font-size: 18px;">Fascia oraria - Top 1Day</label>
-                                                                <div class="wpromo1x1">
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x109001200" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x109001200"
-                                                                                class="form-check-label">09:00-12:00</label>
-                                                                        </div>
+                                                            <div class="promoPanel promoVetrina tab-pane animated fadeInUp"
+                                                                id="tabVetrina">
+                                                                <div class="posts">
+                                                                    <div class="post-list">
                                                                     </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x112001400" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x112001400"
-                                                                                class="form-check-label">12:00-14:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x114001600" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x114001600"
-                                                                                class="form-check-label">14:00-16:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x116001800" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x116001800"
-                                                                                class="form-check-label">16:00-18:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x118002100" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x118002100"
-                                                                                class="form-check-label">18:00-21:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x121002400" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x121002400"
-                                                                                class="form-check-label">21:00-24:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x124000900" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x124000900"
-                                                                                class="form-check-label">24:00-09:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="promoPanel promo1x3 tab-pane animated fadeInUp"
-                                                                id="tab1x3">
-                                                                <label for="promo1x3" class="form-check-label"
-                                                                    style="font-size: 18px;">Fascia oraria - Top 3Days</label>
-                                                                <div class="wpromo1x3">
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x309001800" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x309001800"
-                                                                                class="form-check-label">09:00-18:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x310001600" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x310001600"
-                                                                                class="form-check-label">10:00-16:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x314002000" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x314002000"
-                                                                                class="form-check-label">14:00-20:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x318002300" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x318002300"
-                                                                                class="form-check-label">18:00-23:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x323000900" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x323000900"
-                                                                                class="form-check-label">23:00-09:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x321002400" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x321002400"
-                                                                                class="form-check-label">21:00-24:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="time-slot">
-                                                                        <div class="flex-checkbox">
-                                                                            <input id="1x324000900" type="checkbox"
-                                                                                class="form-check-input">
-                                                                            <label for="1x324000900"
-                                                                                class="form-check-label">24:00-9:00</label>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="promoPanel promo1x7 tab-pane animated fadeInUp"
-                                                                id="tab1x7">
-                                                                <label for="promo1x7" class="form-check-label"
-                                                                    style="font-size: 18px;">Fascia oraria - Top 7Days</label>
-                                                                <div class="wpromo1x7">
-                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x709001800" type="checkbox" class="form-check-input"><label for="1x709001800" class="form-check-label">09:00-18:00</label></div></div>
-                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x710001600" type="checkbox" class="form-check-input"><label for="1x710001600" class="form-check-label">10:00-16:00</label></div></div>
-                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x714002000" type="checkbox" class="form-check-input"><label for="1x714002000" class="form-check-label">14:00-20:00</label></div></div>
-                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x718002300" type="checkbox" class="form-check-input"><label for="1x718002300" class="form-check-label">18:00-23:00</label></div></div>
-                                                                    <div class="time-slot"><div class="flex-checkbox"><input id="1x723000900" type="checkbox" class="form-check-input"><label for="1x723000900" class="form-check-label">23:00-09:00</label></div></div>
+                                                                    <button type="button"
+                                                                        class="btn btn-primary vetrina-add-schedule"
+                                                                        onclick="addIncontriamociVetrinaTime(this);">
+                                                                        <span><b><i class="fa fa-plus"></i></b></span>
+                                                                    </button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1252,9 +1114,15 @@
             }
             return false;
         };
-        window.addincontriamociTurboTime = function (button) {
-            if (typeof window.addTurboSchedule === "function") {
-                window.addTurboSchedule(button);
+        window.addIncontriamociTopListTime = function (button) {
+            if (typeof window.addTopListSchedule === "function") {
+                window.addTopListSchedule(button);
+            }
+            return false;
+        };
+        window.addIncontriamociVetrinaTime = function (button) {
+            if (typeof window.addVetrinaSchedule === "function") {
+                window.addVetrinaSchedule(button);
             }
             return false;
         };

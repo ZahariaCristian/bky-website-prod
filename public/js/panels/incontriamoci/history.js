@@ -212,10 +212,10 @@ function canManageHistorySchedule(schedule) {
 
 function getBakecaStatusAction(schedule) {
     if (schedule.urlBK) {
-        return `<a class="btn btn-xs btn-success" href="${schedule.urlBK}" target="_blank">TG</a>`;
+        return `<a class="btn btn-xs btn-success" href="${schedule.urlBK}" target="_blank">Incontriamoci</a>`;
     }
 
-    return "<span class='btn btn-xs btn-success'>TG</span>";
+    return "<span class='btn btn-xs btn-success'>Incontriamoci</span>";
 }
 
 function getPublishStateConfig(schedule) {
@@ -321,6 +321,18 @@ function formatScheduleTopTimes(schedule, withClockIcon = false) {
 
         try {
             const parsed = JSON.parse(schedule?.period || "[]");
+            if (parsed && !Array.isArray(parsed) && parsed.product) {
+                if (parsed.product === "toplist") {
+                    return [
+                        parsed.giorni ? `${parsed.giorni} giorni` : "",
+                        parsed.fascia ? `fascia ${parsed.fascia}` : "",
+                        parsed.risalite ? `${parsed.risalite} risalite` : ""
+                    ].filter(Boolean).join(" - ");
+                }
+                if (parsed.product === "vetrina") {
+                    return parsed.giorni ? `${parsed.giorni} giorni` : "";
+                }
+            }
             if (!Array.isArray(parsed)) return "";
 
             const item = parsed.find((entry) => entry?.dateTimeTop || entry?.climbingCalendar?.length);
@@ -366,6 +378,10 @@ function formatincontriamociPlanLabel(typeAnnuncio) {
             return "Free";
         case "turbo":
             return "Turbo";
+        case "toplist":
+            return "TopList";
+        case "vetrina":
+            return "Top ShowCase";
         default:
             return typeAnnuncio;
     }

@@ -37,6 +37,62 @@ const incontriamoci_TURBO_OPTIONS = [
     { value: "308", text: "2 Ore" }
 ];
 
+const INCONTRIAMOCI_TOPLIST_DAYS = [
+    { value: "1", text: "1 giorno" },
+    { value: "3", text: "3 giorni" },
+    { value: "7", text: "7 giorni" },
+    { value: "14", text: "14 giorni" },
+    { value: "30", text: "30 giorni" }
+];
+
+const INCONTRIAMOCI_VETRINA_DAYS = [
+    { value: "1", text: "1 giorno" },
+    { value: "2", text: "2 giorni" },
+    { value: "3", text: "3 giorni" },
+    { value: "4", text: "4 giorni" },
+    { value: "5", text: "5 giorni" },
+    { value: "6", text: "6 giorni" },
+    { value: "7", text: "7 giorni" },
+    { value: "8", text: "8 giorni" },
+    { value: "9", text: "9 giorni" },
+    { value: "10", text: "10 giorni" },
+    { value: "11", text: "11 giorni" },
+    { value: "12", text: "12 giorni" },
+    { value: "13", text: "13 giorni" },
+    { value: "14", text: "14 giorni" },
+    { value: "15", text: "15 giorni" },
+    { value: "30", text: "30 giorni" }
+];
+
+const INCONTRIAMOCI_TOPLIST_FASCE = [
+    {
+        label: "Fascia oraria",
+        options: [
+            { value: "08-12", text: "08:00 - 12:00" },
+            { value: "12-16", text: "12:00 - 16:00" },
+            { value: "16-20", text: "4:00 PM - 8:00 PM" }
+        ]
+    },
+    {
+        label: "Tutto il giorno",
+        options: [
+            { value: "08-20", text: "8:00 AM - 8:00 PM" }
+        ]
+    },
+    {
+        label: "Tutta la Notte",
+        options: [
+            { value: "20-08", text: "8:00 PM - 8:00 AM" }
+        ]
+    }
+];
+
+const INCONTRIAMOCI_TOPLIST_RISALITE = [
+    { value: "1", text: "1 risalita al giorno" },
+    { value: "2", text: "2 risalite al giorno" },
+    { value: "3", text: "3 risalite al giorno" }
+];
+
 const normalizeGoldGroup = (value = "") => {
     const text = `${value || ""}`.toUpperCase();
     if (text.includes("MATT")) return "MATTINA";
@@ -151,6 +207,93 @@ const createTurboOptionSelect = (selected = "") => {
 
 const getTurboOptionFromPanel = (panel) => {
     return panel?.querySelector(".turbo-option-select")?.value || incontriamoci_TURBO_OPTIONS[0]?.value || "";
+};
+
+const parseIncontriamociPremiumPeriod = (period = "", promoType = "") => {
+    const product = promoType === "Vetrina" ? "vetrina" : "toplist";
+    const defaults = product === "vetrina"
+        ? { product, giorni: "1" }
+        : { product, giorni: "1", fascia: "08-12", risalite: "1" };
+
+    try {
+        const parsed = JSON.parse(period || "{}");
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return { ...defaults, ...parsed, product };
+        }
+    } catch {
+        // Plain/legacy values fall back to defaults.
+    }
+
+    return defaults;
+};
+
+const createIncontriamociPremiumSelect = (className, options, selected = "") => {
+    const select = document.createElement("select");
+    select.className = `form-control incontriamoci-premium-select ${className}`;
+    const appendOption = (item, parent = select) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.text;
+        if (`${selected || ""}` === item.value) option.selected = true;
+        parent.appendChild(option);
+    };
+
+    options.forEach((item) => {
+        if (Array.isArray(item.options)) {
+            const group = document.createElement("optgroup");
+            group.label = item.label || "";
+            item.options.forEach((option) => appendOption(option, group));
+            select.appendChild(group);
+            return;
+        }
+
+        appendOption(item);
+    });
+    if (!select.value) {
+        const firstOption = select.querySelector("option[value]:not([value=''])") || select.querySelector("option");
+        if (firstOption) select.value = firstOption.value;
+    }
+    select.addEventListener("change", () => {
+        markSchedulePanelEdited(select);
+        safeEnableScheduleUpdate();
+    });
+    return select;
+};
+
+const createIncontriamociPremiumControls = (promoType, selected = {}) => {
+    if (promoType !== "TopList" && promoType !== "Vetrina") return [];
+
+    if (promoType === "Vetrina") {
+        return [
+            createIncontriamociPremiumSelect("vetrina-days-select", INCONTRIAMOCI_VETRINA_DAYS, selected.giorni)
+        ];
+    }
+
+    return [
+        createIncontriamociPremiumSelect("toplist-days-select", INCONTRIAMOCI_TOPLIST_DAYS, selected.giorni),
+        createIncontriamociPremiumSelect("toplist-fascia-select", INCONTRIAMOCI_TOPLIST_FASCE, selected.fascia),
+        createIncontriamociPremiumSelect("toplist-risalite-select", INCONTRIAMOCI_TOPLIST_RISALITE, selected.risalite)
+    ];
+};
+
+const buildIncontriamociPremiumPeriod = (panel, promoType) => {
+    if (promoType === "Vetrina") {
+        return JSON.stringify({
+            product: "vetrina",
+            giorni: panel?.querySelector(".vetrina-days-select")?.value || "1"
+        });
+    }
+
+    if (promoType === "TopList") {
+        return JSON.stringify({
+            product: "toplist",
+            giorni: panel?.querySelector(".toplist-days-select")?.value || "1",
+            fascia: panel?.querySelector(".toplist-fascia-select")?.value || "08-12",
+            risalite: panel?.querySelector(".toplist-risalite-select")?.value || "1"
+        });
+    }
+
+    return "";
 };
 
 const getSingleGoldPeriodsFromPanel = (panel) => {
@@ -430,14 +573,14 @@ function getSelectedDayPubs(currentDate) {
         return cityField ? `${cityField.value || ""}`.trim() : "";
     };
 
-    ["Free", "Turbo"].forEach(promoType => {
+    ["Free", "TopList", "Vetrina"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
             let typeData = {};
             typeData.typeAnnuncio = promoType;
             typeData.typePeriodic = "Top";
 
-            typeData.period = promoType === "Turbo" ? buildTurboPeriod(getTurboOptionFromPanel(panel)) : "";
+            typeData.period = buildIncontriamociPremiumPeriod(panel, promoType);
             typeData.city = currentCity();
 
             let images = [];
@@ -552,15 +695,17 @@ function clearPubsViews() {
 };
 
 function loadDayData(pubs) {
-    ["Free", "Turbo"].forEach(promoType => {
+    ["Free", "TopList", "Vetrina"].forEach(promoType => {
         pubs.filter((typer) => { if (typer.typeAnnuncio == promoType) return typer }, promoType).forEach(announcement => {
             console.log(announcement, 'announcement in loadDayData')
             if (announcement.status !== undefined && announcement.status !== "pending") return;
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
 
-            const addButton = document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .turbo-add-schedule, .promo${promoType} .top-add-schedule`);
-            if (promoType === "Turbo") {
-                addTurboSchedule(addButton);
+            const addButton = document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .toplist-add-schedule, .promo${promoType} .vetrina-add-schedule`);
+            if (promoType === "TopList") {
+                addTopListSchedule(addButton, announcement.period);
+            } else if (promoType === "Vetrina") {
+                addVetrinaSchedule(addButton, announcement.period);
             } else {
                 addFreeSchedule(addButton);
             }
@@ -573,8 +718,11 @@ function loadDayData(pubs) {
             currentPanel.attr("data-city", announcement.city);
             currentPanel.data("city", announcement.city);
             currentPanel.find("input[type='time']").val(announcement.time);
-            if (promoType === "Turbo") {
-                currentPanel.find(".turbo-option-select").val(parseTurboPeriod(announcement.period));
+            if (promoType === "TopList" || promoType === "Vetrina") {
+                const selectedPeriod = parseIncontriamociPremiumPeriod(announcement.period, promoType);
+                currentPanel.find(".toplist-days-select, .vetrina-days-select").val(selectedPeriod.giorni);
+                currentPanel.find(".toplist-fascia-select").val(selectedPeriod.fascia);
+                currentPanel.find(".toplist-risalite-select").val(selectedPeriod.risalite);
             }
             applyScheduleImages(currentPanel[0], announcement.images);
             currentPanel.attr("data-state", announcement.state || "");
@@ -784,7 +932,7 @@ const applyScheduleImages = (panel, images = []) => {
     });
 };
 
-const createFreeSchedulePanel = (panel, promoType = "Free") => {
+const createFreeSchedulePanel = (panel, promoType = "Free", period = "") => {
     safeEnableScheduleUpdate();
     if (!panel) return;
     const newPostPanel = document.createElement("div");
@@ -824,10 +972,13 @@ const createFreeSchedulePanel = (panel, promoType = "Free") => {
 
     const picsButton = createPhotoButton();
     const turboSelect = promoType === "Turbo" ? createTurboOptionSelect() : null;
+    const selectedPremiumPeriod = parseIncontriamociPremiumPeriod(period, promoType);
+    const premiumControls = createIncontriamociPremiumControls(promoType, selectedPremiumPeriod);
 
     newPost.appendChild(dateTime);
     newPost.appendChild(timeInput);
     if (turboSelect) newPost.appendChild(turboSelect);
+    premiumControls.forEach((control) => newPost.appendChild(control));
     newPost.appendChild(delButton);
     newPost.appendChild(picsButton);
     newPostPanel.appendChild(newPost);
@@ -846,7 +997,7 @@ const postsPanelOperations = (panel) => {
         addFreeSchedule(addButton);
     });
 }
-document.querySelectorAll(".promoFree > .posts, .promoTurbo > .posts").forEach(postsPanelOperations);
+document.querySelectorAll(".promoFree > .posts, .promoTurbo > .posts, .promoTopList > .posts, .promoVetrina > .posts").forEach(postsPanelOperations);
 
 function addFreeSchedule(button) {
     const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoFree > .posts");
@@ -861,6 +1012,20 @@ function addTurboSchedule(button) {
     createFreeSchedulePanel(panel, "Turbo");
 }
 window.addTurboSchedule = addTurboSchedule;
+
+function addTopListSchedule(button, period = "") {
+    const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoTopList > .posts");
+    if (!panel) return;
+    createFreeSchedulePanel(panel, "TopList", period);
+}
+window.addTopListSchedule = addTopListSchedule;
+
+function addVetrinaSchedule(button, period = "") {
+    const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoVetrina > .posts");
+    if (!panel) return;
+    createFreeSchedulePanel(panel, "Vetrina", period);
+}
+window.addVetrinaSchedule = addVetrinaSchedule;
 
 const createPremiumSchedulePanel = (panel, promoType) => {
     safeEnableScheduleUpdate();
