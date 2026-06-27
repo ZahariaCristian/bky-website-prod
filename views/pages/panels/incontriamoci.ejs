@@ -220,6 +220,61 @@
                 vertical-align: middle;
             }
 
+            .promoTopList .newpost-wrapper,
+            .promoVetrina .newpost-wrapper {
+                align-items: center;
+                flex-wrap: wrap;
+                row-gap: 8px;
+            }
+
+            .incontriamoci-inline-price,
+            .incontriamoci-price-summary {
+                align-items: baseline;
+                display: inline-flex;
+                gap: 6px;
+                white-space: nowrap;
+            }
+
+            .incontriamoci-inline-price {
+                font-size: 18px;
+                margin-left: 12px;
+            }
+
+            .incontriamoci-price-summary {
+                font-size: 20px;
+                margin: 8px 0 10px;
+            }
+
+            .incontriamoci-price-discounted {
+                font-weight: 700;
+            }
+
+            .incontriamoci-price-standard {
+                color: #444;
+                font-weight: 400;
+            }
+
+            .incontriamoci-price-list-actions {
+                display: flex;
+                gap: 8px;
+                justify-content: space-between;
+                margin-bottom: 10px;
+            }
+
+            .incontriamoci-price-list-tables {
+                margin-top: 12px;
+                overflow-x: auto;
+            }
+
+            .incontriamoci-price-table {
+                min-width: 540px;
+            }
+
+            .incontriamoci-price-table[hidden],
+            #incontriamociPriceList[hidden] {
+                display: none;
+            }
+
             .promoPanel:not(.promoFree) .time-slot>.flex-checkbox {
                 align-items: center;
                 display: flex;
@@ -851,38 +906,59 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- <div class="total-cost-container">
-                                                    <label for="totalCost">Totale da spendere:</label>
-                                                    <span id="totalCost">0 €</span>
+                                                <div class="incontriamoci-price-summary" aria-live="polite">
+                                                    <span>Totale:</span>
+                                                    <strong id="totalCost"
+                                                        class="incontriamoci-price-discounted">€ 0.00</strong>
+                                                    <del id="incontriamociStandardTotal"
+                                                        class="incontriamoci-price-standard">€ 0.00</del>
                                                 </div>
-                                                <div class="separator"></div> -->
-
-                                                <!-- Dropdown button -->
-                                                <!-- <button id="toggleTableBtn" class="btn btn-info">Mostra dettagli per più
-                                                    giorni</button> -->
-
-                                                <!-- Hidden table -->
-                                                <div class="total-cost-container">
-                                                    <label for="totalCost">Totale da spendere:</label>
-                                                    <span id="totalCost">0 €</span>
-                                                    <span class="text-muted">
-                                                        (<span id="totalCredits">0</span> crediti)
-                                                    </span>
+                                                <div>
+                                                    <button type="button" class="btn btn-default"
+                                                        id="toggleIncontriamociPriceList"
+                                                        aria-controls="incontriamociPriceList" aria-expanded="false">
+                                                        <i class="fa fa-chevron-down"></i>
+                                                        <span>Mostra listino prezzi</span>
+                                                    </button>
                                                 </div>
-                                                <div class="separator"></div>
-
-                                                <div id="costTableContainer" style="display: none;">
-                                                    <table class="table">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Giorni</th>
-                                                                <th>Totale</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="costTableBody">
-                                                            <!-- Rows will be dynamically added here -->
-                                                        </tbody>
-                                                    </table>
+                                                <div id="incontriamociPriceList" class="price-calc-panel" hidden>
+                                                    <div class="incontriamoci-price-list-actions"
+                                                        role="group" aria-label="Tipo di promozione">
+                                                        <div class="btn-group">
+                                                            <button type="button" class="btn btn-primary"
+                                                                data-incontriamoci-price-table="toplist"
+                                                                aria-pressed="true">TopList</button>
+                                                            <button type="button" class="btn btn-default"
+                                                                data-incontriamoci-price-table="vetrina"
+                                                                aria-pressed="false">Top Vetrina</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="incontriamoci-price-list-tables">
+                                                        <table
+                                                            class="table table-striped table-condensed incontriamoci-price-table"
+                                                            data-product="toplist">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Giorni</th>
+                                                                    <th>Fascia</th>
+                                                                    <th>Risalite</th>
+                                                                    <th>Totale</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="incontriamociTopListPriceRows"></tbody>
+                                                        </table>
+                                                        <table
+                                                            class="table table-striped table-condensed incontriamoci-price-table"
+                                                            data-product="vetrina" hidden>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Giorni</th>
+                                                                    <th>Totale</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="incontriamociVetrinaPriceRows"></tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                                 <div class="separator"></div>
                                                 <button type="button" class="btn btn-success" style="width: 100%;"
@@ -1106,7 +1182,8 @@
     <script src="/js/panels/incontriamoci/main.js"></script>
     <script src="/js/panels/incontriamoci/calendar.js"></script>
     <script src="/js/panels/incontriamoci/images.js?v=20260527-image-arrows"></script>
-    <script src="/js/panels/incontriamoci/timeslot.js"></script>
+    <script src="/js/panels/incontriamoci/price.js?v=20260627-price-list"></script>
+    <script src="/js/panels/incontriamoci/timeslot.js?v=20260627-price-list"></script>
     <script>
         window.addMegaescortFreeTime = function (button) {
             if (typeof window.addFreeSchedule === "function") {

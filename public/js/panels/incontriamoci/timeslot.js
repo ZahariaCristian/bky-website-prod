@@ -93,6 +93,12 @@ const INCONTRIAMOCI_TOPLIST_RISALITE = [
     { value: "3", text: "3 risalite al giorno" }
 ];
 
+const INCONTRIAMOCI_TOPLIST_FIXED_RISALITE_FASCE = new Set(["08-20", "20-08"]);
+
+const normalizeIncontriamociTopListRisalite = (fascia = "", risalite = "1") => {
+    return INCONTRIAMOCI_TOPLIST_FIXED_RISALITE_FASCE.has(`${fascia}`) ? "3" : `${risalite || "1"}`;
+};
+
 const normalizeGoldGroup = (value = "") => {
     const text = `${value || ""}`.toUpperCase();
     if (text.includes("MATT")) return "MATTINA";
@@ -218,7 +224,11 @@ const parseIncontriamociPremiumPeriod = (period = "", promoType = "") => {
     try {
         const parsed = JSON.parse(period || "{}");
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            return { ...defaults, ...parsed, product };
+            const result = { ...defaults, ...parsed, product };
+            if (product === "toplist") {
+                result.risalite = normalizeIncontriamociTopListRisalite(result.fascia, result.risalite);
+            }
+            return result;
         }
     } catch {
         // Plain/legacy values fall back to defaults.
@@ -260,20 +270,64 @@ const createIncontriamociPremiumSelect = (className, options, selected = "") => 
     return select;
 };
 
+const applyIncontriamociTopListRisaliteRule = (fasciaSelect, risaliteSelect) => {
+    if (!fasciaSelect || !risaliteSelect) return;
+
+    const fixedToThree = INCONTRIAMOCI_TOPLIST_FIXED_RISALITE_FASCE.has(fasciaSelect.value);
+    const threeOption = risaliteSelect.querySelector("option[value='3']");
+
+    if (fixedToThree) {
+        if (!risaliteSelect.disabled && risaliteSelect.value !== "3") {
+            risaliteSelect.dataset.previousRisalite = risaliteSelect.value;
+        }
+        risaliteSelect.value = "3";
+        risaliteSelect.disabled = true;
+        if (threeOption) threeOption.textContent = "3 risalite al giorno (obbligatorie)";
+        return;
+    }
+
+    risaliteSelect.disabled = false;
+    if (threeOption) threeOption.textContent = "3 risalite al giorno";
+    if (risaliteSelect.dataset.previousRisalite) {
+        risaliteSelect.value = risaliteSelect.dataset.previousRisalite;
+        delete risaliteSelect.dataset.previousRisalite;
+    }
+};
+
 const createIncontriamociPremiumControls = (promoType, selected = {}) => {
     if (promoType !== "TopList" && promoType !== "Vetrina") return [];
 
     if (promoType === "Vetrina") {
-        return [
-            createIncontriamociPremiumSelect("vetrina-days-select", INCONTRIAMOCI_VETRINA_DAYS, selected.giorni)
-        ];
+        const daysSelect = createIncontriamociPremiumSelect(
+            "vetrina-days-select",
+            INCONTRIAMOCI_VETRINA_DAYS,
+            selected.giorni
+        );
+        daysSelect.addEventListener("change", () => {
+            window.IncontriamociPricing?.updateAll();
+        });
+        return [daysSelect];
     }
 
-    return [
-        createIncontriamociPremiumSelect("toplist-days-select", INCONTRIAMOCI_TOPLIST_DAYS, selected.giorni),
-        createIncontriamociPremiumSelect("toplist-fascia-select", INCONTRIAMOCI_TOPLIST_FASCE, selected.fascia),
-        createIncontriamociPremiumSelect("toplist-risalite-select", INCONTRIAMOCI_TOPLIST_RISALITE, selected.risalite)
-    ];
+    const daysSelect = createIncontriamociPremiumSelect("toplist-days-select", INCONTRIAMOCI_TOPLIST_DAYS, selected.giorni);
+    const fasciaSelect = createIncontriamociPremiumSelect("toplist-fascia-select", INCONTRIAMOCI_TOPLIST_FASCE, selected.fascia);
+    const risaliteSelect = createIncontriamociPremiumSelect(
+        "toplist-risalite-select",
+        INCONTRIAMOCI_TOPLIST_RISALITE,
+        normalizeIncontriamociTopListRisalite(selected.fascia, selected.risalite)
+    );
+
+    fasciaSelect.addEventListener("change", () => {
+        applyIncontriamociTopListRisaliteRule(fasciaSelect, risaliteSelect);
+    });
+    [daysSelect, fasciaSelect, risaliteSelect].forEach((select) => {
+        select.addEventListener("change", () => {
+            window.IncontriamociPricing?.updateAll();
+        });
+    });
+    applyIncontriamociTopListRisaliteRule(fasciaSelect, risaliteSelect);
+
+    return [daysSelect, fasciaSelect, risaliteSelect];
 };
 
 const buildIncontriamociPremiumPeriod = (panel, promoType) => {
@@ -285,11 +339,13 @@ const buildIncontriamociPremiumPeriod = (panel, promoType) => {
     }
 
     if (promoType === "TopList") {
+        const fascia = panel?.querySelector(".toplist-fascia-select")?.value || "08-12";
+        const risalite = panel?.querySelector(".toplist-risalite-select")?.value || "1";
         return JSON.stringify({
             product: "toplist",
             giorni: panel?.querySelector(".toplist-days-select")?.value || "1",
-            fascia: panel?.querySelector(".toplist-fascia-select")?.value || "08-12",
-            risalite: panel?.querySelector(".toplist-risalite-select")?.value || "1"
+            fascia,
+            risalite: normalizeIncontriamociTopListRisalite(fascia, risalite)
         });
     }
 
@@ -687,6 +743,7 @@ function clearPubsViews() {
     //document.querySelectorAll(".promoPanel .btn-danger").forEach(b => b.click());
     $(".btn-danger").parents(".time-slot").find(".form-check-input").click();
     $(".newpost-panel").remove();
+    window.IncontriamociPricing?.updateAll();
     //$(".chkCam").prop("checked", false);
     //$(".chkPremium").prop("checked", false);
     // ["videochiamata", "premium"].forEach(s => {
@@ -968,22 +1025,26 @@ const createFreeSchedulePanel = (panel, promoType = "Free", period = "") => {
         $(newPostPanel).hide();
         $(newPostPanel).data("GCRecord", true);
         safeEnableScheduleUpdate();
+        window.IncontriamociPricing?.updateAll();
     });
 
     const picsButton = createPhotoButton();
     const turboSelect = promoType === "Turbo" ? createTurboOptionSelect() : null;
     const selectedPremiumPeriod = parseIncontriamociPremiumPeriod(period, promoType);
     const premiumControls = createIncontriamociPremiumControls(promoType, selectedPremiumPeriod);
+    const inlinePrice = window.IncontriamociPricing?.createInlinePrice(promoType);
 
     newPost.appendChild(dateTime);
     newPost.appendChild(timeInput);
     if (turboSelect) newPost.appendChild(turboSelect);
     premiumControls.forEach((control) => newPost.appendChild(control));
+    if (inlinePrice) newPost.appendChild(inlinePrice);
     newPost.appendChild(delButton);
     newPost.appendChild(picsButton);
     newPostPanel.appendChild(newPost);
 
     panel.querySelector(".post-list").appendChild(newPostPanel);
+    window.IncontriamociPricing?.updateAll();
 };
 
 const postsPanelOperations = (panel) => {
