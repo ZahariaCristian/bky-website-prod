@@ -1101,6 +1101,55 @@ tblListinoPrezzi.belongsTo(tblGruppi,{
     targetKey: "id"
 });
 
+var tblIncontriamociPrices = model.define("tblIncontriamociPrices", {
+    group: {
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    product: {
+        type: Sequelize.ENUM("toplist", "vetrina"),
+        allowNull: false
+    },
+    days: {
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    timeSlot: {
+        type: Sequelize.STRING(20),
+        allowNull: false,
+        defaultValue: ""
+    },
+    risalite: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+    discountedPrice: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false
+    },
+    standardPrice: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false
+    }
+}, {
+    freezeTableName: true,
+    indexes: [{
+        name: "incontriamoci_price_combination",
+        unique: true,
+        fields: ["group", "product", "days", "timeSlot", "risalite"]
+    }]
+});
+
+tblGruppi.hasMany(tblIncontriamociPrices, {
+    foreignKey: "group",
+    sourceKey: "id"
+});
+tblIncontriamociPrices.belongsTo(tblGruppi, {
+    foreignKey: "group",
+    targetKey: "id"
+});
+
 var tblListinoPrezziSuper = model.define("tblListinoPrezziSuper",{
     group:{
         type: Sequelize.INTEGER,
@@ -1383,6 +1432,7 @@ module.exports = {
     tblInvitiGruppo,
     tblContactVerifyBakeca,
     tblListinoPrezzi,
+    tblIncontriamociPrices,
     tblListinoPrezziSuper,
     tblRole,
     tblUserRole,

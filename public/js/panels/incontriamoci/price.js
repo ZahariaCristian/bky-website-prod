@@ -48,15 +48,37 @@
 
     const standardTopListSlots = new Set(["08-12", "12-16", "16-20"]);
     const standardTopListSlotLabel = "08:00-12:00 / 12:00-16:00 / 16:00-20:00";
+    const storedPrices = new Map();
+
+    const getPriceKey = (product, days, timeSlot = "", risalite = 0) => {
+        return [
+            `${product || ""}`.toLowerCase(),
+            Number(days || 0),
+            `${timeSlot || ""}`,
+            Number(risalite || 0)
+        ].join("|");
+    };
 
     const toPrice = (values) => {
-        if (!Array.isArray(values)) return null;
-        return { discounted: Number(values[0]), standard: Number(values[1]) };
+        if (Array.isArray(values)) {
+            return { discounted: Number(values[0]), standard: Number(values[1]) };
+        }
+        if (values && typeof values === "object") {
+            return {
+                discounted: Number(values.discounted ?? values.discountedPrice),
+                standard: Number(values.standard ?? values.standardPrice)
+            };
+        }
+        return null;
     };
 
     const formatPrice = (value) => `€ ${Number(value || 0).toFixed(2)}`;
 
     const getTopListPrice = (days, fascia, risalite) => {
+        const timeSlot = standardTopListSlots.has(`${fascia}`) ? "standard" : `${fascia}`;
+        const stored = storedPrices.get(getPriceKey("toplist", days, timeSlot, risalite));
+        if (stored) return stored;
+
         const prices = topListPrices[`${days}`];
         if (!prices) return null;
         if (standardTopListSlots.has(`${fascia}`)) {
@@ -70,7 +92,9 @@
     const getPanelPrice = (panel) => {
         const promoType = panel?.dataset?.promoType || "";
         if (promoType === "Vetrina") {
-            return toPrice(vetrinaPrices[panel.querySelector(".vetrina-days-select")?.value || "1"]);
+            const days = panel.querySelector(".vetrina-days-select")?.value || "1";
+            return storedPrices.get(getPriceKey("vetrina", days)) ||
+                toPrice(vetrinaPrices[days]);
         }
         if (promoType === "TopList") {
             return getTopListPrice(
@@ -80,6 +104,38 @@
             );
         }
         return null;
+    };
+
+    const applyStoredPrices = (rows = []) => {
+        storedPrices.clear();
+        rows.forEach((row) => {
+            const price = toPrice(row);
+            if (
+                !price ||
+                !Number.isFinite(price.discounted) ||
+                !Number.isFinite(price.standard)
+            ) return;
+            storedPrices.set(
+                getPriceKey(row.product, row.days, row.timeSlot, row.risalite),
+                price
+            );
+        });
+    };
+
+    const loadStoredPrices = async () => {
+        try {
+            const response = await fetch("/gestPagamenti/getIncontriamociPrices", {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin"
+            });
+            if (!response.ok) return false;
+            const result = await response.json().catch(() => ({}));
+            applyStoredPrices(Array.isArray(result.prices) ? result.prices : []);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     const setPriceContent = (container, price) => {
@@ -151,10 +207,13 @@
         const body = document.querySelector("#incontriamociVetrinaPriceRows");
         if (!body) return;
         body.innerHTML = "";
-        Object.entries(vetrinaPrices).forEach(([days, values]) => {
+        Object.entries(vetrinaPrices).forEach(([days]) => {
             const row = document.createElement("tr");
             appendTextCell(row, `${days} ${days === "1" ? "giorno" : "giorni"}`);
-            appendPriceCell(row, values);
+            appendPriceCell(
+                row,
+                storedPrices.get(getPriceKey("vetrina", days)) || toPrice(vetrinaPrices[days])
+            );
             body.appendChild(row);
         });
     };
@@ -165,24 +224,24 @@
         body.innerHTML = "";
 
         Object.entries(topListPrices).forEach(([days, prices]) => {
-            Object.entries(prices.standardSlots).forEach(([risalite, values]) => {
+            Object.keys(prices.standardSlots).forEach((risalite) => {
                 const row = document.createElement("tr");
                 appendTextCell(row, `${days} ${days === "1" ? "giorno" : "giorni"}`);
                 appendTextCell(row, standardTopListSlotLabel);
                 appendTextCell(row, `${risalite} ${risalite === "1" ? "risalita" : "risalite"}`);
-                appendPriceCell(row, values);
+                appendPriceCell(row, getTopListPrice(days, "08-12", risalite));
                 body.appendChild(row);
             });
 
             [
-                ["08:00-20:00", prices.fullDay],
-                ["20:00-08:00", prices.night]
-            ].forEach(([fascia, values]) => {
+                ["08:00-20:00", "08-20"],
+                ["20:00-08:00", "20-08"]
+            ].forEach(([fasciaLabel, fascia]) => {
                 const row = document.createElement("tr");
                 appendTextCell(row, `${days} ${days === "1" ? "giorno" : "giorni"}`);
-                appendTextCell(row, fascia);
+                appendTextCell(row, fasciaLabel);
                 appendTextCell(row, "3 risalite");
-                appendPriceCell(row, values);
+                appendPriceCell(row, getTopListPrice(days, fascia, 3));
                 body.appendChild(row);
             });
         });
@@ -229,11 +288,18 @@
         }
 
         updateAll();
+        loadStoredPrices().then((loaded) => {
+            if (!loaded) return;
+            renderTopListTable();
+            renderVetrinaTable();
+            updateAll();
+        });
     };
 
     window.IncontriamociPricing = {
         createInlinePrice,
         getPanelPrice,
+        loadStoredPrices,
         updateAll
     };
 

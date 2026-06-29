@@ -4,6 +4,85 @@ const ctx = require("../ctx/model");
 const Op = ctx.model.Sequelize.Op;
 const PDFDocument = require('pdfkit');
 const PDFTable = require('pdfkit-table');
+const {
+    getDefaultIncontriamociPrices,
+    getIncontriamociPriceKey
+} = require("../config/incontriamociPrices");
+
+const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
+const validIncontriamociPriceKeys = new Set(
+    defaultIncontriamociPrices.map(getIncontriamociPriceKey)
+);
+let incontriamociPriceTablePromise;
+
+const ensureIncontriamociPriceTable = () => {
+    if (!incontriamociPriceTablePromise) {
+        incontriamociPriceTablePromise = ctx.tblIncontriamociPrices.sync().catch((error) => {
+            incontriamociPriceTablePromise = null;
+            throw error;
+        });
+    }
+    return incontriamociPriceTablePromise;
+};
+
+const getRequestGroupId = async (req) => {
+    const user = await ctx.tblUser.findOne({ where: { OID: req.session.userid } });
+    if (!user) return null;
+    const membership = await user.getGroup();
+    return membership?.group || null;
+};
+
+const normalizeIncontriamociPrice = (row = {}) => {
+    const product = `${row.product || ""}`.toLowerCase();
+    const days = Number(row.days);
+    const timeSlot = product === "vetrina" ? "" : `${row.timeSlot || ""}`;
+    const risalite = product === "vetrina" ? 0 : Number(row.risalite);
+    const discountedPrice = Number(row.discountedPrice);
+    const standardPrice = Number(row.standardPrice);
+    const normalized = {
+        product,
+        days,
+        timeSlot,
+        risalite,
+        discountedPrice,
+        standardPrice
+    };
+
+    if (!validIncontriamociPriceKeys.has(getIncontriamociPriceKey(normalized))) {
+        throw new Error("Invalid Incontriamoci price combination.");
+    }
+    if (
+        !Number.isFinite(discountedPrice) ||
+        !Number.isFinite(standardPrice) ||
+        discountedPrice < 0 ||
+        standardPrice < discountedPrice
+    ) {
+        throw new Error("Prices must be valid and standard price cannot be lower than price.");
+    }
+
+    return normalized;
+};
+
+const seedIncontriamociPrices = async (group) => {
+    const count = await ctx.tblIncontriamociPrices.count({ where: { group } });
+    if (count >= defaultIncontriamociPrices.length) return;
+    await ctx.tblIncontriamociPrices.bulkCreate(
+        defaultIncontriamociPrices.map((row) => ({ ...row, group })),
+        { ignoreDuplicates: true }
+    );
+};
+
+const findIncontriamociPrices = (group) => {
+    return ctx.tblIncontriamociPrices.findAll({
+        where: { group },
+        order: [
+            ["product", "ASC"],
+            ["days", "ASC"],
+            ["timeSlot", "ASC"],
+            ["risalite", "ASC"]
+        ]
+    });
+};
 
 router.get("/exportCreditsReport", authenticateKey, async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -191,6 +270,72 @@ router.get("/getListino", authenticateKey, async (req, res) => {
     var listino = await ctx.tblListinoPrezzi.findAll({where:{group: groupM.group}});
 
     res.json({listino: listino});
+});
+
+router.get("/getIncontriamociPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensureIncontriamociPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        await seedIncontriamociPrices(group);
+        const prices = await findIncontriamociPrices(group);
+        res.json({ prices });
+    } catch (error) {
+        console.error("Unable to load Incontriamoci prices:", error);
+        res.status(500).json({ error: "Unable to load Incontriamoci prices." });
+    }
+});
+
+router.post("/updateIncontriamociPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > defaultIncontriamociPrices.length
+    ) {
+        return res.status(400).json({ error: "A valid price list is required." });
+    }
+
+    try {
+        await ensureIncontriamociPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const normalizedRows = req.body.rows.map(normalizeIncontriamociPrice);
+        const rows = Array.from(new Map(
+            normalizedRows.map((row) => [getIncontriamociPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    product: row.product,
+                    days: row.days,
+                    timeSlot: row.timeSlot,
+                    risalite: row.risalite
+                };
+                const [price] = await ctx.tblIncontriamociPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    discountedPrice: row.discountedPrice,
+                    standardPrice: row.standardPrice
+                }, { transaction });
+            }
+        });
+
+        const prices = await findIncontriamociPrices(group);
+        res.json({ prices });
+    } catch (error) {
+        const validationMessage = error?.message?.startsWith("Invalid") ||
+            error?.message?.startsWith("Prices");
+        if (validationMessage) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Incontriamoci prices:", error);
+        res.status(500).json({ error: "Unable to save Incontriamoci prices." });
+    }
 });
 
 router.get("/getCrediti", authenticateKey, async (req, res) => {
