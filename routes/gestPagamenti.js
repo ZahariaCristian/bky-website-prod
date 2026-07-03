@@ -5,24 +5,33 @@ const Op = ctx.model.Sequelize.Op;
 const PDFDocument = require('pdfkit');
 const PDFTable = require('pdfkit-table');
 const {
-    getDefaultIncontriamociPrices,
-    getIncontriamociPriceKey
+    INCONTRIAMOCI_PLATFORM,
+    getDefaultIncontriamociPrices
 } = require("../config/incontriamociPrices");
+const {
+    BAKECA_PLATFORM,
+    getDefaultBakecaPrices
+} = require("../config/bakecaPrices");
+const { getPlatformPriceKey } = require("../config/platformPrices");
 
 const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
+const defaultBakecaPrices = getDefaultBakecaPrices();
 const validIncontriamociPriceKeys = new Set(
-    defaultIncontriamociPrices.map(getIncontriamociPriceKey)
+    defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
-let incontriamociPriceTablePromise;
+const validBakecaPriceKeys = new Set(
+    defaultBakecaPrices.map(getPlatformPriceKey)
+);
+let platformPriceTablePromise;
 
-const ensureIncontriamociPriceTable = () => {
-    if (!incontriamociPriceTablePromise) {
-        incontriamociPriceTablePromise = ctx.tblIncontriamociPrices.sync().catch((error) => {
-            incontriamociPriceTablePromise = null;
+const ensurePlatformPriceTable = () => {
+    if (!platformPriceTablePromise) {
+        platformPriceTablePromise = ctx.tblPlatformPrices.sync().catch((error) => {
+            platformPriceTablePromise = null;
             throw error;
         });
     }
-    return incontriamociPriceTablePromise;
+    return platformPriceTablePromise;
 };
 
 const getRequestGroupId = async (req) => {
@@ -35,27 +44,38 @@ const getRequestGroupId = async (req) => {
 const normalizeIncontriamociPrice = (row = {}) => {
     const product = `${row.product || ""}`.toLowerCase();
     const days = Number(row.days);
-    const timeSlot = product === "vetrina" ? "" : `${row.timeSlot || ""}`;
-    const risalite = product === "vetrina" ? 0 : Number(row.risalite);
-    const discountedPrice = Number(row.discountedPrice);
+    let options = row.optionsJson || {};
+    if (typeof options === "string") {
+        try {
+            options = JSON.parse(options);
+        } catch {
+            options = {};
+        }
+    }
+    const timeSlot = product === "vetrina" ? "" : `${options.timeSlot || ""}`;
+    const risalite = product === "vetrina" ? 0 : Number(options.risalite);
+    const variantKey = product === "vetrina" ? "default" : `${timeSlot}-r${risalite}`;
+    const price = Number(row.price);
     const standardPrice = Number(row.standardPrice);
     const normalized = {
+        platform: INCONTRIAMOCI_PLATFORM,
         product,
         days,
-        timeSlot,
-        risalite,
-        discountedPrice,
-        standardPrice
+        variantKey,
+        optionsJson: product === "vetrina" ? {} : { timeSlot, risalite },
+        price,
+        standardPrice,
+        active: true
     };
 
-    if (!validIncontriamociPriceKeys.has(getIncontriamociPriceKey(normalized))) {
+    if (!validIncontriamociPriceKeys.has(getPlatformPriceKey(normalized))) {
         throw new Error("Invalid Incontriamoci price combination.");
     }
     if (
-        !Number.isFinite(discountedPrice) ||
+        !Number.isFinite(price) ||
         !Number.isFinite(standardPrice) ||
-        discountedPrice < 0 ||
-        standardPrice < discountedPrice
+        price < 0 ||
+        standardPrice < price
     ) {
         throw new Error("Prices must be valid and standard price cannot be lower than price.");
     }
@@ -63,23 +83,59 @@ const normalizeIncontriamociPrice = (row = {}) => {
     return normalized;
 };
 
-const seedIncontriamociPrices = async (group) => {
-    const count = await ctx.tblIncontriamociPrices.count({ where: { group } });
-    if (count >= defaultIncontriamociPrices.length) return;
-    await ctx.tblIncontriamociPrices.bulkCreate(
-        defaultIncontriamociPrices.map((row) => ({ ...row, group })),
+const normalizeBakecaPrice = (row = {}) => {
+    const normalized = {
+        platform: BAKECA_PLATFORM,
+        product: `${row.product || ""}`.toLowerCase(),
+        days: Number(row.days),
+        variantKey: "default",
+        optionsJson: {},
+        price: Number(row.price),
+        standardPrice: null,
+        active: true
+    };
+
+    if (!validBakecaPriceKeys.has(getPlatformPriceKey(normalized))) {
+        throw new Error("Invalid Bakeca price combination.");
+    }
+    if (!Number.isFinite(normalized.price) || normalized.price < 0) {
+        throw new Error("Bakeca price must be a valid non-negative value.");
+    }
+
+    return normalized;
+};
+
+const seedPlatformPrices = async (group, platform, defaults) => {
+    const where = { group, platform };
+    const existingRows = await ctx.tblPlatformPrices.findAll({
+        where,
+        attributes: ["platform", "product", "days", "variantKey"]
+    });
+    const existingKeys = new Set(
+        existingRows.map((row) => getPlatformPriceKey(row.get({ plain: true })))
+    );
+    const missingRows = defaults.filter(
+        (row) => !existingKeys.has(getPlatformPriceKey(row))
+    );
+    if (missingRows.length === 0) return;
+
+    await ctx.tblPlatformPrices.bulkCreate(
+        missingRows.map((row) => ({ ...row, group })),
         { ignoreDuplicates: true }
     );
 };
 
-const findIncontriamociPrices = (group) => {
-    return ctx.tblIncontriamociPrices.findAll({
-        where: { group },
+const findPlatformPrices = (group, platform) => {
+    return ctx.tblPlatformPrices.findAll({
+        where: {
+            group,
+            platform,
+            active: true
+        },
         order: [
             ["product", "ASC"],
             ["days", "ASC"],
-            ["timeSlot", "ASC"],
-            ["risalite", "ASC"]
+            ["variantKey", "ASC"]
         ]
     });
 };
@@ -274,11 +330,11 @@ router.get("/getListino", authenticateKey, async (req, res) => {
 
 router.get("/getIncontriamociPrices", authenticateKey, async (req, res) => {
     try {
-        await ensureIncontriamociPriceTable();
+        await ensurePlatformPriceTable();
         const group = await getRequestGroupId(req);
         if (!group) return res.status(404).json({ error: "Group not found." });
-        await seedIncontriamociPrices(group);
-        const prices = await findIncontriamociPrices(group);
+        await seedPlatformPrices(group, INCONTRIAMOCI_PLATFORM, defaultIncontriamociPrices);
+        const prices = await findPlatformPrices(group, INCONTRIAMOCI_PLATFORM);
         res.json({ prices });
     } catch (error) {
         console.error("Unable to load Incontriamoci prices:", error);
@@ -296,36 +352,38 @@ router.post("/updateIncontriamociPrices", authenticateKey, async (req, res) => {
     }
 
     try {
-        await ensureIncontriamociPriceTable();
+        await ensurePlatformPriceTable();
         const group = await getRequestGroupId(req);
         if (!group) return res.status(404).json({ error: "Group not found." });
         const normalizedRows = req.body.rows.map(normalizeIncontriamociPrice);
         const rows = Array.from(new Map(
-            normalizedRows.map((row) => [getIncontriamociPriceKey(row), row])
+            normalizedRows.map((row) => [getPlatformPriceKey(row), row])
         ).values());
 
         await ctx.model.transaction(async (transaction) => {
             for (const row of rows) {
                 const where = {
                     group,
+                    platform: row.platform,
                     product: row.product,
                     days: row.days,
-                    timeSlot: row.timeSlot,
-                    risalite: row.risalite
+                    variantKey: row.variantKey
                 };
-                const [price] = await ctx.tblIncontriamociPrices.findOrCreate({
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
                     where,
                     defaults: { ...where, ...row },
                     transaction
                 });
                 await price.update({
-                    discountedPrice: row.discountedPrice,
-                    standardPrice: row.standardPrice
+                    optionsJson: row.optionsJson,
+                    price: row.price,
+                    standardPrice: row.standardPrice,
+                    active: true
                 }, { transaction });
             }
         });
 
-        const prices = await findIncontriamociPrices(group);
+        const prices = await findPlatformPrices(group, INCONTRIAMOCI_PLATFORM);
         res.json({ prices });
     } catch (error) {
         const validationMessage = error?.message?.startsWith("Invalid") ||
@@ -335,6 +393,74 @@ router.post("/updateIncontriamociPrices", authenticateKey, async (req, res) => {
         }
         console.error("Unable to save Incontriamoci prices:", error);
         res.status(500).json({ error: "Unable to save Incontriamoci prices." });
+    }
+});
+
+router.get("/getBakecaPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        await seedPlatformPrices(group, BAKECA_PLATFORM, defaultBakecaPrices);
+        const prices = await findPlatformPrices(group, BAKECA_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        console.error("Unable to load Bakeca prices:", error);
+        res.status(500).json({ error: "Unable to load Bakeca prices." });
+    }
+});
+
+router.post("/updateBakecaPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > defaultBakecaPrices.length
+    ) {
+        return res.status(400).json({ error: "A valid Bakeca price list is required." });
+    }
+
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const normalizedRows = req.body.rows.map(normalizeBakecaPrice);
+        const rows = Array.from(new Map(
+            normalizedRows.map((row) => [getPlatformPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    platform: row.platform,
+                    product: row.product,
+                    days: row.days,
+                    variantKey: row.variantKey
+                };
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    optionsJson: {},
+                    price: row.price,
+                    standardPrice: null,
+                    active: true
+                }, { transaction });
+            }
+        });
+
+        const prices = await findPlatformPrices(group, BAKECA_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        const validationMessage = error?.message?.startsWith("Invalid") ||
+            error?.message?.startsWith("Bakeca price");
+        if (validationMessage) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Bakeca prices:", error);
+        res.status(500).json({ error: "Unable to save Bakeca prices." });
     }
 });
 

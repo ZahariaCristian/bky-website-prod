@@ -10,7 +10,7 @@ var dropPromoDuration = (selected) => {
         { value: "3", text: "3 giorno" },
         { value: "7", text: "1 settimana" },
         { value: "14", text: "2 settimana" },
-        // { value: "28", text: "4 settimana" }
+        { value: "28", text: "4 settimana" }
     ];
 
     optionsStr.forEach((x) => {

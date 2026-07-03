@@ -57,7 +57,8 @@
         .superTop input{
             color:black;
         }
-        .incontriamoci-price-toolbar {
+        .incontriamoci-price-toolbar,
+        .bakeca-price-toolbar {
             align-items: flex-end;
             display: flex;
             flex-wrap: wrap;
@@ -65,20 +66,25 @@
             justify-content: space-between;
             margin-bottom: 14px;
         }
-        .incontriamoci-price-toolbar .form-group {
+        .incontriamoci-price-toolbar .form-group,
+        .bakeca-price-toolbar .form-group {
             margin-bottom: 0;
         }
-        .incontriamoci-price-editor input[type="number"] {
+        .incontriamoci-price-editor input[type="number"],
+        .bakeca-price-editor input[type="number"] {
             min-width: 100px;
             width: 100%;
         }
-        .incontriamoci-price-editor table {
+        .incontriamoci-price-editor table,
+        .bakeca-price-editor table {
             margin-bottom: 0;
         }
-        .incontriamoci-price-editor [hidden] {
+        .incontriamoci-price-editor [hidden],
+        .bakeca-price-editor [hidden] {
             display: none;
         }
-        .incontriamoci-price-status {
+        .incontriamoci-price-status,
+        .bakeca-price-status {
             margin: 12px 0 0;
         }
     </style>
@@ -369,6 +375,49 @@
                     </div>
                 </div>
 
+                <div class="widget widget-body-gray bakeca-price-editor" id="bakecaPriceEditor">
+                    <div class="widget-head" style="background: #eaeaea;">
+                        <h3 class="heading glyphicons euro"><i></i>Listino Bakeca.it</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="bakeca-price-toolbar">
+                            <div class="btn-group" role="group" aria-label="Prodotto Bakeca.it">
+                                <button type="button" class="btn btn-primary"
+                                    data-bakeca-editor-product="toplist1"
+                                    aria-pressed="true">Top List1</button>
+                                <button type="button" class="btn btn-default"
+                                    data-bakeca-editor-product="toplist3"
+                                    aria-pressed="false">Top List3</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Durata</th>
+                                        <th>Crediti</th>
+                                        <th>Prezzo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bakecaPriceEditorRows">
+                                    <tr>
+                                        <td colspan="3" class="text-muted">Caricamento...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="bakecaPriceStatus" class="bakeca-price-status"
+                            role="status" aria-live="polite"></div>
+                        <button type="button" class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px;"
+                            id="saveBakecaPrices" disabled>
+                            <i class="fa fa-save"></i> <b>Salva listino Bakeca.it</b>
+                        </button>
+                    </div>
+                </div>
+
 
             </div>
             <footer>
@@ -378,6 +427,8 @@
     </div>
             
     <script src="/js/gestPagamenti.js"></script>
-    <script src="/js/gestPagamenti.incontriamoci.js?v=20260629-price-editor"></script>
+    <script src="/js/bakeca-prices.js?v=20260703-bakeca-prices"></script>
+    <script src="/js/gestPagamenti.bakeca.js?v=20260703-bakeca-prices"></script>
+    <script src="/js/gestPagamenti.incontriamoci.js?v=20260703-platform-prices"></script>
 </body>
 </html>

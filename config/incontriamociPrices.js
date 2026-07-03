@@ -1,5 +1,7 @@
 const TOPLIST_STANDARD_SLOT = "standard";
 const TOPLIST_STANDARD_SLOT_LABEL = "08:00-12:00 / 12:00-16:00 / 16:00-20:00";
+const INCONTRIAMOCI_PLATFORM = "incontriamoci";
+const { getPlatformPriceKey } = require("./platformPrices");
 
 const VETRINA_PRICES = {
     1: [7, 13],
@@ -48,14 +50,22 @@ const TOPLIST_PRICES = {
     }
 };
 
-const createPriceRow = (product, days, timeSlot, risalite, prices) => ({
-    product,
-    days: Number(days),
-    timeSlot,
-    risalite: Number(risalite),
-    discountedPrice: Number(prices[0]),
-    standardPrice: Number(prices[1])
-});
+const createPriceRow = (product, days, timeSlot, risalite, prices) => {
+    const isVetrina = product === "vetrina";
+    return {
+        platform: INCONTRIAMOCI_PLATFORM,
+        product,
+        days: Number(days),
+        variantKey: isVetrina ? "default" : `${timeSlot}-r${risalite}`,
+        optionsJson: isVetrina ? {} : {
+            timeSlot,
+            risalite: Number(risalite)
+        },
+        price: Number(prices[0]),
+        standardPrice: Number(prices[1]),
+        active: true
+    };
+};
 
 function getDefaultIncontriamociPrices() {
     const rows = [];
@@ -75,18 +85,9 @@ function getDefaultIncontriamociPrices() {
     return rows;
 }
 
-function getIncontriamociPriceKey(row = {}) {
-    return [
-        `${row.product || ""}`.toLowerCase(),
-        Number(row.days || 0),
-        `${row.timeSlot || ""}`,
-        Number(row.risalite || 0)
-    ].join("|");
-}
-
 module.exports = {
+    INCONTRIAMOCI_PLATFORM,
     TOPLIST_STANDARD_SLOT,
     TOPLIST_STANDARD_SLOT_LABEL,
-    getDefaultIncontriamociPrices,
-    getIncontriamociPriceKey
+    getDefaultIncontriamociPrices
 };

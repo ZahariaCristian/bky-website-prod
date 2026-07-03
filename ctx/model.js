@@ -3,6 +3,16 @@ const Sequelize = require("sequelize"); //https://sequelize.org/v3/docs/querying
 
 dotenv.config();
 
+const PLATFORM_VALUES = [
+    'incontriamoci',
+    'amasens',
+    'trovagnocca',
+    'megaescort',
+    'incontriescort',
+    'bakeca',
+    'bakecaincontrii'
+];
+
 //hasMany -> foreignKey, proprietà presente in destinazione -> sourceKey
 //belongsTo -> foreignKey, proprietà presente in tabella verso -> sourceKey
 //hasOne -> foreignKey, proprietà presente in tabella di destinazione
@@ -225,15 +235,7 @@ var tblPlatform = model.define("tblPlatform", {
         allowNull: false
     },
     platform: {
-        type: Sequelize.ENUM(
-            'incontriamoci',
-            'amasens',
-            'trovagnocca',
-            'megaescort',
-            'incontriescort',
-            'bakeca',
-            'bakecaincontrii'
-        ),
+        type: Sequelize.ENUM(...PLATFORM_VALUES),
         allowNull: false,
         defaultValue: 'bakeca'
     },
@@ -1101,51 +1103,62 @@ tblListinoPrezzi.belongsTo(tblGruppi,{
     targetKey: "id"
 });
 
-var tblIncontriamociPrices = model.define("tblIncontriamociPrices", {
+var tblPlatformPrices = model.define("tblPlatformPrices", {
     group: {
         type: Sequelize.INTEGER,
         allowNull: false
     },
+    platform: {
+        type: Sequelize.ENUM(...PLATFORM_VALUES),
+        allowNull: false
+    },
     product: {
-        type: Sequelize.ENUM("toplist", "vetrina"),
+        type: Sequelize.STRING(50),
         allowNull: false
     },
     days: {
         type: Sequelize.INTEGER,
         allowNull: false
     },
-    timeSlot: {
-        type: Sequelize.STRING(20),
+    variantKey: {
+        type: Sequelize.STRING(100),
         allowNull: false,
-        defaultValue: ""
+        defaultValue: "default"
     },
-    risalite: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 0
+    optionsJson: {
+        type: Sequelize.JSON,
+        allowNull: true
     },
-    discountedPrice: {
+    price: {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: false
     },
     standardPrice: {
         type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: true
+    },
+    active: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     freezeTableName: true,
     indexes: [{
-        name: "incontriamoci_price_combination",
+        name: "platform_price_combination",
         unique: true,
-        fields: ["group", "product", "days", "timeSlot", "risalite"]
+        fields: ["group", "platform", "product", "days", "variantKey"]
+    }, {
+        name: "platform_price_lookup",
+        fields: ["group", "platform", "product"]
     }]
 });
 
-tblGruppi.hasMany(tblIncontriamociPrices, {
+tblGruppi.hasMany(tblPlatformPrices, {
     foreignKey: "group",
     sourceKey: "id"
 });
-tblIncontriamociPrices.belongsTo(tblGruppi, {
+tblPlatformPrices.belongsTo(tblGruppi, {
     foreignKey: "group",
     targetKey: "id"
 });
@@ -1432,7 +1445,7 @@ module.exports = {
     tblInvitiGruppo,
     tblContactVerifyBakeca,
     tblListinoPrezzi,
-    tblIncontriamociPrices,
+    tblPlatformPrices,
     tblListinoPrezziSuper,
     tblRole,
     tblUserRole,

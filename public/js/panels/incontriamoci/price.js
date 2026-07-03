@@ -65,7 +65,7 @@
         }
         if (values && typeof values === "object") {
             return {
-                discounted: Number(values.discounted ?? values.discountedPrice),
+                discounted: Number(values.discounted ?? values.price),
                 standard: Number(values.standard ?? values.standardPrice)
             };
         }
@@ -110,13 +110,26 @@
         storedPrices.clear();
         rows.forEach((row) => {
             const price = toPrice(row);
+            let options = row.optionsJson || {};
+            if (typeof options === "string") {
+                try {
+                    options = JSON.parse(options);
+                } catch {
+                    options = {};
+                }
+            }
             if (
                 !price ||
                 !Number.isFinite(price.discounted) ||
                 !Number.isFinite(price.standard)
             ) return;
             storedPrices.set(
-                getPriceKey(row.product, row.days, row.timeSlot, row.risalite),
+                getPriceKey(
+                    row.product,
+                    row.days,
+                    options.timeSlot,
+                    options.risalite
+                ),
                 price
             );
         });

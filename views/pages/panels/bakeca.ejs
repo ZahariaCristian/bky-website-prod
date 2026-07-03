@@ -201,6 +201,53 @@
             .time-slot .lblDateTime {
                 margin-left: -36px;
             }
+
+            .promo1x .newpost-wrapper,
+            .promo3x .newpost-wrapper {
+                align-items: center;
+                flex-wrap: wrap;
+                row-gap: 8px;
+            }
+
+            .bakeca-inline-price,
+            .bakeca-price-summary {
+                align-items: baseline;
+                display: inline-flex;
+                gap: 6px;
+                white-space: nowrap;
+            }
+
+            .bakeca-inline-price {
+                font-size: 17px;
+                margin-left: 12px;
+            }
+
+            .bakeca-price-summary {
+                font-size: 20px;
+                margin: 8px 0 10px;
+            }
+
+            .bakeca-price-panel {
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                margin: 8px 0 18px;
+                padding: 12px;
+            }
+
+            .bakeca-price-tables {
+                margin-top: 12px;
+                overflow-x: auto;
+            }
+
+            .bakeca-price-table {
+                min-width: 620px;
+            }
+
+            .bakeca-price-table[hidden],
+            #bakecaPriceList[hidden] {
+                display: none;
+            }
         </style>
 </head>
 
@@ -514,29 +561,58 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- <div class="total-cost-container">
-                                                    <label for="totalCost">Totale da spendere:</label>
-                                                    <span id="totalCost">0 €</span>
+                                                <div class="bakeca-price-summary" aria-live="polite">
+                                                    <span>Totale:</span>
+                                                    <strong id="bakecaTotalCredits">0 crediti</strong>
+                                                    <span>/</span>
+                                                    <strong id="bakecaTotalPrice">€ 0.00</strong>
                                                 </div>
-                                                <div class="separator"></div> -->
-
-                                                <!-- Dropdown button -->
-                                                <!-- <button id="toggleTableBtn" class="btn btn-info">Mostra dettagli per più
-                                                    giorni</button> -->
-
-                                                <!-- Hidden table -->
-                                                <div id="costTableContainer" style="display: none;">
-                                                    <table class="table">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Giorni</th>
-                                                                <th>Totale</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody id="costTableBody">
-                                                            <!-- Rows will be dynamically added here -->
-                                                        </tbody>
-                                                    </table>
+                                                <div>
+                                                    <button type="button" class="btn btn-default"
+                                                        id="toggleBakecaPriceList"
+                                                        aria-controls="bakecaPriceList" aria-expanded="false">
+                                                        <i class="fa fa-chevron-down"></i>
+                                                        <span>Mostra listino prezzi</span>
+                                                    </button>
+                                                </div>
+                                                <div id="bakecaPriceList" class="bakeca-price-panel" hidden>
+                                                    <div class="btn-group" role="group"
+                                                        aria-label="Prodotto Bakeca.it">
+                                                        <button type="button" class="btn btn-primary"
+                                                            data-bakeca-price-table="toplist1"
+                                                            aria-pressed="true">Top List1</button>
+                                                        <button type="button" class="btn btn-default"
+                                                            data-bakeca-price-table="toplist3"
+                                                            aria-pressed="false">Top List3</button>
+                                                    </div>
+                                                    <div class="bakeca-price-tables">
+                                                        <table
+                                                            class="table table-striped table-condensed bakeca-price-table"
+                                                            data-bakeca-price-product="toplist1">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Durata</th>
+                                                                    <th>Crediti</th>
+                                                                    <th>Prezzo</th>
+                                                                    <th>Fasce orarie</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody></tbody>
+                                                        </table>
+                                                        <table
+                                                            class="table table-striped table-condensed bakeca-price-table"
+                                                            data-bakeca-price-product="toplist3" hidden>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Durata</th>
+                                                                    <th>Crediti</th>
+                                                                    <th>Prezzo</th>
+                                                                    <th>Fasce orarie</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody></tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                                 <div class="separator"></div>
                                                 <button class="btn btn-success" style="width: 100%;"
@@ -759,7 +835,9 @@
     <script src="/js/panels/bakeca/main.js"></script>
     <script src="/js/panels/bakeca/calendar.js"></script>
     <script src="/js/panels/bakeca/images.js?v=20260527-image-arrows"></script>
-    <script src="/js/panels/bakeca/timeslot.js"></script>
+    <script src="/js/bakeca-prices.js?v=20260703-bakeca-prices"></script>
+    <script src="/js/panels/bakeca/price.js?v=20260703-bakeca-prices"></script>
+    <script src="/js/panels/bakeca/timeslot.js?v=20260703-bakeca-prices"></script>
     <script src="/js/panels/bakeca/ajax.js"></script>
     <script src="/js/panels/bakeca/history.js"></script>
     <script src="/js/panels/bakeca/utils.js"></script>

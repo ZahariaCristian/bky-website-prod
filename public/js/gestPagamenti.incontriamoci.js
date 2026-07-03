@@ -9,11 +9,22 @@
 
     const getRoot = () => document.querySelector("#incontriamociPriceEditor");
     const getKey = (row = {}) => [
+        `${row.platform || ""}`,
         `${row.product || ""}`,
         Number(row.days || 0),
-        `${row.timeSlot || ""}`,
-        Number(row.risalite || 0)
+        `${row.variantKey || "default"}`
     ].join("|");
+
+    const getOptions = (row = {}) => {
+        if (row.optionsJson && typeof row.optionsJson === "object") {
+            return row.optionsJson;
+        }
+        try {
+            return JSON.parse(row.optionsJson || "{}");
+        } catch {
+            return {};
+        }
+    };
 
     const formatInputPrice = (value) => Number(value || 0).toFixed(2);
 
@@ -59,8 +70,10 @@
             .filter((row) => row.product === "toplist" && Number(row.days) === days)
             .sort((a, b) => {
                 const slotOrder = { standard: 0, "08-20": 1, "20-08": 2 };
-                return (slotOrder[a.timeSlot] - slotOrder[b.timeSlot]) ||
-                    (Number(a.risalite) - Number(b.risalite));
+                const aOptions = getOptions(a);
+                const bOptions = getOptions(b);
+                return (slotOrder[aOptions.timeSlot] - slotOrder[bOptions.timeSlot]) ||
+                    (Number(aOptions.risalite) - Number(bOptions.risalite));
             });
 
         if (rows.length === 0) {
@@ -69,13 +82,14 @@
         }
 
         rows.forEach((priceRow) => {
+            const options = getOptions(priceRow);
             const row = document.createElement("tr");
-            appendTextCell(row, SLOT_LABELS[priceRow.timeSlot] || priceRow.timeSlot);
+            appendTextCell(row, SLOT_LABELS[options.timeSlot] || options.timeSlot);
             appendTextCell(
                 row,
-                `${priceRow.risalite} ${Number(priceRow.risalite) === 1 ? "risalita" : "risalite"}`
+                `${options.risalite} ${Number(options.risalite) === 1 ? "risalita" : "risalite"}`
             );
-            appendPriceInput(row, priceRow, "discountedPrice", "Prezzo");
+            appendPriceInput(row, priceRow, "price", "Prezzo");
             appendPriceInput(row, priceRow, "standardPrice", "Prezzo standard");
             body.appendChild(row);
         });
@@ -101,7 +115,7 @@
                 row,
                 `${priceRow.days} ${Number(priceRow.days) === 1 ? "giorno" : "giorni"}`
             );
-            appendPriceInput(row, priceRow, "discountedPrice", "Prezzo");
+            appendPriceInput(row, priceRow, "price", "Prezzo");
             appendPriceInput(row, priceRow, "standardPrice", "Prezzo standard");
             body.appendChild(row);
         });
@@ -160,13 +174,13 @@
 
     const validatePrices = () => {
         for (const row of priceRows) {
-            const discountedPrice = Number(row.discountedPrice);
+            const price = Number(row.price);
             const standardPrice = Number(row.standardPrice);
             if (
-                !Number.isFinite(discountedPrice) ||
+                !Number.isFinite(price) ||
                 !Number.isFinite(standardPrice) ||
-                discountedPrice < 0 ||
-                standardPrice < discountedPrice
+                price < 0 ||
+                standardPrice < price
             ) {
                 return "Il prezzo standard non può essere inferiore al prezzo.";
             }
