@@ -31,6 +31,8 @@ $(()=>{
                     setPlatformStatus("Trovagnocca", res.group?.trovagnocca?.status);
                     $("#inputIncontriamociUserName").val(res.group?.incontriamoci?.username);
                     setPlatformStatus("Incontriamoci", res.group?.incontriamoci?.status);
+                    $("#inputAmasensUserName").val(res.group?.amasens?.username);
+                    setPlatformStatus("Amasens", res.group?.amasens?.status || "inactive");
                 });
             });
     },100);
@@ -49,7 +51,7 @@ $("#btnCreaUtente").on("click",()=>{
             },
             redirect: "follow",
             referrerPolicy: "no-referrer",
-            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca(), incontriamociGroup: getInfoDataIncontriamoci()})
+            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca(), incontriamociGroup: getInfoDataIncontriamoci(), amasensGroup: getInfoDataAmasens()})
         }).then((r) => {
             toggleLoader();
             if(r.status !== 200){
@@ -100,6 +102,13 @@ var getInfoDataIncontriamoci = ()=>{
         username: $("#inputIncontriamociUserName").val(),
         password: $("#inputIncontriamociUserPassword").val(),
         status: getPlatformStatus("Incontriamoci")
+    }
+}
+var getInfoDataAmasens = ()=>{
+    return {
+        username: $("#inputAmasensUserName").val(),
+        password: $("#inputAmasensUserPassword").val(),
+        status: getPlatformStatus("Amasens")
     }
 }
 

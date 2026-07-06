@@ -3,10 +3,25 @@
   animation: flash 1s infinite;
 }
 
+.credit-flashing-label {
+  animation: credit-flash 1s infinite;
+}
+
 @keyframes flash {
   0% { opacity: 1; }
   50% { opacity: 0.3; }
   100% { opacity: 1; }
+}
+
+@keyframes credit-flash {
+  0%, 49.99% {
+    background-color: #5cb85c;
+    border-color: #4cae4c;
+  }
+  50%, 100% {
+    background-color: #d9534f;
+    border-color: #d43f3a;
+  }
 }
 </style>
 <nav class="navbar hidden-print main  animated fadeInUp" role="navigation" style="visibility: visible;">
@@ -23,16 +38,19 @@
             <span id="couponNotice" class="label label-warning flashing-label" style="margin-left: 10px; display:none;">Coupon Disponibili</span>
         </li>
         <li class="notifications">
-            <span class="text-default strong" style="font-size: 100%;">Bakeca:</span> <span id="bakecaCredit" class="label label-success">0</span>
+            <span class="text-default strong" style="font-size: 100%;">BK.it:</span> <span id="bakecaCredit" class="label label-success">0</span>
         </li>
         <li class="notifications">
-            <span class="text-default strong" style="font-size: 100%;">Megaescort:</span> <span id="megaescortCredit" class="label label-success">0</span>
+            <span class="text-default strong" style="font-size: 100%;">ME:</span> <span id="megaescortCredit" class="label label-success">0</span>
         </li>
         <li class="notifications">
-            <span class="text-default strong" style="font-size: 100%;">Trovagnocca:</span> <span id="trovagnoccaCredit" class="label label-success">0</span>
+            <span class="text-default strong" style="font-size: 100%;">TR:</span> <span id="trovagnoccaCredit" class="label label-success">0</span>
         </li>
         <li class="notifications">
-            <span class="text-default strong" style="font-size: 100%;">Incontriamoci:</span> <span id="incontriamociCredit" class="label label-success">0</span>
+            <span class="text-default strong" style="font-size: 100%;">IN:</span> <span id="incontriamociCredit" class="label label-success">0</span>
+        </li>
+        <li class="notifications">
+            <span class="text-default strong" style="font-size: 100%;">AM:</span> <span id="amasensCredit" class="label label-success">0</span>
         </li>
         <!--<li class="dropdown notif notifications hidden-xs">
             <a href="" class="dropdown-toggle" data-toggle="dropdown"><i class="icon-bell-fill"></i> <span class="label label-danger">5</span></a>

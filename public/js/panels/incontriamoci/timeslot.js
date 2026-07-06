@@ -751,9 +751,28 @@ function clearPubsViews() {
     // });
 };
 
+const resolveIncontriamociSchedulePromoType = (announcement = {}) => {
+    try {
+        const parsedPeriod = JSON.parse(announcement.period || "{}");
+        const product = `${parsedPeriod?.product || ""}`.trim().toLowerCase();
+        if (product === "toplist") return "TopList";
+        if (product === "vetrina") return "Vetrina";
+    } catch {
+        // Legacy/plain periods are classified from typeAnnuncio below.
+    }
+
+    const normalizedType = `${announcement.typeAnnuncio || ""}`
+        .replace(/[^a-z0-9]/gi, "")
+        .toLowerCase();
+    if (normalizedType === "free") return "Free";
+    if (normalizedType === "toplist") return "TopList";
+    if (["vetrina", "topvetrina", "topvertrina"].includes(normalizedType)) return "Vetrina";
+    return "";
+};
+
 function loadDayData(pubs) {
     ["Free", "TopList", "Vetrina"].forEach(promoType => {
-        pubs.filter((typer) => { if (typer.typeAnnuncio == promoType) return typer }, promoType).forEach(announcement => {
+        pubs.filter((announcement) => resolveIncontriamociSchedulePromoType(announcement) === promoType).forEach(announcement => {
             console.log(announcement, 'announcement in loadDayData')
             if (announcement.status !== undefined && announcement.status !== "pending") return;
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
@@ -788,7 +807,7 @@ function loadDayData(pubs) {
     });
 
     ["1x1", "1x3", "1x7"].forEach(promoType => {
-        pubs.filter((typer) => { if (typer.typeAnnuncio && typer.typeAnnuncio.includes(promoType)) return typer }, promoType).forEach(announcement => {
+        pubs.filter((announcement) => !resolveIncontriamociSchedulePromoType(announcement) && announcement.typeAnnuncio?.includes(promoType)).forEach(announcement => {
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
             const timeslot = findPremiumTimeSlotForPeriod(promoType, announcement.period);
             if (!timeslot) return;

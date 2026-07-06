@@ -22,6 +22,7 @@ router.post("/get", authenticateKey, async (req, res) => {
         gruppo = gruppo.get({ plain: true });
         const platformInfo = await ctx.tblPlatform.findAll({ where: { gruppi: gruppo.id } });
         platformInfo.map(p => p.get({ plain: true })).forEach((info) => {
+            delete info.password;
             gruppo[info.platform] = info;
         });
     }
@@ -39,6 +40,7 @@ router.post("/edit", authenticateKey, async (req, res) => {
     var megaescortGroup = req.body.megaescortGroup;
     var trovagnoccaGroup = req.body.trovagnoccaGroup;
     var incontriamociGroup = req.body.incontriamociGroup;
+    var amasensGroup = req.body.amasensGroup;
     if(!user.password || user.password.length == 0){
         user.storedPassword = utente.password;
     }else{
@@ -74,6 +76,9 @@ router.post("/edit", authenticateKey, async (req, res) => {
     }
     if (ctx.tblPlatform && incontriamociGroup) {
         await upsertPlatform(gruppo.id, "incontriamoci", incontriamociGroup, true);
+    }
+    if (ctx.tblPlatform && amasensGroup) {
+        await upsertPlatform(gruppo.id, "amasens", amasensGroup, true);
     }
 
     res.sendStatus(200);

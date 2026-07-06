@@ -128,7 +128,12 @@ function requestUpdate(reload) {
         );
 
         document.querySelector("#updateScheduleBtn").setAttribute("disabled", true);
-        if (reload) window.location.reload();
+        if (reload) {
+            const reloadUrl = new URL(window.location.href);
+            if (currentDay) reloadUrl.searchParams.set("day", currentDay);
+            window.location.href = reloadUrl.toString();
+            return;
+        }
         r.json().then(async (res) => {
             $(res.schedulato).each((i, x) => {
                 if (x.relativeID) {

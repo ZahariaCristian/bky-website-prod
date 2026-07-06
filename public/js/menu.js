@@ -167,18 +167,16 @@ function GetBKCredit() {
 
     r.json().then((res) => {
       // Update credit
-      $("#lblBKCredit").text(res.bk);
-      $("#bakecaCredit").text(formatNumber(res.bakeca));
-      $("#megaescortCredit").text(formatNumber(res.megaescort));
-      $("#trovagnoccaCredit").text(formatNumber(res.trovagnocca));
-      $("#incontriamociCredit").text(formatNumber(res.incontriamoci));
-
-      // Flash red if below 500
-      if (parseInt(res.bk.replace(".", "")) < 500) {
-        setInterval(() => {
-          $("#lblBKCredit").toggleClass("label-danger label-success");
-        }, 500);
-      }
+      const bkCredit = parseInt(String(res.bk).replace(/\./g, ""), 10);
+      $("#lblBKCredit")
+        .text(res.bk)
+        .toggleClass("credit-flashing-label label-danger", bkCredit < 500)
+        .toggleClass("label-success", !(bkCredit < 500));
+      updatePlatformCredit("#bakecaCredit", res.bakeca);
+      updatePlatformCredit("#megaescortCredit", res.megaescort);
+      updatePlatformCredit("#trovagnoccaCredit", res.trovagnocca);
+      updatePlatformCredit("#incontriamociCredit", res.incontriamoci);
+      updatePlatformCredit("#amasensCredit", res.amasens);
 
       // Show/hide existing coupon notice element
       if (res.coupon === true) {
@@ -193,6 +191,15 @@ function GetBKCredit() {
 const formatNumber = (value) => {
   const number = parseFloat(value);
   return Number.isNaN(number) ? 0 : number.toString();
+};
+
+const updatePlatformCredit = (selector, value) => {
+  const formattedCredit = formatNumber(value);
+  const isLowCredit = Number(formattedCredit) < 500;
+  $(selector)
+    .text(formattedCredit)
+    .toggleClass("credit-flashing-label label-danger", isLowCredit)
+    .toggleClass("label-success", !isLowCredit);
 };
 
 function getBKUsername(){
