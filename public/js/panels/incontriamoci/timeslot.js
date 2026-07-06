@@ -919,6 +919,7 @@ const createPhotoButton = () => {
             postImgEl.src = picEl.src;
 
             const btnAnteprima = document.createElement("button");
+            btnAnteprima.type = "button";
             btnAnteprima.setAttribute("class", "btn btn-secondary btn-anteprima");
             btnAnteprima.innerHTML = "ANTEPRIMA";
             checkbox.addEventListener("click", () => {
@@ -1282,6 +1283,7 @@ const timeSlotPanelOperations = (panel) => {
                 postImgEl.src = picEl.src;
 
                 const btnAnteprima = document.createElement("button");
+                btnAnteprima.type = "button";
                 btnAnteprima.setAttribute("class", "btn btn-secondary btn-anteprima");
                 btnAnteprima.innerHTML = "ANTEPRIMA";
                 checkbox.addEventListener("click", () => {
