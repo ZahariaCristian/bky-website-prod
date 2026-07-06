@@ -1,7 +1,17 @@
+const validateIncontriamociDescription = (description) => {
+    const normalizedDescription = `${description || ""}`.replace(/\s+/g, " ").trim();
+    if (normalizedDescription.length >= 50) return true;
+    ShowAlert("custom", `La descrizione deve contenere almeno 50 caratteri. Caratteri attuali: ${normalizedDescription.length}.`);
+    const descriptionField = document.querySelector("textarea[name='description']");
+    if (descriptionField) descriptionField.focus();
+    return false;
+};
+
 // Update Info(title, Description etc) When Save button
 function updateInfo(save) {
     var dataAnnuncio = getInfoData();
     console.log("1", { dataAnnuncio })
+    if (!validateIncontriamociDescription(dataAnnuncio.description)) return false;
     var phoneNumber = parseInt(dataAnnuncio.phone, 10);
     if (!phoneNumber || dataAnnuncio.phone.indexOf(" ") != -1 || dataAnnuncio.phone.indexOf("/") != -1 || dataAnnuncio.phone.indexOf(".") != -1 || dataAnnuncio.phone.indexOf(",") != -1) {
         ShowAlert("custom", "Verifica il numero di telefono inserito.");
@@ -28,6 +38,9 @@ function updateInfo(save) {
     }).then((r) => {
         toggleLoader();
         console.log(r.status, 'status')
+        if (r.status === 422) {
+            return r.json().then((payload) => ShowAlert("custom", payload.error || "La descrizione è troppo corta."));
+        }
         if (r.status === 405) return alert(
             "📝 Assicurati prima di aver compilato correttamente tutte le informazioni relative all'annuncio!",
         );
@@ -54,6 +67,7 @@ function updateInfo(save) {
 
 function UpdateSchedulazioni() {
     var dataAnnuncio = getInfoData();
+    if (!validateIncontriamociDescription(dataAnnuncio.description)) return false;
     var phoneNumber = parseInt(dataAnnuncio.phone, 10);
     if (!phoneNumber || dataAnnuncio.phone.indexOf(" ") != -1 || dataAnnuncio.phone.indexOf("/") != -1 || dataAnnuncio.phone.indexOf(".") != -1 || dataAnnuncio.phone.indexOf(",") != -1) {
         ShowAlert("custom", "Verifica il numero di telefono inserito.");
@@ -95,6 +109,8 @@ function UpdateSchedulazioni() {
 
 // requestUpdate Schedule
 function requestUpdate(reload) {
+    const description = document.querySelector("textarea[name='description']")?.value || "";
+    if (!validateIncontriamociDescription(description)) return false;
     var anID = $("#annuncioID").val();
     if (!anID || anID === "new" || Number.isNaN(parseInt(anID, 10))) {
         return alert("Assicurati prima di salvare le informazioni dell'annuncio.");
@@ -120,6 +136,9 @@ function requestUpdate(reload) {
     }).then((r) => {
         toggleLoader();
         // loadStorico(parseInt(QUERY_NEW));
+        if (r.status === 422) {
+            return r.json().then((payload) => ShowAlert("custom", payload.error || "La descrizione è troppo corta."));
+        }
         if (r.status === 405) return alert(
             "⚠ Assicurati prima di salvare le informazioni dell'annuncio."
         );

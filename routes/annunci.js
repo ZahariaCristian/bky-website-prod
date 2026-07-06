@@ -1883,11 +1883,20 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
     const { info } = req.body
     const panel = normalizePanelPlatform(req.body.panel);
     const parsedAge = parseAgeValue(info.age);
+    const minimumDescriptionLength = panel === "incontriamoci" ? 50 : 20;
+    const normalizedDescription = `${info.description || ""}`.replace(/\s+/g, " ").trim();
+    if (normalizedDescription.length < minimumDescriptionLength) {
+        return res.status(422).json({
+            error: `La descrizione deve contenere almeno ${minimumDescriptionLength} caratteri.`,
+            minimum: minimumDescriptionLength,
+            actual: normalizedDescription.length
+        });
+    }
     // Checking if the info has been correctly inserted
     if (
         info.city === "Seleziona una città" ||
         !info.title || info.title.length < 5 ||
-        !info.description || info.description.length < 20 ||
+        !info.description || normalizedDescription.length < minimumDescriptionLength ||
         !info.phone || isNaN(info.phone)
     ) return res.sendStatus(405);
 
@@ -2021,6 +2030,16 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
     var girl = await ctx.tblAnnunci.findOne({ where: { id: req.body.id } });
     if (!girl)
         return res.sendStatus(405);
+    if (normalizePanelPlatform(req.body.panel) === "incontriamoci") {
+        const descriptionLength = `${girl.description || ""}`.replace(/\s+/g, " ").trim().length;
+        if (descriptionLength < 50) {
+            return res.status(422).json({
+                error: "La descrizione deve contenere almeno 50 caratteri prima di pubblicare.",
+                minimum: 50,
+                actual: descriptionLength
+            });
+        }
+    }
     var allSchedulazioni = req.body.schedule;
     var onlySchedulazioni = [];
     for (let date of Object.keys(allSchedulazioni)) {
@@ -2364,6 +2383,16 @@ router.get("/blacklist", authenticateKey, async (req, res) => {
 
 router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
     if (!req.body.id) return res.sendStatus(400);
+    if (normalizePanelPlatform(req.body.panel) === "incontriamoci") {
+        const descriptionLength = `${req.body.info?.description || ""}`.replace(/\s+/g, " ").trim().length;
+        if (descriptionLength < 50) {
+            return res.status(422).json({
+                error: "La descrizione deve contenere almeno 50 caratteri.",
+                minimum: 50,
+                actual: descriptionLength
+            });
+        }
+    }
     const userid = req.session.userid;
     const panel = normalizePanelPlatform(req.body.panel);
     var annuncio = await ctx.tblAnnunci.findOne({ where: { id: req.body.id } });
