@@ -2088,8 +2088,9 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                                 }
                             }
                         } else {
+                            const selectedPreviewIndex = s.images.findIndex((image) => image.isAnteprima === true);
                             for (let img in s.images) {
-                                const anteprima = s.images[img].isAnteprima === true || (img == '0' && !s.images.some((image) => image.isAnteprima === true));
+                                const anteprima = Number(img) === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0);
                                 await ctx.tblGalleriaAnnuncio.create({
                                     schedulazione: schedulato.id,
                                     galleria: s.images[img].galleria,
@@ -2114,7 +2115,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 if (s.state == "EDIT") {
                     if (task.remotePostID != null) state = "EDIT"; //remotePostId 
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
-                    for (r of Object.keys(rImgs)) rImgs[r].update({ GCRecord: ctx.newGCRecord() });
+                    for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
                     var i = 0;
                     const platform = normalizePanelPlatform(req.body.panel);
                     const imageLimit = ["trovagnocca", "incontriamoci"].includes(platform) ? 6 : 5;
@@ -2125,9 +2126,9 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         scheduleImages = photos.map((photo) => ({ galleria: photo.id }));
                     }
 
+                    const selectedPreviewIndex = scheduleImages.findIndex((image) => image.isAnteprima === true);
                     for (img of scheduleImages) {
-                        const hasExplicitAnteprima = scheduleImages.some((image) => image.isAnteprima === true);
-                        var anteprima = img.isAnteprima === true || (!hasExplicitAnteprima && i == 0);
+                        var anteprima = i === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0);
                         i++;
                         await ctx.tblGalleriaAnnuncio.create({
                             schedulazione: task.id,
@@ -2464,12 +2465,26 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         }
         var schedulazioni = await ctx.tblSchedulazioni.findAll({ where: schedulazioniWhere });
 
-        var newGallery = await donna.getTblGalleria({ limit: 5, where: { isHidden: 0, GCRecord: null } });
+        const galleryLimit = panel === "incontriamoci" ? 6 : 5;
+        var newGallery = await donna.getTblGalleria({ limit: galleryLimit, where: { isHidden: 0, GCRecord: null } });
 
         var recentPublishLimit = new Date();
         recentPublishLimit.setDate(recentPublishLimit.getDate() - 8);
         for (ad of schedulazioni) {
             if (ad.data > recentPublishLimit) {
+                const existingScheduleGallery = await ad.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
+                const sourceImages = panel === "incontriamoci" && existingScheduleGallery.length
+                    ? existingScheduleGallery.map((image) => ({
+                        galleria: image.galleria,
+                        isAnteprima: image.isAnteprima === true
+                    }))
+                    : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
+                const selectedPreviewIndex = sourceImages.findIndex((image) => image.isAnteprima === true);
+                const normalizedImages = sourceImages.map((image, index) => ({
+                    galleria: image.galleria,
+                    isAnteprima: index === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0)
+                }));
+
                 if (shouldRepublishBakeca) {
                     var republishSchedule = await ctx.tblSchedulazioni.create({
                         annuncio: ad.annuncio,
@@ -2486,22 +2501,25 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                         platform: ad.platform
                     });
 
-                    var republishAnteprima = true;
-                    for (newG of newGallery) {
-                        await ctx.tblGalleriaAnnuncio.create({ galleria: newG.id, schedulazione: republishSchedule.id, isAnteprima: republishAnteprima });
-                        republishAnteprima = false;
+                    for (const image of normalizedImages) {
+                        await ctx.tblGalleriaAnnuncio.create({
+                            galleria: image.galleria,
+                            schedulazione: republishSchedule.id,
+                            isAnteprima: image.isAnteprima
+                        });
                     }
 
                     await ad.update({ state: "DELETE", editedBy: userid });
                     continue;
                 }
 
-                var galleryes = await ad.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
-                for (oldG of galleryes) await oldG.update({ GCRecord: ctx.newGCRecord() });
-                var antePrima = true;
-                for (newG of newGallery) {
-                    await ctx.tblGalleriaAnnuncio.create({ galleria: newG.id, schedulazione: ad.id, isAnteprima: antePrima });
-                    antePrima = false;
+                for (oldG of existingScheduleGallery) await oldG.update({ GCRecord: ctx.newGCRecord() });
+                for (const image of normalizedImages) {
+                    await ctx.tblGalleriaAnnuncio.create({
+                        galleria: image.galleria,
+                        schedulazione: ad.id,
+                        isAnteprima: image.isAnteprima
+                    });
                 }
 
                 await ad.update({ state: "EDIT" });
