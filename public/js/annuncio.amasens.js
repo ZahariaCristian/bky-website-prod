@@ -413,7 +413,8 @@ document.querySelector("#caricalink-button").addEventListener("click", () => {
     const url = document.querySelector("#link-to-scrape").value;
     if (!url) return ShowAlert("custom", "🔗 Assicurati di inserire prima un link.");//alert("🔗 Assicurati di inserire prima un link.");
 
-    fetch("/annuncio/getByUrl", {
+    toggleLoader();
+    fetch("/annuncio/scrapeAmasens", {
         method: "POST",
         mode: "cors",
         cache: "no-cache",
@@ -423,8 +424,9 @@ document.querySelector("#caricalink-button").addEventListener("click", () => {
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, panel: QUERY_PANEL || "amasens" }),
     }).then((r) => {
+        toggleLoader();
         if (r.status == 500) return alert(
             "⚠ L'annuncio richiesto non contiene il numero di telefono.",
         );
@@ -432,11 +434,19 @@ document.querySelector("#caricalink-button").addEventListener("click", () => {
             "⚠ Si è verificato un errore durante il caricamento dati da URL",
         );
         r.json().then((res) => {
+            if (!res.id) return alert(
+                "âš  Si Ã¨ verificato un errore durante il caricamento dati da URL",
+            );
+            var link = "/annuncio.html?edit=" + res.id + "&panel=amasens";
             if (res.donna == null) {
-                return window.location = "/annuncio.html?edit=" + res.id + "&enableEdit=true";
+                return window.location = link + "&enableEdit=true";
             }
-            window.location = "/annuncio.html?edit=" + res.id;
+            window.location = link;
         });
+    }).catch((error) => {
+        toggleLoader();
+        console.error("Amasens scrape failed:", error);
+        alert("âš  Si Ã¨ verificato un errore durante il caricamento dati da URL");
     });
 });
 

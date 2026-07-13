@@ -871,7 +871,10 @@ var loadAnnuncio = (id)=>{
 document.querySelector("#caricalink-button").addEventListener("click", () => {
     const url = document.querySelector("#link-to-scrape").value;
     if (!url) return  ShowAlert("custom", "🔗 Assicurati di inserire prima un link.");//alert("🔗 Assicurati di inserire prima un link.");
-    fetch("/annuncio/getByUrl", {
+    const panel = `${URL_PARAMS.get("panel") || ""}`.toLowerCase();
+    const scrapeUrl = panel === "amasens" ? "/annuncio/scrapeAmasens" : "/annuncio/getByUrl";
+    if (panel === "amasens") toggleLoader();
+    fetch(scrapeUrl, {
         method: "POST",
         mode: "cors",
         cache: "no-cache",
@@ -881,8 +884,9 @@ document.querySelector("#caricalink-button").addEventListener("click", () => {
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, panel }),
     }).then((r) => {
+        if (panel === "amasens") toggleLoader();
         if (r.status == 500) return alert(
             "⚠ L'annuncio richiesto non contiene il numero di telefono.",
         );
@@ -890,11 +894,19 @@ document.querySelector("#caricalink-button").addEventListener("click", () => {
             "⚠ Si è verificato un errore durante il caricamento dati da URL",
         );
         r.json().then((res)=>{
+            if (!res.id) return alert(
+                "âš  Si Ã¨ verificato un errore durante il caricamento dati da URL",
+            );
+            const panelQuery = panel ? `&panel=${panel}` : "";
             if (res.donna == null){
-                return window.location = "/annuncio.html?edit=" + res.id + "&enableEdit=true";
+                return window.location = "/annuncio.html?edit=" + res.id + panelQuery + "&enableEdit=true";
             }
-            window.location = "/annuncio.html?edit=" + res.id;
+            window.location = "/annuncio.html?edit=" + res.id + panelQuery;
         });
+    }).catch((error) => {
+        if (panel === "amasens") toggleLoader();
+        console.error("Scrape failed:", error);
+        alert("âš  Si Ã¨ verificato un errore durante il caricamento dati da URL");
     });
 });
 

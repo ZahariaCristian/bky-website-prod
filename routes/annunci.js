@@ -4,6 +4,7 @@ const scrapeBakeca = require("../lib/scraper/backer");
 const scrapeMegaescort = require("../lib/scraper/me");
 const scrapeTrovagnocca = require("../lib/scraper/trovagnocca");
 const scrapeIncontriamoci = require("../lib/scraper/incontriamoci");
+const scrapeAmasens = require("../lib/scraper/amasens");
 const axios = require("axios");
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
@@ -1658,6 +1659,180 @@ router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
         return res.json({ id: annuncio.id, donna: donna.id });
     } catch (error) {
         console.error("Error in /scrapeincontriamoci route:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+});
+
+router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
+    try {
+        if (!req.body.url) {
+            console.error("Error: Missing URL in request body.");
+            return res.status(400).json({ error: "Missing URL in request body." });
+        }
+
+        const userid = req.session.userid;
+        if (!userid) {
+            console.error("Error: User not authenticated.");
+            return res.status(401).json({ error: "User not authenticated." });
+        }
+
+        const user = await ctx.tblUser.findOne({ where: { OID: userid } });
+        if (!user) {
+            console.error(`Error: User with ID ${userid} not found.`);
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        const groupM = await user.getGroup();
+
+        console.log(req.body.url, "scrape amasens");
+
+        const MAX_RETRIES = 3;
+        let scrapingResult = null;
+        for (let i = 1; i <= MAX_RETRIES; i++) {
+            try {
+                console.log(`Amasens scraping attempt ${i}...`);
+                const result = await scrapeAmasens.scrape(req.body.url);
+                console.log("Amasens scraping result:", result);
+
+                if (result) {
+                    scrapingResult = {
+                        remotePostID: result.remotePostID || "",
+                        phoneFromUrl: result.phoneFromUrl || "",
+                        adId: result.adId || "",
+                        title: result.title || "",
+                        description: result.description || "",
+                        city: result.city || "",
+                        location: result.location || result.city || "",
+                        region: result.region || result.attributes?.region || "",
+                        name: result.name || "",
+                        phone: result.phone || "",
+                        whatsapp: Boolean(result.whatsapp),
+                        telegram: result.telegram || "",
+                        telegramUrl: result.telegramUrl || "",
+                        hasTelegram: Boolean(result.telegram || result.telegramUrl),
+                        category: result.category || "",
+                        info: result.info || {},
+                        attributes: result.attributes || result.info || {},
+                        images: Array.isArray(result.images) ? result.images : [],
+                        imageFiles: Array.isArray(result.imageFiles) ? result.imageFiles : [],
+                        url: result.url || req.body.url
+                    };
+
+                    if (scrapingResult.phone && scrapingResult.imageFiles.length > 0) {
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error(`Amasens attempt ${i} error:`, err.message);
+            }
+
+            if (i < MAX_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, 2000 * i));
+            }
+        }
+
+        if (!scrapingResult) {
+            console.error("Error: Amasens scraping failed, no data returned.");
+            return res.status(400).json({ error: "Scraping failed." });
+        }
+
+        if (!scrapingResult.phone) {
+            console.error("Error: Amasens scraping failed, no phone returned.");
+            return res.status(500).json({ error: "Missing phone number." });
+        }
+
+        let donna = await ctx.tblDonne.findOne({
+            where: { phone: scrapingResult.phone, GCRecord: null }
+        });
+
+        if (!donna) {
+            donna = await ctx.tblDonne.create({
+                name: scrapingResult.name || "NUOVA CLIENTE CAMBIARE NOME",
+                city: scrapingResult.city,
+                phone: scrapingResult.phone,
+                groupOwner: groupM.group
+            });
+        } else {
+            const donnaUpdates = {};
+            if (scrapingResult.name) donnaUpdates.name = scrapingResult.name;
+            if (scrapingResult.city) donnaUpdates.city = scrapingResult.city;
+            if (Object.keys(donnaUpdates).length > 0) {
+                await donna.update(donnaUpdates);
+            }
+        }
+
+        const phoneDir = `${rootPath}/girls/${donna.phone}`;
+        const picsDir = `${phoneDir}/pics`;
+        if (!fs.existsSync(picsDir)) fs.mkdirSync(picsDir, { recursive: true });
+
+        let annuncio = await ctx.tblAnnunci.findOne({
+            where: { donna: donna.id, title: scrapingResult.title }
+        });
+
+        const categorie = normalizeMegaescortCategory(scrapingResult.category);
+        const note = JSON.stringify({
+            amasens: {
+                scrape: {
+                    remotePostID: scrapingResult.remotePostID || "",
+                    phoneFromUrl: scrapingResult.phoneFromUrl || "",
+                    adId: scrapingResult.adId || "",
+                    sourceUrl: scrapingResult.url || req.body.url,
+                    region: scrapingResult.region || "",
+                    address: scrapingResult.attributes?.address || "",
+                    phoneLinks: Array.isArray(scrapingResult.phoneLinks) ? scrapingResult.phoneLinks : [],
+                    whatsappLinks: Array.isArray(scrapingResult.whatsappLinks) ? scrapingResult.whatsappLinks : []
+                }
+            }
+        });
+
+        if (!annuncio) {
+            annuncio = await ctx.tblAnnunci.create({
+                title: scrapingResult.title,
+                city: scrapingResult.city,
+                location: scrapingResult.location,
+                description: scrapingResult.description,
+                donna: donna.id,
+                hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
+                categorie,
+                sono: categorie,
+                note,
+                groupOwner: groupM.group,
+                editedBy: userid,
+                cost: 0
+            });
+        } else {
+            await annuncio.update({
+                city: scrapingResult.city,
+                location: scrapingResult.location,
+                description: scrapingResult.description,
+                hasWhatapp: scrapingResult.whatsapp,
+                hasTelegram: scrapingResult.hasTelegram,
+                categorie,
+                sono: categorie,
+                note,
+                editedBy: userid
+            });
+        }
+
+        if (scrapingResult.imageFiles && scrapingResult.imageFiles.length > 0) {
+            for (let i = 0; i < scrapingResult.imageFiles.length; i++) {
+                const fileName = scrapingResult.imageFiles[i];
+                await ctx.tblGalleria.create({
+                    donna: donna.id,
+                    src: `/images/get?phone=${donna.phone}&index=${i}`,
+                    GCRecord: null,
+                    origin: basename(fileName),
+                    isHidden: false,
+                });
+            }
+        } else {
+            console.error("No Amasens images found in scraping result.");
+        }
+
+        return res.json({ id: annuncio.id, donna: donna.id });
+    } catch (error) {
+        console.error("Error in /scrapeAmasens route:", error);
         return res.status(500).json({ error: "Internal server error." });
     }
 });
