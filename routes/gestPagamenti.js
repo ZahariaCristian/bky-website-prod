@@ -293,7 +293,8 @@ router.get("/getCreditsUsedBetweenDates", authenticateKey, async (req, res) => {
             },
             include: [{
                 model: ctx.tblDonne,
-                required: true
+                required: true,
+                attributes: []
             }]
         });
 
