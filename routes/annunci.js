@@ -1705,14 +1705,17 @@ router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
                         location: result.location || result.city || "",
                         region: result.region || result.attributes?.region || "",
                         name: result.name || "",
+                        age: result.age || result.info?.eta || result.attributes?.eta || result.attributes?.age || "",
                         phone: result.phone || "",
                         whatsapp: Boolean(result.whatsapp),
+                        whatsappLinks: Array.isArray(result.whatsappLinks) ? result.whatsappLinks : [],
                         telegram: result.telegram || "",
                         telegramUrl: result.telegramUrl || "",
                         hasTelegram: Boolean(result.telegram || result.telegramUrl),
                         category: result.category || "",
                         info: result.info || {},
                         attributes: result.attributes || result.info || {},
+                        phoneLinks: Array.isArray(result.phoneLinks) ? result.phoneLinks : [],
                         images: Array.isArray(result.images) ? result.images : [],
                         imageFiles: Array.isArray(result.imageFiles) ? result.imageFiles : [],
                         url: result.url || req.body.url
@@ -1748,6 +1751,7 @@ router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
         if (!donna) {
             donna = await ctx.tblDonne.create({
                 name: scrapingResult.name || "NUOVA CLIENTE CAMBIARE NOME",
+                years: parseAgeValue(scrapingResult.age),
                 city: scrapingResult.city,
                 phone: scrapingResult.phone,
                 groupOwner: groupM.group
@@ -1755,6 +1759,7 @@ router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
         } else {
             const donnaUpdates = {};
             if (scrapingResult.name) donnaUpdates.name = scrapingResult.name;
+            if (parseAgeValue(scrapingResult.age)) donnaUpdates.years = parseAgeValue(scrapingResult.age);
             if (scrapingResult.city) donnaUpdates.city = scrapingResult.city;
             if (Object.keys(donnaUpdates).length > 0) {
                 await donna.update(donnaUpdates);
@@ -1779,6 +1784,8 @@ router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
                     sourceUrl: scrapingResult.url || req.body.url,
                     region: scrapingResult.region || "",
                     address: scrapingResult.attributes?.address || "",
+                    name: scrapingResult.name || "",
+                    age: scrapingResult.age || "",
                     phoneLinks: Array.isArray(scrapingResult.phoneLinks) ? scrapingResult.phoneLinks : [],
                     whatsappLinks: Array.isArray(scrapingResult.whatsappLinks) ? scrapingResult.whatsappLinks : []
                 }

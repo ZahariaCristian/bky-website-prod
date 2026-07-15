@@ -99,6 +99,11 @@
                 width: 33%;
             }
 
+            .widget-annuncio .innerB:has([data-incontriamoci-tag-group]),
+            .widget-annuncio .innerB:has(select[name="serviceNazionalita"]) {
+                display: none;
+            }
+
             .widget-after {
                 display: none;
             }
@@ -511,11 +516,6 @@
                                                                 onclick="enableInfoUpdate();" disabled>
                                                             <label class="form-check-label"
                                                                 for="whatsapp">Whatsapp</label>
-                                                            <input class="form-check-input" type="checkbox"
-                                                                name="telegram" id="telegram"
-                                                                onclick="enableInfoUpdate();" disabled>
-                                                            <label class="form-check-label"
-                                                                for="telegram">Telegram</label>
                                                         </div>
                                                     </div>
                                                 </div>

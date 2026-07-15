@@ -22,43 +22,22 @@ const checkboxInputValue = (name) => {
     return input ? input.checked : false;
 };
 
-const checkedincontriamociTags = (group) => {
-    return Array.from(document.querySelectorAll(`input[data-incontriamoci-tag-group='${group}']:checked`))
-        .map((input) => input.dataset.incontriamociTag || "")
-        .filter(Boolean);
-};
-
-const getincontriamociTagsData = () => ({
-    ethnicity: checkedincontriamociTags("ethnicity"),
-    nationality: selectInputValue("serviceNazionalita"),
-    eye: checkedincontriamociTags("eye"),
-    hair: checkedincontriamociTags("hair"),
-    body: checkedincontriamociTags("body"),
-    particularSigns: checkedincontriamociTags("particularSigns"),
-    services: checkedincontriamociTags("services"),
-    serviceFor: checkedincontriamociTags("serviceFor"),
-    servicePlace: checkedincontriamociTags("servicePlace"),
-    paymentMethods: checkedincontriamociTags("paymentMethods")
-});
-
 const normalizeincontriamociInfoCategoryValue = (value) => {
     const normalizedPanelValue = window.normalizePanelCategoryValue ? window.normalizePanelCategoryValue(value) : "";
-    if (normalizedPanelValue === "TRANS" || normalizedPanelValue === "COPPIE" || normalizedPanelValue === "UOMOUOMO") {
+    if (normalizedPanelValue) {
         return normalizedPanelValue;
     }
-    if (normalizedPanelValue) return "DONNAUOMO";
 
     const normalized = `${value || ""}`.toLowerCase();
     if (normalized.includes("trans")) return "TRANS";
     if (normalized.includes("copp") || normalized === "coppia") return "COPPIE";
-    if (normalized.includes("uomouomo") || normalized === "gay" || normalized.includes("uomo uomo")) return "UOMOUOMO";
+    if (normalized.includes("massaggi") || normalized.includes("benessere")) return "MASSAGGI";
     return "DONNAUOMO";
 };
 
 const getInfoData = () => {
     const locationInput = document.querySelector("input[name='location']");
     const whatsappInput = document.querySelector("input[name='whatsapp']");
-    const telegramInput = document.querySelector("input[name='telegram']");
     const selectedCategory = document.querySelector("select[name='categorie']")?.value || "";
 
     const data = {
@@ -72,9 +51,9 @@ const getInfoData = () => {
         age: apiInputValue("age"),
         location: locationInput ? locationInput.value : "",
         whatsapp: whatsappInput ? whatsappInput.checked : false,
-        telegram: telegramInput ? telegramInput.checked : false,
-        serviceNazionalita: selectInputValue("serviceNazionalita"),
-        incontriamociTags: getincontriamociTagsData()
+        telegram: false,
+        serviceNazionalita: "",
+        incontriamociTags: {}
     };
 
     return data;

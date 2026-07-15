@@ -345,46 +345,10 @@ const loadAdvertisement = async (res) => {
     setSelectValueByValueOrText("select[name='city']", res.city);
     const categoryValue = normalizeMegaescortCategoryValue(res.categorie || res.sono);
     setFieldValue("select[name='categorie']", categoryValue);
-    setSelectValueByValueOrText("select[name='serviceNazionalita']", res.serviceNazionalita);
     setFieldValue("input[name='location']", res.location || "");
     setFieldValue("input[name='age']", res.age || "");
     const whatsappInput = document.querySelector("input[name='whatsapp']");
-    const telegramInput = document.querySelector("input[name='telegram']");
     if (whatsappInput) whatsappInput.checked = Boolean(res.hasWhatapp);
-    if (telegramInput) telegramInput.checked = Boolean(res.hasTelegram);
-    const tags = res.incontriamociTags || {};
-    if (!tags.ethnicity) {
-        tags.ethnicity = [
-            res.serviceAfricana ? "Africana" : "",
-            res.serviceAraba ? "Araba" : "",
-            res.serviceCaucasica ? "Caucasica" : "",
-            res.serviceItaliana ? "Italiana" : "",
-            res.serviceLatina ? "Latina" : ""
-        ].filter(Boolean);
-    }
-    if (!tags.hair) {
-        tags.hair = [
-            res.serviceCBiondi ? "Biondi" : "",
-            res.serviceCMarroni ? "Castani" : "",
-            res.serviceCNeri ? "Neri" : "",
-            res.serviceCRossi ? "Rossi" : ""
-        ].filter(Boolean);
-    }
-    if (!tags.body) {
-        tags.body = [
-            res.serviceFormoso ? "Formoso" : "",
-            res.serviceMagro ? "Magro" : ""
-        ].filter(Boolean);
-    }
-    setincontriamociTagGroupValues("ethnicity", tags.ethnicity);
-    setincontriamociTagGroupValues("eye", tags.eye);
-    setincontriamociTagGroupValues("hair", tags.hair);
-    setincontriamociTagGroupValues("body", tags.body);
-    setincontriamociTagGroupValues("particularSigns", tags.particularSigns);
-    setincontriamociTagGroupValues("services", tags.services);
-    setincontriamociTagGroupValues("serviceFor", tags.serviceFor);
-    setincontriamociTagGroupValues("servicePlace", tags.servicePlace);
-    setincontriamociTagGroupValues("paymentMethods", tags.paymentMethods);
     if (res.phone) setPhoneVerified();
 
     // if (EDIT == "true") {
