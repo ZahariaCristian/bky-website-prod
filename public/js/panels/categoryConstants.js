@@ -61,6 +61,12 @@
             CATEGORY_VALUES.TRANS,
             CATEGORY_VALUES.COPPIE,
         ],
+        amasens: [
+            CATEGORY_VALUES.DONNAUOMO,
+            CATEGORY_VALUES.TRANS,
+            CATEGORY_VALUES.MASSAGGI,
+            CATEGORY_VALUES.COPPIE,
+        ],
     };
 
     const PANEL_CATEGORY_LABELS = {
@@ -89,6 +95,12 @@
             [CATEGORY_VALUES.DONNAUOMO]: "Escort",
             [CATEGORY_VALUES.UOMOUOMO]: "Gay",
             [CATEGORY_VALUES.TRANS]: "Trans",
+            [CATEGORY_VALUES.COPPIE]: "Coppie & Scambisti",
+        },
+        amasens: {
+            [CATEGORY_VALUES.DONNAUOMO]: "Escort",
+            [CATEGORY_VALUES.TRANS]: "Trans",
+            [CATEGORY_VALUES.MASSAGGI]: "Massaggi",
             [CATEGORY_VALUES.COPPIE]: "Coppie & Scambisti",
         },
     };
