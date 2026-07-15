@@ -1,23 +1,4 @@
 (() => {
-    const vetrinaPrices = {
-        "1": [7, 13],
-        "2": [13, 24],
-        "3": [19, 35],
-        "4": [25, 46],
-        "5": [31, 57],
-        "6": [38, 69],
-        "7": [44, 80],
-        "8": [50, 91],
-        "9": [56, 102],
-        "10": [63, 114],
-        "11": [69, 125],
-        "12": [75, 136],
-        "13": [82, 149],
-        "14": [87, 159],
-        "15": [94, 170],
-        "30": [182, 331]
-    };
-
     const topListPrices = {
         "1": {
             standardSlots: { "1": [3, 6], "2": [5, 9], "3": [6, 11] },
@@ -91,11 +72,6 @@
 
     const getPanelPrice = (panel) => {
         const promoType = panel?.dataset?.promoType || "";
-        if (promoType === "Vetrina") {
-            const days = panel.querySelector(".vetrina-days-select")?.value || "1";
-            return storedPrices.get(getPriceKey("vetrina", days)) ||
-                toPrice(vetrinaPrices[days]);
-        }
         if (promoType === "TopList") {
             return getTopListPrice(
                 panel.querySelector(".toplist-days-select")?.value || "1",
@@ -160,7 +136,7 @@
     };
 
     const createInlinePrice = (promoType) => {
-        if (promoType !== "TopList" && promoType !== "Vetrina") return null;
+        if (promoType !== "TopList") return null;
         const price = document.createElement("div");
         price.className = "incontriamoci-inline-price";
         price.innerHTML = [
@@ -181,7 +157,7 @@
         let standardTotal = 0;
 
         document.querySelectorAll(
-            ".promoTopList .newpost-panel, .promoVetrina .newpost-panel"
+            ".promoTopList .newpost-panel"
         ).forEach((panel) => {
             const price = getPanelPrice(panel);
             setPriceContent(panel.querySelector(".incontriamoci-inline-price"), price);
@@ -214,21 +190,6 @@
         cell.appendChild(document.createTextNode(" "));
         cell.appendChild(standard);
         row.appendChild(cell);
-    };
-
-    const renderVetrinaTable = () => {
-        const body = document.querySelector("#incontriamociVetrinaPriceRows");
-        if (!body) return;
-        body.innerHTML = "";
-        Object.entries(vetrinaPrices).forEach(([days]) => {
-            const row = document.createElement("tr");
-            appendTextCell(row, `${days} ${days === "1" ? "giorno" : "giorni"}`);
-            appendPriceCell(
-                row,
-                storedPrices.get(getPriceKey("vetrina", days)) || toPrice(vetrinaPrices[days])
-            );
-            body.appendChild(row);
-        });
     };
 
     const renderTopListTable = () => {
@@ -274,7 +235,6 @@
 
     const initialize = () => {
         renderTopListTable();
-        renderVetrinaTable();
         selectPriceTable("toplist");
 
         document.querySelectorAll("[data-incontriamoci-price-table]").forEach((button) => {
@@ -304,7 +264,6 @@
         loadStoredPrices().then((loaded) => {
             if (!loaded) return;
             renderTopListTable();
-            renderVetrinaTable();
             updateAll();
         });
     };

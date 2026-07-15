@@ -216,10 +216,8 @@ const getTurboOptionFromPanel = (panel) => {
 };
 
 const parseIncontriamociPremiumPeriod = (period = "", promoType = "") => {
-    const product = promoType === "Vetrina" ? "vetrina" : "toplist";
-    const defaults = product === "vetrina"
-        ? { product, giorni: "1" }
-        : { product, giorni: "1", fascia: "08-12", risalite: "1" };
+    const product = "toplist";
+    const defaults = { product, giorni: "1", fascia: "08-12", risalite: "1" };
 
     try {
         const parsed = JSON.parse(period || "{}");
@@ -295,19 +293,7 @@ const applyIncontriamociTopListRisaliteRule = (fasciaSelect, risaliteSelect) => 
 };
 
 const createIncontriamociPremiumControls = (promoType, selected = {}) => {
-    if (promoType !== "TopList" && promoType !== "Vetrina") return [];
-
-    if (promoType === "Vetrina") {
-        const daysSelect = createIncontriamociPremiumSelect(
-            "vetrina-days-select",
-            INCONTRIAMOCI_VETRINA_DAYS,
-            selected.giorni
-        );
-        daysSelect.addEventListener("change", () => {
-            window.IncontriamociPricing?.updateAll();
-        });
-        return [daysSelect];
-    }
+    if (promoType !== "TopList") return [];
 
     const daysSelect = createIncontriamociPremiumSelect("toplist-days-select", INCONTRIAMOCI_TOPLIST_DAYS, selected.giorni);
     const fasciaSelect = createIncontriamociPremiumSelect("toplist-fascia-select", INCONTRIAMOCI_TOPLIST_FASCE, selected.fascia);
@@ -331,13 +317,6 @@ const createIncontriamociPremiumControls = (promoType, selected = {}) => {
 };
 
 const buildIncontriamociPremiumPeriod = (panel, promoType) => {
-    if (promoType === "Vetrina") {
-        return JSON.stringify({
-            product: "vetrina",
-            giorni: panel?.querySelector(".vetrina-days-select")?.value || "1"
-        });
-    }
-
     if (promoType === "TopList") {
         const fascia = panel?.querySelector(".toplist-fascia-select")?.value || "08-12";
         const risalite = panel?.querySelector(".toplist-risalite-select")?.value || "1";
@@ -629,7 +608,7 @@ function getSelectedDayPubs(currentDate) {
         return cityField ? `${cityField.value || ""}`.trim() : "";
     };
 
-    ["Free", "TopList", "Vetrina"].forEach(promoType => {
+    ["Free", "TopList"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             if ($(panel).is(":hidden") && !$(panel).data("GCRecord")) return;
             let typeData = {};
@@ -756,7 +735,6 @@ const resolveIncontriamociSchedulePromoType = (announcement = {}) => {
         const parsedPeriod = JSON.parse(announcement.period || "{}");
         const product = `${parsedPeriod?.product || ""}`.trim().toLowerCase();
         if (product === "toplist") return "TopList";
-        if (product === "vetrina") return "Vetrina";
     } catch {
         // Legacy/plain periods are classified from typeAnnuncio below.
     }
@@ -766,22 +744,19 @@ const resolveIncontriamociSchedulePromoType = (announcement = {}) => {
         .toLowerCase();
     if (normalizedType === "free") return "Free";
     if (normalizedType === "toplist") return "TopList";
-    if (["vetrina", "topvetrina", "topvertrina"].includes(normalizedType)) return "Vetrina";
     return "";
 };
 
 function loadDayData(pubs) {
-    ["Free", "TopList", "Vetrina"].forEach(promoType => {
+    ["Free", "TopList"].forEach(promoType => {
         pubs.filter((announcement) => resolveIncontriamociSchedulePromoType(announcement) === promoType).forEach(announcement => {
             console.log(announcement, 'announcement in loadDayData')
             if (announcement.status !== undefined && announcement.status !== "pending") return;
             announcement.time = announcement.data.split("T")[1].split(":00.")[0];
 
-            const addButton = document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .toplist-add-schedule, .promo${promoType} .vetrina-add-schedule`);
+            const addButton = document.querySelector(`.promo${promoType} .free-add-schedule, .promo${promoType} .toplist-add-schedule`);
             if (promoType === "TopList") {
                 addTopListSchedule(addButton, announcement.period);
-            } else if (promoType === "Vetrina") {
-                addVetrinaSchedule(addButton, announcement.period);
             } else {
                 addFreeSchedule(addButton);
             }
@@ -794,9 +769,9 @@ function loadDayData(pubs) {
             currentPanel.attr("data-city", announcement.city);
             currentPanel.data("city", announcement.city);
             currentPanel.find("input[type='time']").val(announcement.time);
-            if (promoType === "TopList" || promoType === "Vetrina") {
+            if (promoType === "TopList") {
                 const selectedPeriod = parseIncontriamociPremiumPeriod(announcement.period, promoType);
-                currentPanel.find(".toplist-days-select, .vetrina-days-select").val(selectedPeriod.giorni);
+                currentPanel.find(".toplist-days-select").val(selectedPeriod.giorni);
                 currentPanel.find(".toplist-fascia-select").val(selectedPeriod.fascia);
                 currentPanel.find(".toplist-risalite-select").val(selectedPeriod.risalite);
             }
@@ -1078,7 +1053,7 @@ const postsPanelOperations = (panel) => {
         addFreeSchedule(addButton);
     });
 }
-document.querySelectorAll(".promoFree > .posts, .promoTurbo > .posts, .promoTopList > .posts, .promoVetrina > .posts").forEach(postsPanelOperations);
+document.querySelectorAll(".promoFree > .posts, .promoTurbo > .posts, .promoTopList > .posts").forEach(postsPanelOperations);
 
 function addFreeSchedule(button) {
     const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoFree > .posts");
@@ -1100,13 +1075,6 @@ function addTopListSchedule(button, period = "") {
     createFreeSchedulePanel(panel, "TopList", period);
 }
 window.addTopListSchedule = addTopListSchedule;
-
-function addVetrinaSchedule(button, period = "") {
-    const panel = button && button.closest ? button.closest(".posts") : document.querySelector(".promoVetrina > .posts");
-    if (!panel) return;
-    createFreeSchedulePanel(panel, "Vetrina", period);
-}
-window.addVetrinaSchedule = addVetrinaSchedule;
 
 const createPremiumSchedulePanel = (panel, promoType) => {
     safeEnableScheduleUpdate();

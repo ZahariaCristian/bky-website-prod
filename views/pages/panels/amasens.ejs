@@ -208,11 +208,6 @@
                 padding: 12px;
             }
 
-            .promoPanel.promoVetrina {
-                background: #d47ed4;
-                padding: 12px;
-            }
-
             .incontriamoci-premium-select {
                 display: inline-block;
                 max-width: 180px;
@@ -220,8 +215,7 @@
                 vertical-align: middle;
             }
 
-            .promoTopList .newpost-wrapper,
-            .promoVetrina .newpost-wrapper {
+            .promoTopList .newpost-wrapper {
                 align-items: center;
                 flex-wrap: wrap;
                 row-gap: 8px;
@@ -859,8 +853,6 @@
                                                                     Free</a></li>
                                                             <li><a href="#tabTopList" data-toggle="tab"
                                                                     style="background-color: #d0d174;">TopList</a></li>
-                                                            <li><a href="#tabVetrina" data-toggle="tab"
-                                                                    style="background-color: #d47ed4;">TopVertrina</a></li>
                                                         </ul>
                                                     </div>
                                                     <div class="widget-body" id="wizar-body">
@@ -891,18 +883,6 @@
                                                                 </div>
                                                             </div>
 
-                                                            <div class="promoPanel promoVetrina tab-pane animated fadeInUp"
-                                                                id="tabVetrina">
-                                                                <div class="posts">
-                                                                    <div class="post-list">
-                                                                    </div>
-                                                                    <button type="button"
-                                                                        class="btn btn-primary vetrina-add-schedule"
-                                                                        onclick="addIncontriamociVetrinaTime(this);">
-                                                                        <span><b><i class="fa fa-plus"></i></b></span>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -928,9 +908,6 @@
                                                             <button type="button" class="btn btn-primary"
                                                                 data-incontriamoci-price-table="toplist"
                                                                 aria-pressed="true">TopList</button>
-                                                            <button type="button" class="btn btn-default"
-                                                                data-incontriamoci-price-table="vetrina"
-                                                                aria-pressed="false">Top Vetrina</button>
                                                         </div>
                                                     </div>
                                                     <div class="incontriamoci-price-list-tables">
@@ -946,17 +923,6 @@
                                                                 </tr>
                                                             </thead>
                                                             <tbody id="incontriamociTopListPriceRows"></tbody>
-                                                        </table>
-                                                        <table
-                                                            class="table table-striped table-condensed incontriamoci-price-table"
-                                                            data-product="vetrina" hidden>
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Giorni</th>
-                                                                    <th>Totale</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody id="incontriamociVetrinaPriceRows"></tbody>
                                                         </table>
                                                     </div>
                                                 </div>
@@ -1194,12 +1160,6 @@
         window.addIncontriamociTopListTime = function (button) {
             if (typeof window.addTopListSchedule === "function") {
                 window.addTopListSchedule(button);
-            }
-            return false;
-        };
-        window.addIncontriamociVetrinaTime = function (button) {
-            if (typeof window.addVetrinaSchedule === "function") {
-                window.addVetrinaSchedule(button);
             }
             return false;
         };
