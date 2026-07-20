@@ -2,53 +2,6 @@ var loadStorico = (annuncio) => {
     requestStorico(annuncio, false);
 };
 
-var showSus = false;
-function toggleSuspended() {
-    let anID = parseInt(QUERY_NEW);
-    if (!showSus) {
-        requestStorico(anID, true);
-        $("#btnShowSuspended").html("<b>NASCONDI SOSPESI</b>");
-        $(".lblTitleStorico").show();
-    } else {
-        $(".suspendedStorico").remove();
-        $("#btnShowSuspended").html("<b>MOSTRA SOSPESI</b>");
-        $(".lblTitleStorico").hide();
-    }
-    showSus = !showSus;
-}
-
-function suspendOldAds(e) {
-    let anID = parseInt(QUERY_NEW);
-    if (confirm("Sicuro di voler procedere con la sospensione? ATTENZIONE: gli annunci verranno sospesi anche se risultassero a pagamento.")) {
-        $(e).attr("onclick", "void(0)");
-        $(e).html("<b>In Sospensione..</b>");
-        $(e).removeClass("btn-danger");
-        $(e).addClass("btn-warning");
-        toggleLoader();
-        fetch("/annuncio/suspendAll", {
-            method: "POST",
-            mode: "cors",
-            cache: "no-cache",
-            credentials: "same-origin",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            redirect: "follow",
-            referrerPolicy: "no-referrer",
-            body: JSON.stringify({
-                annuncio: anID,
-                panel: PANEL_PLATFORM
-            }),
-        }).then(() => {
-            toggleLoader();
-            $(e).removeClass("btn-warning");
-            $(e).addClass("btn-danger");
-            $(e).attr("disabled", true);
-            $(e).html("<b>SOSPENDI SCADUTI</b>");
-        });
-    }
-}
-
 function updateAllPublishedAdsState(e, options) {
     let anID = parseInt(QUERY_NEW);
     if (!confirm(options.confirmText)) {
@@ -96,18 +49,6 @@ function updateAllPublishedAdsState(e, options) {
         setTimeout(() => {
             location.reload();
         }, 300);
-    });
-}
-
-function suspendPublishedAds(e) {
-    updateAllPublishedAdsState(e, {
-        confirmText: "Sicuro di voler sospendere tutti gli annunci pubblicati su Bakeca? ATTENZIONE: verranno sospesi anche se risultassero a pagamento.",
-        pendingText: "In Sospensione..",
-        defaultText: "SOSPENDI PUBBLICATI",
-        idleClass: "btn-danger",
-        endpoint: "/annuncio/suspendAllPublished",
-        onclick: "suspendPublishedAds(this)",
-        errorText: "Si e verificato un errore durante la sospensione di tutti gli annunci pubblicati."
     });
 }
 
@@ -296,12 +237,11 @@ function replaceCityPlaceholder(html, city) {
 
 function configureHistoryActionButtons(row, schedule) {
     const publishBtn = row.find(".btnPublishState");
-    const suspendBtn = row.find(".btnSuspend");
     const deleteBtn = row.find(".btnDeleteState");
     const publishState = getPublishStateConfig(schedule);
 
     publishBtn.hide();
-    suspendBtn.hide();
+    row.find(".btnSuspend").remove();
     deleteBtn.hide();
     publishBtn.text(publishState.label);
     publishBtn.removeClass("btn-success btn-danger btn-default btn-warning").addClass(publishState.className);
@@ -310,7 +250,6 @@ function configureHistoryActionButtons(row, schedule) {
     deleteBtn.attr("onclick", `deleteAds(this, '${schedule.id}')`);
 
     if (canManageHistorySchedule(schedule)) {
-        suspendBtn.show();
         deleteBtn.show();
     }
 }
@@ -471,6 +410,7 @@ var addRptStorico = (sxhedule, i) => {
     }
 
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    newRow.find(".btnSuspend").remove();
 
     switch (sxhedule.payed) {
         case true:
@@ -483,7 +423,7 @@ var addRptStorico = (sxhedule, i) => {
     if (canManageHistorySchedule(sxhedule)) {
         configureHistoryActionButtons(newRow, sxhedule);
     } else {
-        newRow.find(".btnPublishState, .btnSuspend, .btnDeleteState").hide();
+        newRow.find(".btnPublishState, .btnDeleteState").hide();
     }
 
     newRow.appendTo(root);
@@ -491,18 +431,6 @@ var addRptStorico = (sxhedule, i) => {
     const rowText = getHistoryRowText(newRow);
     $("#btnWhatapp").attr("href", $("#btnWhatapp").attr("href") + encodeURIComponent(rowText) + "%0a");
 };
-
-function suspendAds(e, ids) {
-    updateScheduleStateAction(e, ids, {
-        confirmText: "Sicuro di voler procedere con la sospensione? ATTENZIONE: l'annuncio verra sospeso anche se risultasse a pagamento.",
-        pendingText: "In Sospensione..",
-        defaultText: "SOSPENDI",
-        idleClass: "btn-danger",
-        endpoint: "/annuncio/suspend",
-        onclick: `suspendAds(this, '${ids}')`,
-        errorText: "Si e verificato un errore durante la sospensione dell'annuncio."
-    });
-}
 
 function republishAds(e, ids, idleClass = "btn-success", defaultText = "PUBBLICATO") {
     updateScheduleStateAction(e, ids, {

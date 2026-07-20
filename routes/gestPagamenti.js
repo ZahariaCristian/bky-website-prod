@@ -12,15 +12,23 @@ const {
     BAKECA_PLATFORM,
     getDefaultBakecaPrices
 } = require("../config/bakecaPrices");
+const {
+    AMASENS_PLATFORM,
+    getDefaultAmasensPrices
+} = require("../config/amasensPrices");
 const { getPlatformPriceKey } = require("../config/platformPrices");
 
 const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
 const defaultBakecaPrices = getDefaultBakecaPrices();
+const defaultAmasensPrices = getDefaultAmasensPrices();
 const validIncontriamociPriceKeys = new Set(
     defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
 const validBakecaPriceKeys = new Set(
     defaultBakecaPrices.map(getPlatformPriceKey)
+);
+const validAmasensPriceKeys = new Set(
+    defaultAmasensPrices.map(getPlatformPriceKey)
 );
 let platformPriceTablePromise;
 
@@ -100,6 +108,38 @@ const normalizeBakecaPrice = (row = {}) => {
     }
     if (!Number.isFinite(normalized.price) || normalized.price < 0) {
         throw new Error("Bakeca price must be a valid non-negative value.");
+    }
+
+    return normalized;
+};
+
+const normalizeAmasensPrice = (row = {}) => {
+    let options = row.optionsJson || {};
+    if (typeof options === "string") {
+        try {
+            options = JSON.parse(options);
+        } catch {
+            options = {};
+        }
+    }
+    const timeSlot = `${options.timeSlot || ""}`;
+    const risalite = Number(options.risalite);
+    const normalized = {
+        platform: AMASENS_PLATFORM,
+        product: "toplist",
+        days: Number(row.days),
+        variantKey: `${timeSlot}-r${risalite}`,
+        optionsJson: { timeSlot, risalite },
+        price: Number(row.price),
+        standardPrice: null,
+        active: true
+    };
+
+    if (!validAmasensPriceKeys.has(getPlatformPriceKey(normalized))) {
+        throw new Error("Invalid Amasens price combination.");
+    }
+    if (!Number.isFinite(normalized.price) || normalized.price < 0) {
+        throw new Error("Amasens price must be a valid non-negative value.");
     }
 
     return normalized;
@@ -462,6 +502,74 @@ router.post("/updateBakecaPrices", authenticateKey, async (req, res) => {
         }
         console.error("Unable to save Bakeca prices:", error);
         res.status(500).json({ error: "Unable to save Bakeca prices." });
+    }
+});
+
+router.get("/getAmasensPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        await seedPlatformPrices(group, AMASENS_PLATFORM, defaultAmasensPrices);
+        const prices = await findPlatformPrices(group, AMASENS_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        console.error("Unable to load Amasens prices:", error);
+        res.status(500).json({ error: "Unable to load Amasens prices." });
+    }
+});
+
+router.post("/updateAmasensPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > defaultAmasensPrices.length
+    ) {
+        return res.status(400).json({ error: "A valid Amasens price list is required." });
+    }
+
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const normalizedRows = req.body.rows.map(normalizeAmasensPrice);
+        const rows = Array.from(new Map(
+            normalizedRows.map((row) => [getPlatformPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    platform: row.platform,
+                    product: row.product,
+                    days: row.days,
+                    variantKey: row.variantKey
+                };
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    optionsJson: row.optionsJson,
+                    price: row.price,
+                    standardPrice: null,
+                    active: true
+                }, { transaction });
+            }
+        });
+
+        const prices = await findPlatformPrices(group, AMASENS_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        const validationMessage = error?.message?.startsWith("Invalid") ||
+            error?.message?.startsWith("Amasens price");
+        if (validationMessage) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Amasens prices:", error);
+        res.status(500).json({ error: "Unable to save Amasens prices." });
     }
 });
 

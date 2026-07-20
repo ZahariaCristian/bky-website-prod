@@ -42,12 +42,14 @@
 
     const toPrice = (values) => {
         if (Array.isArray(values)) {
-            return { discounted: Number(values[0]), standard: Number(values[1]) };
+            const price = Number(values[1] ?? values[0]);
+            return { discounted: price, standard: price };
         }
         if (values && typeof values === "object") {
+            const price = Number(values.price ?? values.discounted);
             return {
-                discounted: Number(values.discounted ?? values.price),
-                standard: Number(values.standard ?? values.standardPrice)
+                discounted: price,
+                standard: Number(values.standard ?? values.standardPrice ?? price)
             };
         }
         return null;
@@ -96,8 +98,7 @@
             }
             if (
                 !price ||
-                !Number.isFinite(price.discounted) ||
-                !Number.isFinite(price.standard)
+                !Number.isFinite(price.discounted)
             ) return;
             storedPrices.set(
                 getPriceKey(
@@ -113,7 +114,7 @@
 
     const loadStoredPrices = async () => {
         try {
-            const response = await fetch("/gestPagamenti/getIncontriamociPrices", {
+            const response = await fetch("/gestPagamenti/getAmasensPrices", {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
                 credentials: "same-origin"
@@ -130,9 +131,7 @@
     const setPriceContent = (container, price) => {
         if (!container || !price) return;
         const discounted = container.querySelector(".incontriamoci-price-discounted");
-        const standard = container.querySelector(".incontriamoci-price-standard");
         if (discounted) discounted.textContent = formatPrice(price.discounted);
-        if (standard) standard.textContent = formatPrice(price.standard);
     };
 
     const createInlinePrice = (promoType) => {
@@ -142,7 +141,6 @@
         price.innerHTML = [
             "<span>Totale:</span>",
             '<strong class="incontriamoci-price-discounted">€ 0.00</strong>',
-            '<del class="incontriamoci-price-standard">€ 0.00</del>'
         ].join(" ");
         return price;
     };
@@ -154,8 +152,6 @@
 
     const updateAll = () => {
         let discountedTotal = 0;
-        let standardTotal = 0;
-
         document.querySelectorAll(
             ".promoTopList .newpost-panel"
         ).forEach((panel) => {
@@ -163,13 +159,10 @@
             setPriceContent(panel.querySelector(".incontriamoci-inline-price"), price);
             if (!price || isDeletedSchedule(panel)) return;
             discountedTotal += price.discounted;
-            standardTotal += price.standard;
         });
 
         const discounted = document.querySelector("#totalCost");
-        const standard = document.querySelector("#incontriamociStandardTotal");
         if (discounted) discounted.textContent = formatPrice(discountedTotal);
-        if (standard) standard.textContent = formatPrice(standardTotal);
     };
 
     const appendTextCell = (row, value) => {
@@ -182,13 +175,8 @@
         const price = toPrice(values);
         const cell = document.createElement("td");
         const discounted = document.createElement("strong");
-        const standard = document.createElement("del");
         discounted.textContent = formatPrice(price.discounted);
-        standard.textContent = formatPrice(price.standard);
-        standard.className = "incontriamoci-price-standard";
         cell.appendChild(discounted);
-        cell.appendChild(document.createTextNode(" "));
-        cell.appendChild(standard);
         row.appendChild(cell);
     };
 

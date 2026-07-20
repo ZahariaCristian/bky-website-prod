@@ -248,11 +248,6 @@
                 font-weight: 700;
             }
 
-            .incontriamoci-price-standard {
-                color: #444;
-                font-weight: 400;
-            }
-
             .incontriamoci-price-list-actions {
                 display: flex;
                 gap: 8px;
@@ -890,8 +885,6 @@
                                                     <span>Totale:</span>
                                                     <strong id="totalCost"
                                                         class="incontriamoci-price-discounted">€ 0.00</strong>
-                                                    <del id="incontriamociStandardTotal"
-                                                        class="incontriamoci-price-standard">€ 0.00</del>
                                                 </div>
                                                 <div>
                                                     <button type="button" class="btn btn-default"
@@ -1063,9 +1056,6 @@
                                                         @stato@
                                                         <a class="btn btn-success btn-xs btnPublishState"
                                                             data-id="@id@">PUBBLICATO</a>
-                                                        <a class="btn btn-danger btn-xs btnSuspend"
-                                                            onclick="suspendAds(this, '@id@')"
-                                                            data-id="@id@">SOSPENDI</a>
                                                         <a class="btn btn-default btn-xs btnDeleteState"
                                                             onclick="deleteAds(this, '@id@')" data-id="@id@">DELETE</a>
                                                     </div>
@@ -1108,25 +1098,9 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <button class="btn btn-primary" style="width: 100%; margin-top: 20px;"
-                                                onclick="toggleSuspended();" id="btnShowSuspended"><b>MOSTRA
-                                                    SOSPESI</b></button>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <a class="btn btn-danger strong" style="width: 100%; margin-top: 20px;"
-                                                onclick="suspendPublishedAds(this)"><b>SOSPENDI PUBBLICATI</b></a>
-                                        </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-12">
                                             <a class="btn btn-default strong" style="width: 100%; margin-top: 20px;"
                                                 onclick="deletePublishedAds(this)"><b>DELETE PUBBLICATI</b></a>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <a class="btn btn-danger btnSuspendAll strong"
-                                                style="width: 100%; margin-top: 20px;"
-                                                onclick="suspendOldAds(this)">SOSPENDI SCADUTI</a>
                                         </div>
                                     </div>
                                 </div>
