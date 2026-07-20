@@ -212,10 +212,10 @@ function canManageHistorySchedule(schedule) {
 
 function getBakecaStatusAction(schedule) {
     if (schedule.urlBK) {
-        return `<a class="btn btn-xs btn-success" href="${schedule.urlBK}" target="_blank">Incontriamoci</a>`;
+        return `<a class="btn btn-xs btn-success" href="${schedule.urlBK}" target="_blank">AM</a>`;
     }
 
-    return "<span class='btn btn-xs btn-success'>Incontriamoci</span>";
+    return "<span class='btn btn-xs btn-success'>AM</span>";
 }
 
 function getPublishStateConfig(schedule) {
