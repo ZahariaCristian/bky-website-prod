@@ -461,17 +461,30 @@
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="innerB">
-                                                    <label for="city">Città</label>
-                                                    <select class="form-control" name="city" disabled
-                                                        data-incontriamoci-cities="true"></select>
+                                                    <label for="region">Regione</label>
+                                                    <select class="form-control" name="region" id="amasensRegion" disabled>
+                                                        <option value="">Seleziona la Regione...</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="innerB">
-                                                    <label for="location">Posizione</label>
-                                                    <input class="form-control" type="text" name="location" disabled>
+                                                    <label for="city">Provincia</label>
+                                                    <select class="form-control" name="city" id="amasensProvince" disabled>
+                                                        <option value="">Seleziona la Provincia...</option>
+                                                    </select>
                                                 </div>
                                             </div>
+                                            <div class="col-md-4">
+                                                <div class="innerB">
+                                                    <label for="location">Comune</label>
+                                                    <select class="form-control" name="location" id="amasensComune" disabled>
+                                                        <option value="">Seleziona il Comune...</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
                                             <div class="col-md-4">
                                                 <div class="innerB">
                                                     <label for="age">Età</label>
@@ -511,6 +524,20 @@
                                                                 onclick="enableInfoUpdate();" disabled>
                                                             <label class="form-check-label"
                                                                 for="whatsapp">Whatsapp</label>
+                                                        </div>
+                                                        <div class="flex-checkbox" style="margin-bottom: 5px;">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                name="telegram" id="telegram"
+                                                                onclick="enableInfoUpdate();" disabled>
+                                                            <label class="form-check-label"
+                                                                for="telegram">Telegram</label>
+                                                        </div>
+                                                        <div class="flex-checkbox" style="margin-bottom: 5px;">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                name="serviceVideoChiamata" id="serviceVideoChiamata"
+                                                                onclick="enableInfoUpdate();" disabled>
+                                                            <label class="form-check-label"
+                                                                for="serviceVideoChiamata">Video chiamate / CAM Live</label>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1119,7 +1146,8 @@
     <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
     <script src="/js/panels/categoryConstants.js"></script>
     <script src="/js/panels/amasens/values.js"></script>
-    <script src="/js/panels/amasens/main.js?v=20260704-timeslot-day"></script>
+    <script src="/js/panels/amasens/location.js?v=20260722-location-api"></script>
+    <script src="/js/panels/amasens/main.js?v=20260722-contact-options"></script>
     <script src="/js/panels/amasens/calendar.js"></script>
     <script src="/js/panels/amasens/images.js?v=20260527-image-arrows"></script>
     <script src="/js/panels/amasens/price.js?v=20260703-platform-prices"></script>
@@ -1140,7 +1168,7 @@
     </script>
     <script src="/js/panels/amasens/ajax.js?v=20260706-description-validation"></script>
     <script src="/js/panels/amasens/history.js"></script>
-    <script src="/js/panels/amasens/utils.js"></script>
+    <script src="/js/panels/amasens/utils.js?v=20260722-contact-options"></script>
 </body>
 
 </html>

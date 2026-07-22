@@ -342,13 +342,26 @@ const loadAdvertisement = async (res) => {
         const field = document.querySelector(selector);
         if (field) field.value = (res[info] === null || res[info] === undefined) ? "" : res[info];
     });
-    setSelectValueByValueOrText("select[name='city']", res.city);
+    if (typeof window.loadAmasensLocationValues === "function") {
+        try {
+            await window.loadAmasensLocationValues(res.city || "", res.location || "", res.region || "");
+        } catch (error) {
+            console.error("Unable to load Amasens location values:", error);
+            ShowAlert("custom", "Impossibile caricare Regione, Provincia e Comune da Amasens.");
+        }
+    } else {
+        setSelectValueByValueOrText("select[name='city']", res.city);
+        setFieldValue("select[name='location']", res.location || "");
+    }
     const categoryValue = normalizeMegaescortCategoryValue(res.categorie || res.sono);
     setFieldValue("select[name='categorie']", categoryValue);
-    setFieldValue("input[name='location']", res.location || "");
     setFieldValue("input[name='age']", res.age || "");
     const whatsappInput = document.querySelector("input[name='whatsapp']");
     if (whatsappInput) whatsappInput.checked = Boolean(res.hasWhatapp);
+    const telegramInput = document.querySelector("input[name='telegram']");
+    if (telegramInput) telegramInput.checked = Boolean(res.hasTelegram);
+    const videoInput = document.querySelector("input[name='serviceVideoChiamata']");
+    if (videoInput) videoInput.checked = Boolean(res.serviceVideoChiamata);
     if (res.phone) setPhoneVerified();
 
     // if (EDIT == "true") {

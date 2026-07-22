@@ -36,14 +36,17 @@ const normalizeincontriamociInfoCategoryValue = (value) => {
 };
 
 const getInfoData = () => {
-    const locationInput = document.querySelector("input[name='location']");
+    const locationInput = document.querySelector("select[name='location']");
     const whatsappInput = document.querySelector("input[name='whatsapp']");
+    const telegramInput = document.querySelector("input[name='telegram']");
+    const videoInput = document.querySelector("input[name='serviceVideoChiamata']");
     const selectedCategory = document.querySelector("select[name='categorie']")?.value || "";
 
     const data = {
         title: document.querySelector("textarea[name='title']").value,
         description: document.querySelector("textarea[name='description']").value,
         city: apiInputValue("city"),
+        region: selectInputValue("region"),
         phone: document.querySelector("input[name='phone']").value,
         name: document.querySelector("input[name='name']").value,
         categorie: normalizeincontriamociInfoCategoryValue(selectedCategory),
@@ -51,7 +54,8 @@ const getInfoData = () => {
         age: apiInputValue("age"),
         location: locationInput ? locationInput.value : "",
         whatsapp: whatsappInput ? whatsappInput.checked : false,
-        telegram: false,
+        telegram: telegramInput ? telegramInput.checked : false,
+        serviceVideoChiamata: videoInput ? videoInput.checked : false,
         serviceNazionalita: "",
         incontriamociTags: {}
     };
