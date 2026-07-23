@@ -1,7 +1,15 @@
 // Update Info(title, Description etc) When Save button
+function validateTrovagnoccaCity(dataAnnuncio) {
+    if (dataAnnuncio.city) return true;
+    ShowAlert("custom", "Seleziona una città valida per Trovagnocca.");
+    document.querySelector("select[name='city']")?.focus();
+    return false;
+}
+
 function updateInfo(save) {
     var dataAnnuncio = getInfoData();
     console.log("1", { dataAnnuncio })
+    if (!validateTrovagnoccaCity(dataAnnuncio)) return false;
     var phoneNumber = parseInt(dataAnnuncio.phone, 10);
     if (!phoneNumber || dataAnnuncio.phone.indexOf(" ") != -1 || dataAnnuncio.phone.indexOf("/") != -1 || dataAnnuncio.phone.indexOf(".") != -1 || dataAnnuncio.phone.indexOf(",") != -1) {
         ShowAlert("custom", "Verifica il numero di telefono inserito.");
@@ -54,6 +62,7 @@ function updateInfo(save) {
 
 function UpdateSchedulazioni() {
     var dataAnnuncio = getInfoData();
+    if (!validateTrovagnoccaCity(dataAnnuncio)) return false;
     var phoneNumber = parseInt(dataAnnuncio.phone, 10);
     if (!phoneNumber || dataAnnuncio.phone.indexOf(" ") != -1 || dataAnnuncio.phone.indexOf("/") != -1 || dataAnnuncio.phone.indexOf(".") != -1 || dataAnnuncio.phone.indexOf(",") != -1) {
         ShowAlert("custom", "Verifica il numero di telefono inserito.");

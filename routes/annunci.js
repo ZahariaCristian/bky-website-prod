@@ -2129,6 +2129,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         !info.title || info.title.length < 5 ||
         !info.description || normalizedDescription.length < minimumDescriptionLength ||
         !info.phone || isNaN(info.phone) ||
+        (panel === "trovagnocca" && !info.city) ||
         (panel === "amasens" && (!info.region || !info.city || !info.location))
     ) return res.sendStatus(405);
 

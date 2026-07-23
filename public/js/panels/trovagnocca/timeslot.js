@@ -433,7 +433,7 @@ function getSelectedDayPubs(currentDate) {
             typeData.typePeriodic = "Top";
 
             typeData.period = promoType === "Turbo" ? buildTurboPeriod(getTurboOptionFromPanel(panel)) : "";
-            typeData.city = document.querySelector("input[name='city']").value
+            typeData.city = document.querySelector("select[name='city']").value
 
             let images = [];
             typeData.id = "";
@@ -493,7 +493,7 @@ function getSelectedDayPubs(currentDate) {
                 typeData.typeAnnuncio = promoType;
                 typeData.typePeriodic = "Top";
                 typeData.period = period;
-                typeData.city = document.querySelector("input[name='city']").value;
+                typeData.city = document.querySelector("select[name='city']").value;
 
                 let images = [];
                 typeData.id = "";

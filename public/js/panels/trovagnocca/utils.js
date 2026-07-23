@@ -61,7 +61,7 @@ const getInfoData = () => {
     const data = {
         title: document.querySelector("textarea[name='title']").value,
         description: document.querySelector("textarea[name='description']").value,
-        city: document.querySelector("input[name='city']").value,
+        city: selectInputValue("city"),
         phone: document.querySelector("input[name='phone']").value,
         name: document.querySelector("input[name='name']").value,
         categorie: normalizeTrovagnoccaInfoCategoryValue(selectedCategory),

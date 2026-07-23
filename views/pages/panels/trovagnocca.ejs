@@ -420,7 +420,10 @@
                                             <div class="col-md-4">
                                                 <div class="innerB">
                                                     <label for="city">Città</label>
-                                                    <input class="form-control" type="text" name="city" disabled>
+                                                    <select class="form-control" name="city" id="trovagnoccaCity"
+                                                        data-trovagnocca-cities="true" disabled>
+                                                        <option value="">Seleziona città</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -1318,10 +1321,11 @@
     </div>
     <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
     <script src="/js/panels/categoryConstants.js"></script>
-    <script src="/js/panels/trovagnocca/main.js"></script>
+    <script src="/js/panels/trovagnocca/values.js?v=20260723-city-select"></script>
+    <script src="/js/panels/trovagnocca/main.js?v=20260723-city-select"></script>
     <script src="/js/panels/trovagnocca/calendar.js"></script>
     <script src="/js/panels/trovagnocca/images.js?v=20260527-image-arrows"></script>
-    <script src="/js/panels/trovagnocca/timeslot.js"></script>
+    <script src="/js/panels/trovagnocca/timeslot.js?v=20260723-city-select"></script>
     <script src="/js/panels/trovagnocca/price.js"></script>
     <script>
         window.addMegaescortFreeTime = function (button) {
@@ -1339,7 +1343,7 @@
     </script>
     <script src="/js/panels/trovagnocca/ajax.js"></script>
     <script src="/js/panels/trovagnocca/history.js"></script>
-    <script src="/js/panels/trovagnocca/utils.js"></script>
+    <script src="/js/panels/trovagnocca/utils.js?v=20260723-city-select"></script>
 </body>
 
 </html>

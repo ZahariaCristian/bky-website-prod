@@ -334,9 +334,14 @@ const setPhoneVerified = () => {
 };
 
 const loadAdvertisement = async (res) => {
-    ["title", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
+    ["title", "description", "phone", "name", "donnaID"].forEach((info) => {
         document.querySelector(`${(info == "description" || info == "title" || info == "note") ? "textarea" : "input"}[name='${info}']`).value = (res[info] === null || res[info] === undefined) ? "" : res[info];
     });
+    if (typeof window.setTrovagnoccaCityValue === "function") {
+        window.setTrovagnoccaCityValue(res.city || "");
+    } else {
+        setSelectValueByValueOrText("select[name='city']", res.city);
+    }
     const categoryValue = normalizeMegaescortCategoryValue(res.categorie || res.sono);
     setFieldValue("select[name='categorie']", categoryValue);
     setSelectValueByValueOrText("select[name='serviceNazionalita']", res.serviceNazionalita);
