@@ -14,38 +14,21 @@ const { platform } = require("os");
 const appDir = dirname((require.main && require.main.filename) || __filename);
 var rootPath;
 const Op = ctx.model.Sequelize.Op;
-const AMASENS_REGIONS = [
-    ["64969", "Abruzzo"], ["64981", "Basilicata"], ["64984", "Calabria"],
-    ["64990", "Campania"], ["65006", "Emilia-Romagna"], ["65016", "Friuli-Venezia Giulia"],
-    ["65021", "Lazio"], ["65026", "Liguria"], ["65031", "Lombardia"],
-    ["65044", "Marche"], ["65050", "Molise"], ["65053", "Piemonte"],
-    ["64974", "Puglia"], ["64997", "Sardegna"], ["65062", "Sicilia"],
-    ["502361", "Toscana"], ["65083", "Trentino-Alto Adige"], ["65086", "Umbria"],
-    ["65089", "Valle d'Aosta"], ["65091", "Veneto"]
-];
-const amasensLocationCache = new Map();
+const amasensLocations = require("../data/amasens-locations.json");
 
 const normalizeLocationName = (value) => `${value || ""}`.normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, " ")
     .replace(/\s+/g, " ").trim().toLowerCase();
 
-const getAmasensLocations = async (type, id) => {
-    const numericId = `${id || ""}`.trim();
-    if (!/^\d+$/.test(numericId)) throw new Error("Invalid Amasens location id");
-    const action = type === "cities" ? "cities" : "city_areas";
-    const parameter = type === "cities" ? "regionId" : "cityAreaId";
-    const cacheKey = `${action}:${numericId}`;
-    if (amasensLocationCache.has(cacheKey)) return amasensLocationCache.get(cacheKey);
-
-    const response = await axios.get("https://amasens.com/index.php", {
-        params: { page: "ajax", action, [parameter]: numericId },
-        timeout: 15000,
-        headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" }
+const amasensRegionsById = new Map(amasensLocations.map((region) => [`${region.id}`, region]));
+const amasensProvincesById = new Map();
+const amasensProvinceRegionsByName = new Map();
+amasensLocations.forEach((region) => {
+    (region.provinces || []).forEach((province) => {
+        amasensProvincesById.set(`${province.id}`, province);
+        amasensProvinceRegionsByName.set(normalizeLocationName(province.name), region.name);
     });
-    if (!Array.isArray(response.data)) throw new Error("Invalid response from Amasens location API");
-    amasensLocationCache.set(cacheKey, response.data);
-    return response.data;
-};
+});
 
 if (process.env.PROD == 0) {
     rootPath = `${appDir}`
@@ -69,28 +52,38 @@ const sortSchedule = (schedule) => {
     return sortedSchedule;
 };
 
-router.get("/amasensLocations", authenticateKey, async (req, res) => {
-    try {
-        const type = `${req.query.type || ""}`;
-        if (type === "cities" || type === "areas") {
-            return res.json(await getAmasensLocations(type, req.query.id));
-        }
-        if (type === "resolve") {
-            const province = normalizeLocationName(req.query.id);
-            if (!province) return res.status(400).json({ error: "Province is required" });
-            const results = await Promise.all(AMASENS_REGIONS.map(async ([regionId, region]) => ({
-                region,
-                match: (await getAmasensLocations("cities", regionId))
-                    .some((item) => normalizeLocationName(item.s_name) === province)
-            })));
-            const resolved = results.find((item) => item.match);
-            return resolved ? res.json({ region: resolved.region }) : res.status(404).json({ error: "Province not found" });
-        }
-        return res.status(400).json({ error: "Invalid location lookup type" });
-    } catch (error) {
-        console.error("Amasens location lookup failed:", error.message);
-        return res.status(502).json({ error: "Amasens location service is unavailable" });
+router.get("/amasensLocations", authenticateKey, (req, res) => {
+    const type = `${req.query.type || ""}`;
+    const id = `${req.query.id || ""}`.trim();
+
+    if (type === "cities") {
+        const region = amasensRegionsById.get(id);
+        if (!region) return res.status(404).json({ error: "Region not found" });
+        return res.json((region.provinces || []).map((province) => ({
+            pk_i_id: `${province.id}`,
+            fk_i_region_id: `${region.id}`,
+            s_name: province.name,
+            s_slug: province.slug || ""
+        })));
     }
+
+    if (type === "areas") {
+        const province = amasensProvincesById.get(id);
+        if (!province) return res.status(404).json({ error: "Province not found" });
+        return res.json((province.comuni || []).map((comune) => ({
+            pk_i_id: `${comune.id}`,
+            fk_i_city_id: `${province.id}`,
+            s_name: comune.name,
+            s_slug: comune.slug || ""
+        })));
+    }
+
+    if (type === "resolve") {
+        const region = amasensProvinceRegionsByName.get(normalizeLocationName(id));
+        return region ? res.json({ region }) : res.status(404).json({ error: "Province not found" });
+    }
+
+    return res.status(400).json({ error: "Invalid location lookup type" });
 });
 
 router.post("/setExpiresAt", authenticateKey, async (req, res) => {
