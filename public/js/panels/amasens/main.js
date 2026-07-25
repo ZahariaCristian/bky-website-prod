@@ -278,6 +278,17 @@ const setCheckboxValue = (name, value) => {
     if (field) field.checked = Boolean(value);
 };
 
+const getPanelContactNote = (note) => {
+    try {
+        const parsed = typeof note === "string" ? JSON.parse(note || "{}") : (note || {});
+        return PANEL_PLATFORM === "incontriamoci"
+            ? (parsed.incontriamoci || {})
+            : (parsed.amasens || {});
+    } catch {
+        return {};
+    }
+};
+
 const normalizeincontriamociTagValue = (value) => `${value || ""}`
     .toLowerCase()
     .normalize("NFD")
@@ -362,6 +373,8 @@ const loadAdvertisement = async (res) => {
     if (telegramInput) telegramInput.checked = Boolean(res.hasTelegram);
     const videoInput = document.querySelector("input[name='serviceVideoChiamata']");
     if (videoInput) videoInput.checked = Boolean(res.serviceVideoChiamata);
+    const canCommentInput = document.querySelector("input[name='canComment']");
+    if (canCommentInput) canCommentInput.checked = Boolean(getPanelContactNote(res.note).canComment);
     if (res.phone) setPhoneVerified();
 
     // if (EDIT == "true") {

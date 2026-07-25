@@ -774,6 +774,51 @@ const buildTrovagnoccaContactNote = (data = {}) => {
     });
 };
 
+const buildAmasensNote = (existingNote, canComment) => {
+    let parsed = {};
+    try {
+        parsed = typeof existingNote === "string" ? JSON.parse(existingNote || "{}") : (existingNote || {});
+    } catch {
+        parsed = {};
+    }
+    return JSON.stringify({
+        ...parsed,
+        amasens: {
+            ...(parsed.amasens || {}),
+            canComment: Boolean(canComment)
+        }
+    });
+};
+
+const buildIncontriamociPanelNote = (existingNote, data = {}) => {
+    let parsed = {};
+    try {
+        parsed = typeof existingNote === "string" ? JSON.parse(existingNote || "{}") : (existingNote || {});
+    } catch {
+        parsed = {};
+    }
+    const tags = sanitizeTrovagnoccaTags(data.incontriamociTags || data.trovagnoccaTags || {});
+    const telegram = Boolean(data.telegram || data.telegramUrl);
+    return JSON.stringify({
+        ...parsed,
+        trovagnocca: {
+            ...(parsed.trovagnocca || {}),
+            telegram,
+            telegramNumber: data.telegram || "",
+            telegramUrl: data.telegramUrl || "",
+            tags
+        },
+        incontriamoci: {
+            ...(parsed.incontriamoci || {}),
+            telegram,
+            telegramNumber: data.telegram || "",
+            telegramUrl: data.telegramUrl || "",
+            canComment: Boolean(data.canComment),
+            tags
+        }
+    });
+};
+
 const buildIncontriamociContactNote = (data = {}) => {
     const baseNote = JSON.parse(buildTrovagnoccaContactNote({
         ...data,
@@ -2143,22 +2188,32 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         info.trovagnoccaTags = info.incontriamociTags;
     }
 
+    const incontriamociContactOptions = panel == "incontriamoci" ? {
+        telegram: info.telegram,
+        telegramUrl: info.telegramUrl,
+        canComment: info.canComment,
+        incontriamociTags: info.incontriamociTags
+    } : null;
     if (panel == "trovagnocca" || panel == "incontriamoci") {
         if (info.trovagnoccaTags) {
             info.trovagnoccaTags.nationality = info.serviceNazionalita || info.trovagnoccaTags.nationality || "";
         }
-        info.note = buildTrovagnoccaContactNote({
-            telegram: info.telegram,
-            trovagnoccaTags: info.trovagnoccaTags
-        });
+        if (panel == "trovagnocca") {
+            info.note = buildTrovagnoccaContactNote({
+                telegram: info.telegram,
+                trovagnoccaTags: info.trovagnoccaTags
+            });
+        }
         info.hasWhatapp = Boolean(info.whatsapp);
         info.hasTelegram = Boolean(info.telegram);
         delete info.whatsapp;
         delete info.telegram;
         delete info.trovagnoccaTags;
         delete info.incontriamociTags;
+        delete info.canComment;
     }
 
+    const amasensCanComment = panel == "amasens" ? Boolean(info.canComment) : false;
     if (panel == "amasens") {
         info.hasWhatapp = Boolean(info.whatsapp);
         info.hasTelegram = Boolean(info.telegram);
@@ -2166,6 +2221,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         delete info.region;
         delete info.whatsapp;
         delete info.telegram;
+        delete info.canComment;
     }
 
     if (info.categorie) {
@@ -2191,6 +2247,11 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         donna = await annuncio.getTblDonne();
     } else {
         donna = await ctx.tblDonne.findOne({ where: { phone: req.body.info.phone } });
+    }
+    if (panel == "amasens") {
+        info.note = buildAmasensNote(annuncio?.note || info.note, amasensCanComment);
+    } else if (panel == "incontriamoci") {
+        info.note = buildIncontriamociPanelNote(annuncio?.note || info.note, incontriamociContactOptions);
     }
 
     // Creating the girl folder if it does not exist and setting up the verifiedCities.json file
@@ -2303,7 +2364,9 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         typePeriodic: "Top",
                         editedBy: userid,
                         hasPremium: s.hasPremium,
-                        hasVideo: platform === "amasens" ? Boolean(girl.serviceVideoChiamata) : s.hasVideo,
+                        hasVideo: (platform === "amasens" || platform === "incontriamoci")
+                            ? Boolean(girl.serviceVideoChiamata)
+                            : s.hasVideo,
                         hasHighlight: s.hasHighlight,
                         hasEtichetta: s.hasEtichetta,
                         payed: payed,
@@ -2388,7 +2451,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         GCRecord: deleteThis,
                         editedBy: userid,
                         hasPremium: s.hasPremium,
-                        hasVideo: normalizePanelPlatform(req.body.panel) === "amasens"
+                        hasVideo: ["amasens", "incontriamoci"].includes(normalizePanelPlatform(req.body.panel))
                             ? Boolean(girl.serviceVideoChiamata)
                             : s.hasVideo,
                         hasHighlight: s.hasHighlight,
@@ -2650,7 +2713,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
             : normalizeMegaescortCategory(annuncio.categorie);
         var shouldRepublishBakeca = panel == "bakeca" && nextCategory != previousCategory;
         const panelTags = req.body.info.trovagnoccaTags || req.body.info.incontriamociTags || {};
-        const nextNote = (panel == "trovagnocca" || panel == "incontriamoci")
+        const nextNote = panel == "trovagnocca"
             ? buildTrovagnoccaContactNote({
                 telegram: req.body.info.telegram,
                 trovagnoccaTags: {
@@ -2658,7 +2721,15 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                     nationality: req.body.info.serviceNazionalita || panelTags.nationality || ""
                 }
             })
-            : (req.body.info.note || annuncio.note);
+            : panel == "incontriamoci"
+                ? buildIncontriamociPanelNote(annuncio.note, {
+                    telegram: req.body.info.telegram,
+                    canComment: req.body.info.canComment,
+                    incontriamociTags: panelTags
+                })
+                : panel == "amasens"
+                ? buildAmasensNote(annuncio.note, req.body.info.canComment)
+                : (req.body.info.note || annuncio.note);
 
         await annuncio.update({
             title: req.body.info.title,

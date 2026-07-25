@@ -40,6 +40,7 @@ const getInfoData = () => {
     const whatsappInput = document.querySelector("input[name='whatsapp']");
     const telegramInput = document.querySelector("input[name='telegram']");
     const videoInput = document.querySelector("input[name='serviceVideoChiamata']");
+    const canCommentInput = document.querySelector("input[name='canComment']");
     const selectedCategory = document.querySelector("select[name='categorie']")?.value || "";
 
     const data = {
@@ -56,6 +57,7 @@ const getInfoData = () => {
         whatsapp: whatsappInput ? whatsappInput.checked : false,
         telegram: telegramInput ? telegramInput.checked : false,
         serviceVideoChiamata: videoInput ? videoInput.checked : false,
+        canComment: canCommentInput ? canCommentInput.checked : false,
         serviceNazionalita: "",
         incontriamociTags: {}
     };
