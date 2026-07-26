@@ -334,6 +334,15 @@ const setPhoneVerified = () => {
     }
 };
 
+const getIncontriamociContactNote = (note) => {
+    try {
+        const parsed = typeof note === "string" ? JSON.parse(note || "{}") : (note || {});
+        return parsed.incontriamoci || {};
+    } catch {
+        return {};
+    }
+};
+
 const loadAdvertisement = async (res) => {
     ["title", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
         const selector = (info == "description" || info == "title" || info == "note")
@@ -352,6 +361,12 @@ const loadAdvertisement = async (res) => {
     const telegramInput = document.querySelector("input[name='telegram']");
     if (whatsappInput) whatsappInput.checked = Boolean(res.hasWhatapp);
     if (telegramInput) telegramInput.checked = Boolean(res.hasTelegram);
+    const videoInput = document.querySelector("input[name='serviceVideoChiamata']");
+    if (videoInput) videoInput.checked = Boolean(res.serviceVideoChiamata);
+    const canCommentInput = document.querySelector("input[name='canComment']");
+    if (canCommentInput) {
+        canCommentInput.checked = Boolean(getIncontriamociContactNote(res.note).canComment);
+    }
     const tags = res.incontriamociTags || {};
     if (!tags.ethnicity) {
         tags.ethnicity = [
