@@ -2175,7 +2175,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         !info.description || normalizedDescription.length < minimumDescriptionLength ||
         !info.phone || isNaN(info.phone) ||
         (panel === "trovagnocca" && !info.city) ||
-        (panel === "amasens" && (!info.region || !info.city || !info.location))
+        (panel === "amasens" && (!info.region || !info.city))
     ) return res.sendStatus(405);
 
     if (panel !== 'bakeca') {
