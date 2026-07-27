@@ -36,7 +36,7 @@
         const target = normalize(name);
         const option = Array.from(select.options).find((item) => normalize(item.textContent) === target);
         if (!option) return false;
-        select.value = option.value;
+        select.selectedIndex = option.index;
         return true;
     };
 
@@ -57,10 +57,22 @@
         return items;
     };
 
-    const loadComuni = async (provinceId) => {
+    const loadComuni = async (provinceId, provinceName) => {
         resetSelect(comuneSelect, "Caricamento...");
         const items = provinceId ? await requestLocations("areas", provinceId) : [];
         fillSelect(comuneSelect, items, "Seleziona il Comune...");
+
+        const capitalName = `${provinceName || ""}`.trim();
+        if (provinceId && capitalName) {
+            Array.from(comuneSelect.options)
+                .filter((option, index) => index > 0 && normalize(option.textContent) === normalize(capitalName))
+                .forEach((option) => option.remove());
+
+            const capitalOption = new Option(capitalName, "", true, true);
+            capitalOption.dataset.provinceCapital = "true";
+            comuneSelect.add(capitalOption, 1);
+            comuneSelect.selectedIndex = 1;
+        }
         return items;
     };
 
@@ -72,7 +84,11 @@
     });
     provinceSelect.addEventListener("change", async () => {
         try {
-            await loadComuni(provinceSelect.selectedOptions[0]?.dataset.locationId || "");
+            const selectedProvince = provinceSelect.selectedOptions[0];
+            await loadComuni(
+                selectedProvince?.dataset.locationId || "",
+                selectedProvince?.textContent || ""
+            );
         } catch (error) { alert(error.message); }
     });
 
@@ -85,7 +101,12 @@
         if (!selectByName(regionSelect, resolvedRegion)) return false;
         await loadProvinces(regionSelect.value);
         if (!selectByName(provinceSelect, province)) return false;
-        await loadComuni(provinceSelect.selectedOptions[0]?.dataset.locationId || "");
+        const selectedProvince = provinceSelect.selectedOptions[0];
+        await loadComuni(
+            selectedProvince?.dataset.locationId || "",
+            selectedProvince?.textContent || ""
+        );
+        if (!`${comune || ""}`.trim()) return true;
         return selectByName(comuneSelect, comune);
     };
 })();
