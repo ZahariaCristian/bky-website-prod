@@ -2765,7 +2765,14 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
 
         var sevenDay = new Date();
         sevenDay.setDate(sevenDay.getDate() - 7);
-        let schedulazioniWhere = { annuncio: req.body.id, GCRecord: null, state: "OK", remotePostID: { [Op.ne]: null }, data: { [Op.gt]: sevenDay } };
+        let schedulazioniWhere = {
+            annuncio: req.body.id,
+            platform: panel,
+            GCRecord: null,
+            state: "OK",
+            remotePostID: { [Op.ne]: null },
+            data: { [Op.gt]: sevenDay }
+        };
         if (panel == "bakeca") {
             schedulazioniWhere = {
                 annuncio: req.body.id,
@@ -2838,7 +2845,10 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                     });
                 }
 
-                await ad.update({ state: "EDIT" });
+                await ad.update({
+                    state: "EDIT",
+                    city: req.body.info.city || ad.city
+                });
             }
         }
 
