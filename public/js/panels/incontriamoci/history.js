@@ -490,7 +490,6 @@ var addRptStorico = (sxhedule, i) => {
     }
 
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
-    configureHistoryErrorButton(newRow, sxhedule);
 
     switch (sxhedule.payed) {
         case true:
@@ -499,6 +498,8 @@ var addRptStorico = (sxhedule, i) => {
         default:
             newRow.html(newRow.html().replace(/@pagato@/g, "<h3 class='fa fa-times text-danger'><i></i></h3>"));
     }
+
+    configureHistoryErrorButton(newRow, sxhedule);
 
     if (canManageHistorySchedule(sxhedule)) {
         configureHistoryActionButtons(newRow, sxhedule);
@@ -572,7 +573,6 @@ function addRptStoricoSus(sxhedule) {
     }
 
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
-    configureHistoryErrorButton(newRow, sxhedule);
     configureSuspendedHistoryPublishButton(newRow, sxhedule);
     switch (sxhedule.payed) {
         case true:
@@ -581,6 +581,8 @@ function addRptStoricoSus(sxhedule) {
         default:
             newRow.html(newRow.html().replace(/@pagato@/g, "<h3 class='fa fa-times text-danger'><i></i></h3>"));
     }
+
+    configureHistoryErrorButton(newRow, sxhedule);
 
     newRow.appendTo(root);
 }
