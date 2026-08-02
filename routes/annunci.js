@@ -2081,7 +2081,17 @@ router.post("/getByID", authenticateKey, async (req, res) => {
                 scrapingResult.images = galleria.sort((a, b) => getGalleryOrderIndex(a) - getGalleryOrderIndex(b));
             }
         }
-        var schedulazioni = await annuncio.getTblSchedulazionis({ where: { GCRecord: null, [Op.or]: [{ state: { [Op.ne]: "CLOSED" } }, { state: null }] } });
+        var schedulazioni = await annuncio.getTblSchedulazionis({
+            where: {
+                platform: panel,
+                GCRecord: null,
+                [Op.or]: [
+                    { state: null },
+                    { state: { [Op.notIn]: ["CLOSED", "CLOSE", "DELETE"] } }
+                ]
+            },
+            order: [["data", "ASC"]]
+        });
         scrapingResult.schedule = {};
         // console.log(schedulazioni, 'schedule of tasks')
         if (schedulazioni.length != 0) {
