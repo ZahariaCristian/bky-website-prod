@@ -225,6 +225,11 @@ function getPublishStateConfig(schedule) {
                 className: "btn-success",
                 label: "PUBBLICATO"
             };
+        case "KO":
+            return {
+                className: "btn-danger",
+                label: "ERRORE"
+            };
         case "CLOSE":
         case "CLOSED":
             return {
@@ -262,7 +267,7 @@ function getHistoryStatusIconHtml(schedule) {
             }
             return "<h3 class='fa fa-check-square text-success'><i></i></h3>";
         case "KO":
-            return "<h3 class='fa fa-times text-danger'><i></i></h3>";
+            return "<button type='button' class='btn btn-xs btn-danger btnScheduleError' aria-label='Visualizza il motivo dell errore'><span class='fa fa-times'></span></button>";
         case "ALERT":
             return "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>";
         case "CLOSE":
@@ -387,6 +392,20 @@ function formatincontriamociPlanLabel(typeAnnuncio) {
     }
 }
 
+function configureHistoryErrorButton(row, schedule) {
+    const errorButton = row.find(".btnScheduleError");
+    if (!errorButton.length) return;
+
+    const reason = `${schedule?.errorReason || ""}`.trim() ||
+        "Il publisher non ha fornito ulteriori dettagli per questo tentativo.";
+    const message = `Pubblicazione non riuscita: ${reason}`;
+
+    errorButton.attr("title", reason);
+    errorButton.off("click.publishError").on("click.publishError", () => {
+        ShowAlert("custom", message, 8000);
+    });
+}
+
 function updateScheduleStateAction(e, ids, options) {
     if (!confirm(options.confirmText)) {
         return;
@@ -471,6 +490,7 @@ var addRptStorico = (sxhedule, i) => {
     }
 
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    configureHistoryErrorButton(newRow, sxhedule);
 
     switch (sxhedule.payed) {
         case true:
@@ -552,6 +572,7 @@ function addRptStoricoSus(sxhedule) {
     }
 
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    configureHistoryErrorButton(newRow, sxhedule);
     configureSuspendedHistoryPublishButton(newRow, sxhedule);
     switch (sxhedule.payed) {
         case true:

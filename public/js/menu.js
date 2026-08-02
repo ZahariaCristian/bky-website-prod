@@ -128,7 +128,7 @@ function setValidation(textbox, inputFilter, errMsg) {
       });
     });
   }
-function ShowAlert(pnlID, customText) {
+function ShowAlert(pnlID, customText, duration = 2000) {
     $(".pnlAlert").show();
     if (customText) $("#lblCustom").text(customText);
     let pnlSelector = "#" + pnlID;
@@ -138,7 +138,7 @@ function ShowAlert(pnlID, customText) {
     $(pnlSelector).fadeIn(function () {
       setTimeout(function () {
           HideAlert();
-      }, 2000);
+      }, duration);
     });
 }
 
