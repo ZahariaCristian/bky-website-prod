@@ -12,11 +12,17 @@ const croppers = {};
 let images = []; //slider images
 var picIds = [];
 var pubs = {};
-var currentDay = new Date().toLocaleDateString("zh-hans-cn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-}).replace(/\//g, "-");
+const getRomeDateKey = (date = new Date()) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Rome",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+};
+var currentDay = getRomeDateKey();
 
 $(() => {
     //This is New Panel
@@ -403,14 +409,9 @@ const loadAdvertisement = async (res) => {
 
     pubs = res.schedule !== undefined ? res.schedule : {};
     console.log(pubs, currentDay, "loadAdvertisement")
-    if (JSON.stringify(pubs) !== "{}") {
-        const scheduleDays = Object.keys(pubs).sort();
-        const dayToLoad = pubs[currentDay] ? currentDay : scheduleDays[0];
-        currentDay = dayToLoad;
-        console.log(currentDay, dayToLoad, pubs,  'currentDay in loadAdvertisement')
-        $("#txtDate").val(dayToLoad);
-        loadDay(dayToLoad);
-    }
+    console.log(currentDay, pubs, "currentDay in loadAdvertisement")
+    $("#txtDate").val(currentDay);
+    loadDay(currentDay);
     setTimeout(() => {
         $("#updateInfoBtn").prop("disabled", true);
         // document.querySelector("input[name='phone']").setAttribute("disabled", true);
