@@ -363,6 +363,42 @@ const normalizePanelPlatform = (panel) => {
     return normalized || "bakecaincontrii";
 };
 
+const SCHEDULE_IMAGE_LIMITS = Object.freeze({
+    amasens: 9,
+    incontriamoci: 9,
+    trovagnocca: 6
+});
+
+const getScheduleImageLimit = (panel) => SCHEDULE_IMAGE_LIMITS[normalizePanelPlatform(panel)] || 5;
+
+const isSchedulePreviewImage = (image) => image?.isAnteprima === true ||
+    image?.isAnteprima === 1 || `${image?.isAnteprima || ""}`.toLowerCase() === "true";
+
+const normalizeScheduleImages = (images, limit) => {
+    const sourceImages = Array.isArray(images) ? images : [];
+    const previewImage = sourceImages.find(isSchedulePreviewImage);
+    const orderedImages = previewImage
+        ? [previewImage, ...sourceImages.filter((image) => image !== previewImage)]
+        : sourceImages;
+    const normalizedImages = [];
+    const galleryIds = new Set();
+
+    for (const image of orderedImages) {
+        const galleryId = image?.galleria;
+        const galleryKey = `${galleryId ?? ""}`.trim();
+        if (!galleryKey || galleryIds.has(galleryKey)) continue;
+
+        galleryIds.add(galleryKey);
+        normalizedImages.push({ galleria: galleryId });
+        if (normalizedImages.length >= limit) break;
+    }
+
+    return normalizedImages.map((image, index) => ({
+        ...image,
+        isAnteprima: index === 0
+    }));
+};
+
 const parseAgeValue = (value) => {
     const match = `${value || ""}`.match(/\d+/);
     return match ? Number(match[0]) : null;
@@ -2385,33 +2421,20 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     });
                     s.id = schedulato.id;
                     if (s.images) {
-                        const imageLimit = ["trovagnocca", "incontriamoci"].includes(platform) ? 6 : 5;
-                        if (s.images.length == 0) {
-                            let anteprima = true;
+                        const imageLimit = getScheduleImageLimit(platform);
+                        let scheduleImages = s.images;
+                        if (scheduleImages.length == 0) {
                             var donna = await girl.getTblDonne()
                             var photos = await donna.getTblGalleria({ limit: imageLimit, where: { isHidden: 0, GCRecord: null } });
-                            if (photos) {
-                                if (photos.length > 0) {
-                                    for (img of photos) {
-                                        await ctx.tblGalleriaAnnuncio.create({
-                                            schedulazione: schedulato.id,
-                                            galleria: img.id,
-                                            isAnteprima: anteprima
-                                        });
-                                        anteprima = false;
-                                    }
-                                }
-                            }
-                        } else {
-                            const selectedPreviewIndex = s.images.findIndex((image) => image.isAnteprima === true);
-                            for (let img in s.images) {
-                                const anteprima = Number(img) === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0);
-                                await ctx.tblGalleriaAnnuncio.create({
-                                    schedulazione: schedulato.id,
-                                    galleria: s.images[img].galleria,
-                                    isAnteprima: anteprima
-                                });
-                            }
+                            scheduleImages = photos.map((photo) => ({ galleria: photo.id }));
+                        }
+
+                        for (const image of normalizeScheduleImages(scheduleImages, imageLimit)) {
+                            await ctx.tblGalleriaAnnuncio.create({
+                                schedulazione: schedulato.id,
+                                galleria: image.galleria,
+                                isAnteprima: image.isAnteprima
+                            });
                         }
                     }
                 }
@@ -2431,9 +2454,8 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     if (task.remotePostID != null) state = "EDIT"; //remotePostId 
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
                     for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
-                    var i = 0;
                     const platform = normalizePanelPlatform(req.body.panel);
-                    const imageLimit = ["trovagnocca", "incontriamoci"].includes(platform) ? 6 : 5;
+                    const imageLimit = getScheduleImageLimit(platform);
                     let scheduleImages = Array.isArray(s.images) ? s.images : [];
                     if (scheduleImages.length == 0) {
                         var donna = await girl.getTblDonne();
@@ -2441,14 +2463,11 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         scheduleImages = photos.map((photo) => ({ galleria: photo.id }));
                     }
 
-                    const selectedPreviewIndex = scheduleImages.findIndex((image) => image.isAnteprima === true);
-                    for (img of scheduleImages) {
-                        var anteprima = i === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0);
-                        i++;
+                    for (const image of normalizeScheduleImages(scheduleImages, imageLimit)) {
                         await ctx.tblGalleriaAnnuncio.create({
                             schedulazione: task.id,
-                            galleria: img.galleria,
-                            isAnteprima: anteprima
+                            galleria: image.galleria,
+                            isAnteprima: image.isAnteprima
                         });
                     }
                 }
@@ -2798,7 +2817,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         }
         var schedulazioni = await ctx.tblSchedulazioni.findAll({ where: schedulazioniWhere });
 
-        const galleryLimit = panel === "incontriamoci" ? 6 : 5;
+        const galleryLimit = getScheduleImageLimit(panel);
         var newGallery = await donna.getTblGalleria({ limit: galleryLimit, where: { isHidden: 0, GCRecord: null } });
 
         var recentPublishLimit = new Date();
@@ -2812,11 +2831,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                         isAnteprima: image.isAnteprima === true
                     }))
                     : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
-                const selectedPreviewIndex = sourceImages.findIndex((image) => image.isAnteprima === true);
-                const normalizedImages = sourceImages.map((image, index) => ({
-                    galleria: image.galleria,
-                    isAnteprima: index === (selectedPreviewIndex >= 0 ? selectedPreviewIndex : 0)
-                }));
+                const normalizedImages = normalizeScheduleImages(sourceImages, galleryLimit);
 
                 if (shouldRepublishBakeca) {
                     var republishSchedule = await ctx.tblSchedulazioni.create({

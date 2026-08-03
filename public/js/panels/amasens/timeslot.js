@@ -3,6 +3,8 @@ $(".promoType>ul>li").on("click", (me) => {
     $("#wizar-body").css("background-color", $(me.target).css("background-color"));
 })
 
+const AMASENS_MAX_SCHEDULE_IMAGES = 9;
+
 function safeEnableScheduleUpdate() {
     if (typeof enableScheduleUpdate === "function") {
         enableScheduleUpdate();
@@ -904,7 +906,7 @@ const createPhotoButton = () => {
                 const thisAnteprimaButton = checkbox.parentElement.querySelector("button");
                 const checkedPics = getCheckedPics(checkbox);
                 if (checkbox.checked) {
-                    if (checkedPics >= 6) {
+                    if (checkedPics >= AMASENS_MAX_SCHEDULE_IMAGES) {
                         checkbox.parentElement.parentElement.querySelectorAll("input").forEach((c) => {
                             if (c.checked) return;
                             c.setAttribute("disabled", true);
@@ -931,7 +933,7 @@ const createPhotoButton = () => {
                 markSchedulePanelEdited(btnAnteprima);
                 if (!btnAnteprima.parentElement.querySelector("input").checked) {
                     const checkedPics = getCheckedPics(btnAnteprima);
-                    if (checkedPics >= 6) return;
+                    if (checkedPics >= AMASENS_MAX_SCHEDULE_IMAGES) return;
                     btnAnteprima.parentElement.querySelector("input").click();
                 }
                 if (btnAnteprima.classList.contains("btn-warning")) return;
@@ -1261,7 +1263,7 @@ const timeSlotPanelOperations = (panel) => {
                     const thisAnteprimaButton = checkbox.parentElement.querySelector("button");
                     const checkedPics = getCheckedPics(checkbox);
                     if (checkbox.checked) {
-                        if (checkedPics >= 6) {
+                        if (checkedPics >= AMASENS_MAX_SCHEDULE_IMAGES) {
                             checkbox.parentElement.parentElement.querySelectorAll("input").forEach((c) => {
                                 if (c.checked) return;
                                 c.setAttribute("disabled", true);
@@ -1288,7 +1290,7 @@ const timeSlotPanelOperations = (panel) => {
                     markSchedulePanelEdited(btnAnteprima);
                     if (!btnAnteprima.parentElement.querySelector("input").checked) {
                         const checkedPics = getCheckedPics(btnAnteprima);
-                        if (checkedPics >= 6) return;
+                        if (checkedPics >= AMASENS_MAX_SCHEDULE_IMAGES) return;
                         btnAnteprima.parentElement.querySelector("input").click();
                     }
                     if (btnAnteprima.classList.contains("btn-warning")) return;
