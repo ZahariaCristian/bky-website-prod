@@ -22,6 +22,14 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     if (!req.query.phone) return res.sendStatus(400);
     if (!req.query.ann) return res.sendStatus(400);
 
+    if (`${req.query.panel || ""}`.toLowerCase() === "moscarossa") {
+        const files = Array.isArray(req.files) ? req.files : [];
+        const invalidFile = files.find((file) =>
+            !`${file.mimetype || ""}`.toLowerCase().startsWith("image/") || file.size > 5 * 1024 * 1024
+        );
+        if (files.length > 20 || invalidFile) return res.sendStatus(413);
+    }
+
     const bodyArray = (value) => Array.isArray(value) ? value : (value === undefined ? [] : [value]);
     const origins = bodyArray(req.body.origin);
     const hiddenFlags = bodyArray(req.body.hidden);

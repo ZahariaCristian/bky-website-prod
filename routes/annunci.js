@@ -366,7 +366,8 @@ const normalizePanelPlatform = (panel) => {
 const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     amasens: 9,
     incontriamoci: 9,
-    trovagnocca: 6
+    trovagnocca: 6,
+    moscarossa: 20
 });
 
 const getScheduleImageLimit = (panel) => SCHEDULE_IMAGE_LIMITS[normalizePanelPlatform(panel)] || 5;
@@ -851,6 +852,34 @@ const buildIncontriamociPanelNote = (existingNote, data = {}) => {
             telegramUrl: data.telegramUrl || "",
             canComment: Boolean(data.canComment),
             tags
+        }
+    });
+};
+
+const buildMoscarossaPanelNote = (existingNote, data = {}) => {
+    let parsed = {};
+    try {
+        parsed = typeof existingNote === "string" ? JSON.parse(existingNote || "{}") : (existingNote || {});
+    } catch {
+        parsed = {};
+    }
+
+    const options = data.moscarossa || {};
+    const stringValue = (value, maxLength = 250) => `${value || ""}`.trim().slice(0, maxLength);
+    return JSON.stringify({
+        ...parsed,
+        moscarossa: {
+            ...(parsed.moscarossa || {}),
+            categoryId: stringValue(options.categoryId, 10),
+            zoneId: stringValue(options.zoneId, 50),
+            zone: stringValue(options.zone || data.location, 150),
+            address: stringValue(options.address, 250),
+            zoneDetail: stringValue(options.zoneDetail, 150),
+            latitude: stringValue(options.latitude, 50),
+            longitude: stringValue(options.longitude, 50),
+            airConditioned: Boolean(options.airConditioned),
+            website: stringValue(options.website, 250),
+            previewGalleryId: stringValue(options.previewGalleryId, 50)
         }
     });
 };
@@ -2221,10 +2250,11 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         !info.description || normalizedDescription.length < minimumDescriptionLength ||
         !info.phone || isNaN(info.phone) ||
         (panel === "trovagnocca" && !info.city) ||
+        (panel === "moscarossa" && !info.city) ||
         (panel === "amasens" && (!info.region || !info.city))
     ) return res.sendStatus(405);
 
-    if (panel !== 'bakeca') {
+    if (panel !== 'bakeca' && panel !== 'moscarossa') {
         if (!info.age || parsedAge === null || (panel !== 'megaescort' && isNaN(info.age))) {
             return res.sendStatus(405)
         }
@@ -2270,6 +2300,15 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         delete info.canComment;
     }
 
+    const moscarossaOptions = panel == "moscarossa" ? (info.moscarossa || {}) : null;
+    if (panel == "moscarossa") {
+        info.hasWhatapp = Boolean(info.whatsapp);
+        info.hasTelegram = Boolean(info.telegram);
+        delete info.whatsapp;
+        delete info.telegram;
+        delete info.moscarossa;
+    }
+
     if (info.categorie) {
         info.categorie = panel == "incontriamoci"
             ? normalizeIncontriamociCategory(info.categorie)
@@ -2298,6 +2337,11 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         info.note = buildAmasensNote(annuncio?.note || info.note, amasensCanComment);
     } else if (panel == "incontriamoci") {
         info.note = buildIncontriamociPanelNote(annuncio?.note || info.note, incontriamociContactOptions);
+    } else if (panel == "moscarossa") {
+        info.note = buildMoscarossaPanelNote(annuncio?.note || info.note, {
+            moscarossa: moscarossaOptions,
+            location: info.location
+        });
     }
 
     // Creating the girl folder if it does not exist and setting up the verifiedCities.json file
@@ -2308,7 +2352,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         phone: info.phone,
     }
 
-    if (panel !== 'bakeca') {
+    if (panel !== 'bakeca' && parsedAge !== null) {
         donnaInfo.years = parsedAge
     }
     if (!donna) {
@@ -2322,7 +2366,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
     } else {
         oldPhone = donna.phone;
         if (panel !== 'bakeca') {
-            donnaInfo.years = parsedAge
+            if (parsedAge !== null) donnaInfo.years = parsedAge
             donnaInfo.GCRecord = null
         }
 

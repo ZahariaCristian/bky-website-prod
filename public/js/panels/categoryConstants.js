@@ -67,6 +67,12 @@
             CATEGORY_VALUES.MASSAGGI,
             CATEGORY_VALUES.COPPIE,
         ],
+        moscarossa: [
+            CATEGORY_VALUES.DONNAUOMO,
+            CATEGORY_VALUES.TRANS,
+            CATEGORY_VALUES.UOMODONNA,
+            CATEGORY_VALUES.MASSAGGI,
+        ],
     };
 
     const PANEL_CATEGORY_LABELS = {
@@ -102,6 +108,12 @@
             [CATEGORY_VALUES.TRANS]: "Trans",
             [CATEGORY_VALUES.MASSAGGI]: "Massaggi",
             [CATEGORY_VALUES.COPPIE]: "Coppie & Scambisti",
+        },
+        moscarossa: {
+            [CATEGORY_VALUES.DONNAUOMO]: "Escort donne",
+            [CATEGORY_VALUES.TRANS]: "Trans",
+            [CATEGORY_VALUES.UOMODONNA]: "Gigolò",
+            [CATEGORY_VALUES.MASSAGGI]: "Massaggi",
         },
     };
 

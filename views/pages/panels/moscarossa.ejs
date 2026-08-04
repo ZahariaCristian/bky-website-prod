@@ -5,55 +5,218 @@
     <title>BKY - Annuncio Moscarossa</title>
     <%- include('../../partials/head'); %>
     <style>
-        .moscarossa-panel-logo {
-            display: block;
-            width: 100%;
-            max-width: 394px;
+        .moscarossa-logo {
+            width: 260px;
+            max-width: 100%;
             height: auto;
-            margin: 0 auto 24px;
+            margin: 8px 0 20px;
         }
 
-        .moscarossa-panel-status {
-            max-width: 760px;
-            margin: 40px auto;
+        .moscarossa-contact-options label {
+            margin-right: 24px;
         }
 
-        .moscarossa-panel-status .widget-body {
-            padding: 32px;
+        .moscarossa-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
         }
 
-        .moscarossa-panel-status .btn {
-            margin-top: 12px;
+        .moscarossa-image-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .moscarossa-image-card.is-preview {
+            border: 3px solid #d71939;
+            padding: 8px;
+        }
+
+        .moscarossa-image-card img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            background: #eee;
+        }
+
+        .moscarossa-image-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 9px;
+        }
+
+        .moscarossa-image-actions .btn {
+            flex: 1 1 42px;
+        }
+
+        .moscarossa-save-row {
+            margin-top: 20px;
+        }
+
+        .moscarossa-pending-note {
+            margin-top: 16px;
         }
     </style>
 </head>
 
 <body class="scripts-async wysihtml5-supported menu-left-visible">
+    <input id="annuncioID" type="hidden" value="new">
+    <input id="donnaID" type="hidden" value="new">
+
     <div class="container-fluid menu-hidden" style="visibility: visible;">
         <%- include('../../partials/menu'); %>
         <div id="content">
             <%- include('../../partials/header'); %>
-            <h1>Annuncio Moscarossa</h1>
+            <h1 id="moscarossaPageTitle">Nuovo Annuncio Moscarossa</h1>
 
             <div class="innerLR">
-                <div class="widget widget-heading-simple widget-body-gray moscarossa-panel-status">
+                <div class="widget widget-heading-simple widget-body-gray widget-annuncio">
                     <div class="widget-head">
-                        <h3 class="heading"><i class="fa fa-cog"></i> Moscarossa</h3>
+                        <h3 class="heading"><i class="fa fa-edit"></i> Informazioni annuncio</h3>
                     </div>
-                    <div class="widget-body text-center">
-                        <img class="moscarossa-panel-logo" src="/assets/panels/moscarossa.png" alt="Moscarossa">
-                        <div class="alert alert-info text-left" role="status">
-                            Il login e il riutilizzo della sessione Moscarossa sono configurati. La pubblicazione
-                            automatica sarà disponibile dopo aver configurato i campi e i selettori degli annunci.
-                        </div>
-                        <p class="text-muted">
-                            Puoi salvare le credenziali e attivare la piattaforma per verificare il login. Questo
-                            pannello non crea ancora programmazioni Moscarossa.
+                    <div class="widget-body">
+                        <img class="moscarossa-logo" src="/assets/panels/moscarossa.png" alt="Moscarossa">
+
+                        <form id="moscarossaInfoForm" novalidate>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaCategory">Categoria *</label>
+                                        <select id="moscarossaCategory" name="categorie" class="form-control" required>
+                                            <option value="">Seleziona una categoria</option>
+                                            <option value="DONNAUOMO">Escort donne</option>
+                                            <option value="TRANS">Trans</option>
+                                            <option value="UOMODONNA">Gigolò</option>
+                                            <option value="MASSAGGI">Massaggi</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaName">Nome *</label>
+                                        <input id="moscarossaName" name="name" type="text" maxlength="30" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="moscarossaTitle">Titolo *</label>
+                                <textarea id="moscarossaTitle" name="title" maxlength="150" rows="2" class="form-control" required></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="moscarossaDescription">Descrizione *</label>
+                                <textarea id="moscarossaDescription" name="description" rows="8" class="form-control" required></textarea>
+                                <p class="help-block">Minimo 20 caratteri.</p>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaPhone">Telefono *</label>
+                                        <input id="moscarossaPhone" name="phone" type="tel" maxlength="50" class="form-control" required>
+                                    </div>
+                                    <div class="moscarossa-contact-options">
+                                        <label><input name="whatsapp" type="checkbox"> WhatsApp</label>
+                                        <label><input name="telegram" type="checkbox"> Telegram</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaAge">Età</label>
+                                        <input id="moscarossaAge" name="age" type="number" min="18" max="99" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaCity">Comune *</label>
+                                        <input id="moscarossaCity" name="city" type="text" class="form-control" placeholder="Scrivi una città/comune" required>
+                                        <p class="help-block">La ricerca automatica Moscarossa sarà collegata quando sarà disponibile la relativa API.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaZone">Zona/quartiere</label>
+                                        <input id="moscarossaZone" name="location" type="text" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaAddress">Indirizzo</label>
+                                        <input id="moscarossaAddress" name="address" type="text" class="form-control" placeholder="Es: Via Roma, 1">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaZoneDetail">Dettaglio zona</label>
+                                        <input id="moscarossaZoneDetail" name="zoneDetail" type="text" maxlength="150" class="form-control" placeholder="Es: vicino alla stazione">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="moscarossaWebsite">Sito web personale</label>
+                                        <input id="moscarossaWebsite" name="website" type="url" maxlength="250" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="checkbox-inline" style="margin-top: 26px;">
+                                            <input id="moscarossaAirConditioned" name="airConditioned" type="checkbox"> Ambiente climatizzato
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input id="moscarossaZoneId" name="zoneId" type="hidden">
+                            <input id="moscarossaLatitude" name="latitude" type="hidden">
+                            <input id="moscarossaLongitude" name="longitude" type="hidden">
+
+                            <div class="row moscarossa-save-row">
+                                <div class="col-md-12">
+                                    <button id="moscarossaSaveInfo" type="submit" class="btn btn-primary" style="width: 100%;">
+                                        <i class="fa fa-save"></i> SALVA INFORMAZIONI
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="widget widget-heading-simple widget-body-gray">
+                    <div class="widget-head">
+                        <h3 class="heading"><i class="fa fa-camera"></i> Foto</h3>
+                    </div>
+                    <div class="widget-body">
+                        <p>Massimo 20 foto, 5 MB per immagine. Seleziona una foto come anteprima.</p>
+                        <input id="moscarossaImages" type="file" class="form-control" accept="image/*" multiple>
+                        <p id="moscarossaNewAdImageHelp" class="help-block moscarossa-pending-note" style="display:none;">
+                            Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.
                         </p>
-                        <a class="btn btn-primary" href="/profile.html">
-                            <i class="fa fa-user"></i> Configura credenziali Moscarossa
-                        </a>
+                        <div id="moscarossaImageGrid" class="moscarossa-image-grid"></div>
+                        <button id="moscarossaSaveImages" type="button" class="btn btn-primary" style="width: 100%; margin-top: 20px;" disabled>
+                            <i class="fa fa-save"></i> SALVA FOTO E ANTEPRIMA
+                        </button>
                     </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    Il pannello Moscarossa salva informazioni, foto e anteprima. Le programmazioni saranno abilitate
+                    dopo aver integrato il secondo passaggio del sito Moscarossa.
                 </div>
             </div>
 
@@ -62,6 +225,8 @@
             </footer>
         </div>
     </div>
+
+    <script src="/js/panels/moscarossa/main.js?v=20260803-panel-phase1"></script>
 </body>
 
 </html>
