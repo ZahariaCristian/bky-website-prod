@@ -86,6 +86,44 @@ router.get("/amasensLocations", authenticateKey, (req, res) => {
     return res.status(400).json({ error: "Invalid location lookup type" });
 });
 
+router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
+    const term = `${req.query.term || req.query.q || ""}`.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (term.length < 2) {
+        return res.status(400).json({ error: "Inserisci almeno due caratteri per cercare il Comune." });
+    }
+
+    const rawIdAccompa = `${req.query.idAccompa || ""}`.trim();
+    const idAccompa = /^\d+$/.test(rawIdAccompa) ? rawIdAccompa : "0";
+    const publisherLocationsUrl = process.env.MOSCAROSSA_LOCATIONS_API_URL
+        || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
+
+    try {
+        const response = await axios.post(
+            publisherLocationsUrl,
+            { term, idAccompa },
+            {
+                headers: {
+                    accept: "application/json",
+                    "content-type": "application/json"
+                },
+                timeout: 45000
+            }
+        );
+        const results = Array.isArray(response.data?.results) ? response.data.results : [];
+        return res.status(response.status).json({ results });
+    } catch (error) {
+        console.error("Moscarossa Comune proxy error:", {
+            publisherLocationsUrl,
+            status: error.response?.status,
+            details: error.response?.data || error.message
+        });
+        return res.status(error.response?.status || 503).json({
+            error: "Il servizio Comuni Moscarossa non è disponibile.",
+            details: error.response?.data?.details || error.response?.data || error.message
+        });
+    }
+});
+
 router.post("/setExpiresAt", authenticateKey, async (req, res) => {
     try {
         const { annuncioId, expiresAt } = req.body;
@@ -871,6 +909,7 @@ const buildMoscarossaPanelNote = (existingNote, data = {}) => {
         moscarossa: {
             ...(parsed.moscarossa || {}),
             categoryId: stringValue(options.categoryId, 10),
+            cityId: stringValue(options.cityId, 50),
             zoneId: stringValue(options.zoneId, 50),
             zone: stringValue(options.zone || data.location, 150),
             address: stringValue(options.address, 250),
@@ -2236,6 +2275,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
     const parsedAge = parseAgeValue(info.age);
     const minimumDescriptionLength = panel === "incontriamoci" ? 50 : 20;
     const normalizedDescription = `${info.description || ""}`.replace(/\s+/g, " ").trim();
+    const moscarossaCityId = panel === "moscarossa" ? `${info.moscarossa?.cityId || ""}`.trim() : "";
     if (normalizedDescription.length < minimumDescriptionLength) {
         return res.status(422).json({
             error: `La descrizione deve contenere almeno ${minimumDescriptionLength} caratteri.`,
@@ -2253,6 +2293,10 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         (panel === "moscarossa" && !info.city) ||
         (panel === "amasens" && (!info.region || !info.city))
     ) return res.sendStatus(405);
+
+    if (panel === "moscarossa" && !moscarossaCityId) {
+        return res.status(422).json({ error: "Seleziona un Comune dai risultati Moscarossa." });
+    }
 
     if (panel !== 'bakeca' && panel !== 'moscarossa') {
         if (!info.age || parsedAge === null || (panel !== 'megaescort' && isNaN(info.age))) {

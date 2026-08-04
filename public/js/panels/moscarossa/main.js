@@ -10,6 +10,7 @@
     const state = {
         donnaId: null,
         phone: "",
+        cityId: "",
         images: [],
         previewKey: ""
     };
@@ -29,18 +30,174 @@
     const infoForm = document.querySelector("#moscarossaInfoForm");
     const editInfoButton = document.querySelector("#moscarossaEditInfo");
     const saveInfoButton = document.querySelector("#moscarossaSaveInfo");
+    const verifyPhoneButton = document.querySelector("#verify-button");
+    const verifyPhoneLabel = document.querySelector("#test-label");
+    const cityLookup = $("#moscarossaCityId");
     const galleryImageSrc = (image) => {
         if (!image?.id || !image.src || !image.src.includes("?")) return image?.src || "";
         if (/[?&]id=/.test(image.src)) return image.src;
         return `${image.src}&id=${encodeURIComponent(image.id)}`;
     };
 
+    const selectedCityId = () => {
+        const value = clean(field("cityId")?.value);
+        return value.startsWith("legacy:") ? "" : value;
+    };
+
+    const setCitySelection = (cityId, cityName) => {
+        const name = clean(cityName);
+        const id = clean(cityId) || (name ? `legacy:${name}` : "");
+        state.cityId = clean(cityId);
+        setValue("city", name);
+
+        if (cityLookup.data("select2")) {
+            cityLookup.select2("data", id && name ? { id, text: name } : null);
+        } else {
+            cityLookup.val(id);
+        }
+    };
+
+    const initializeCityLookup = () => {
+        if (!cityLookup.length || typeof $.fn.select2 === "undefined") {
+            showError("Il controllo Comune Moscarossa non è disponibile.");
+            return;
+        }
+
+        cityLookup.select2({
+            width: "100%",
+            placeholder: "Scrivi una città/comune",
+            allowClear: true,
+            minimumInputLength: 2,
+            maximumInputLength: 80,
+            formatInputTooShort: () => "Inserisci almeno 2 caratteri",
+            formatSearching: () => "Ricerca in corso...",
+            formatNoMatches: () => "Nessun Comune trovato",
+            ajax: {
+                url: "/annuncio/moscarossaLocations",
+                dataType: "json",
+                quietMillis: 350,
+                data: (term) => ({ term, idAccompa: "0" }),
+                results: (payload) => ({
+                    results: (Array.isArray(payload?.results) ? payload.results : [])
+                        .filter((item) => item?.id && item?.text)
+                        .map((item) => ({ id: `${item.id}`, text: clean(item.text) }))
+                }),
+                params: {
+                    error: (xhr) => {
+                        let message = "Impossibile caricare i Comuni Moscarossa.";
+                        try {
+                            message = xhr.responseJSON?.error || JSON.parse(xhr.responseText || "{}").error || message;
+                        } catch {
+                            // Keep the user-facing fallback when the proxy returned non-JSON content.
+                        }
+                        showError(message);
+                    }
+                }
+            }
+        });
+
+        cityLookup.on("change", () => {
+            const selection = cityLookup.select2("data");
+            const nextId = clean(selection?.id);
+            const previousId = state.cityId;
+            state.cityId = nextId.startsWith("legacy:") ? "" : nextId;
+            setValue("city", selection?.text || "");
+
+            if (previousId && state.cityId && previousId !== state.cityId) {
+                setValue("location", "");
+                setValue("zoneId", "");
+            }
+        });
+    };
+
     const setFormEditing = (editing) => {
         infoForm.querySelectorAll("input:not([type='hidden']), textarea, select").forEach((control) => {
             control.disabled = !editing;
         });
+        verifyPhoneButton.disabled = !editing || verifyPhoneButton.dataset.verified === "true";
         saveInfoButton.disabled = !editing;
         editInfoButton.style.display = editing || isNew ? "none" : "block";
+        if (cityLookup.data("select2")) {
+            if (editing && clean(field("cityId")?.value).startsWith("legacy:")) {
+                setCitySelection("", "");
+            }
+            cityLookup.select2("enable", editing);
+        }
+    };
+
+    const setPhoneVerificationState = (status) => {
+        const verified = status === "verified";
+        const loading = status === "loading";
+        verifyPhoneButton.dataset.verified = verified ? "true" : "false";
+        verifyPhoneButton.className = verified ? "btn btn-success" : "btn btn-secondary";
+        verifyPhoneButton.innerHTML = verified
+            ? "<i class='fa fa-check'></i>"
+            : "<span><i class='fa fa-arrow-right'></i></span>";
+        verifyPhoneButton.disabled = verified || loading || saveInfoButton.disabled;
+        verifyPhoneLabel.textContent = verified ? "Verificato" : (loading ? "In corso.." : "Verifica");
+    };
+
+    const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    const postPhoneOperation = (operation) => fetch("/contactVerify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operation })
+    });
+
+    const waitForPhoneOperation = async (operation) => {
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+            const response = await postPhoneOperation(operation);
+            if (response.status !== 202) return response;
+            await delay(3000);
+        }
+        throw new Error("La verifica telefonica non ha risposto in tempo.");
+    };
+
+    const verifyPhone = async () => {
+        const phone = clean(field("phone")?.value);
+        const city = clean(field("city")?.value);
+        if (!/^\d+$/.test(phone)) return showError("Il numero di telefono non è valido.");
+        if (!city) return showError("Inserisci il Comune prima di verificare il telefono.");
+
+        const operation = {
+            id: btoa(`${Date.now()}-${Math.random()}`).replace(/[^a-z0-9]/gi, "").slice(-16),
+            action: "check",
+            status: false,
+            approved: false,
+            phone,
+            city
+        };
+
+        setPhoneVerificationState("loading");
+        try {
+            let response = await postPhoneOperation(operation);
+            if (response.status !== 204) response = await waitForPhoneOperation(operation);
+            if (response.status === 204) return setPhoneVerificationState("verified");
+
+            let firstAttempt = true;
+            while (response.status === 402 || response.status === 403) {
+                const code = window.prompt(firstAttempt
+                    ? "Inserisci il codice di verifica:"
+                    : "Codice errato. Inserisci di nuovo il codice di verifica:");
+                if (code === null) {
+                    await postPhoneOperation({ ...operation, code: "cancel" });
+                    setPhoneVerificationState("idle");
+                    return;
+                }
+
+                const operationWithCode = { ...operation, code: clean(code) };
+                await postPhoneOperation(operationWithCode);
+                response = await waitForPhoneOperation(operationWithCode);
+                if (response.status === 204) return setPhoneVerificationState("verified");
+                firstAttempt = false;
+            }
+
+            throw new Error("Non è stato possibile verificare il numero di telefono.");
+        } catch (error) {
+            setPhoneVerificationState("idle");
+            showError(error.message);
+        }
     };
 
     const parseMoscarossaNote = (note) => {
@@ -72,6 +229,7 @@
                 UOMODONNA: "2",
                 MASSAGGI: "12"
             }[field("categorie")?.value] || "",
+            cityId: selectedCityId(),
             zoneId: clean(field("zoneId")?.value),
             zone: clean(field("location")?.value),
             address: clean(field("address")?.value),
@@ -91,6 +249,7 @@
         if (info.description.length < 20) return "La descrizione deve contenere almeno 20 caratteri.";
         if (!/^\d+$/.test(info.phone)) return "Il telefono deve contenere solo numeri.";
         if (!info.city) return "Inserisci il Comune.";
+        if (!info.moscarossa.cityId) return "Seleziona il Comune dai risultati Moscarossa.";
         if (info.age && (!/^\d{2}$/.test(info.age) || Number(info.age) < 18 || Number(info.age) > 99)) {
             return "L'età deve essere compresa tra 18 e 99 anni.";
         }
@@ -147,44 +306,54 @@
         state.images.forEach((image, index) => {
             const key = imageKey(image);
             const card = document.createElement("div");
-            card.className = `moscarossa-image-card${state.previewKey === key ? " is-preview" : ""}`;
+            card.className = `pic-panel moscarossa-image-card${state.previewKey === key ? " is-preview" : ""}`;
             card.dataset.key = key;
-
-            const picture = document.createElement("img");
-            picture.src = galleryImageSrc(image);
-            picture.alt = `Foto Moscarossa ${index + 1}`;
-            card.appendChild(picture);
-
-            const previewLabel = document.createElement("label");
-            previewLabel.className = "moscarossa-preview-label";
-            const preview = document.createElement("input");
-            preview.type = "radio";
-            preview.name = "moscarossaPreview";
-            preview.checked = state.previewKey === key;
-            preview.addEventListener("change", () => {
-                state.previewKey = key;
-                renderImages();
-                document.querySelector("#moscarossaSaveImages").disabled = false;
-            });
-            previewLabel.append(preview, document.createTextNode(" Anteprima"));
-            card.appendChild(previewLabel);
+            card.dataset.id = image.id || "";
 
             const actions = document.createElement("div");
-            actions.className = "moscarossa-image-actions";
+            actions.className = "pic-operations moscarossa-image-actions";
             [
-                { icon: "fa-arrow-left", action: "left", disabled: index === 0 },
-                { icon: "fa-arrow-right", action: "right", disabled: index === state.images.length - 1 },
-                { icon: "fa-trash", action: "remove", danger: true, disabled: false }
+                { icon: "fa-arrow-left", action: "left", className: "btn-success", disabled: index === 0 },
+                { icon: "fa-times", action: "remove", className: "btn-danger", disabled: false },
+                { icon: "fa-arrow-right", action: "right", className: "btn-success", disabled: index === state.images.length - 1 }
             ].forEach((definition) => {
                 const button = document.createElement("button");
                 button.type = "button";
-                button.className = `btn btn-sm ${definition.danger ? "btn-danger" : "btn-default"}`;
+                button.className = `btn ${definition.className}`;
                 button.disabled = definition.disabled;
                 button.innerHTML = `<i class="fa ${definition.icon}"></i>`;
                 button.addEventListener("click", () => handleImageAction(definition.action, index));
                 actions.appendChild(button);
             });
+
+            const download = document.createElement("a");
+            download.className = "btn btn-primary";
+            download.href = galleryImageSrc(image);
+            download.target = "_blank";
+            download.download = image.origin || "moscarossa-image";
+            download.innerHTML = '<i class="fa fa-arrow-down" style="color:white"></i>';
+            actions.appendChild(download);
             card.appendChild(actions);
+
+            const pictureWrapper = document.createElement("div");
+            pictureWrapper.className = "pic-wrapper";
+
+            const picture = document.createElement("img");
+            picture.src = galleryImageSrc(image);
+            picture.alt = `Foto Moscarossa ${index + 1}`;
+            pictureWrapper.appendChild(picture);
+            card.appendChild(pictureWrapper);
+
+            const previewButton = document.createElement("button");
+            previewButton.type = "button";
+            previewButton.className = `btn moscarossa-preview-button ${state.previewKey === key ? "btn-warning" : "btn-default"}`;
+            previewButton.textContent = state.previewKey === key ? "ANTEPRIMA" : "IMPOSTA ANTEPRIMA";
+            previewButton.addEventListener("click", () => {
+                state.previewKey = key;
+                renderImages();
+                document.querySelector("#moscarossaSaveImages").disabled = false;
+            });
+            card.appendChild(previewButton);
             grid.appendChild(card);
         });
     };
@@ -346,7 +515,7 @@
             setValue("description", ad.description);
             setValue("phone", ad.phone);
             setValue("age", ad.age);
-            setValue("city", ad.city);
+            setCitySelection(options.cityId, ad.city);
             setValue("location", options.zone || ad.location);
             setValue("zoneId", options.zoneId);
             setValue("address", options.address);
@@ -357,6 +526,7 @@
             setChecked("whatsapp", ad.hasWhatapp);
             setChecked("telegram", ad.hasTelegram);
             setChecked("airConditioned", options.airConditioned);
+            setPhoneVerificationState(ad.isPhoneChecked ? "verified" : "idle");
 
             state.images = (Array.isArray(ad.images) ? ad.images : [])
                 .filter((image) => !image.isHidden)
@@ -386,11 +556,15 @@
         await saveInfo({ redirect: isNew });
     });
     editInfoButton.addEventListener("click", () => setFormEditing(true));
+    verifyPhoneButton.addEventListener("click", verifyPhone);
+    field("phone").addEventListener("input", () => setPhoneVerificationState("idle"));
     document.querySelector("#moscarossaImages").addEventListener("change", (event) => {
         addSelectedImages(event.target.files);
         event.target.value = "";
     });
     document.querySelector("#moscarossaSaveImages").addEventListener("click", saveImages);
+
+    initializeCityLookup();
 
     if (isNew) {
         setFormEditing(true);

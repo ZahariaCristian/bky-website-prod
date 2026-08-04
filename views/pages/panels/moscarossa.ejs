@@ -6,42 +6,16 @@
     <title>BKY - Annuncio-Moscarossa</title>
     <%- include('../../partials/head'); %>
     <style>
-        .moscarossa-brand {
-            align-items: center;
-            display: flex;
-            gap: 24px;
-            justify-content: space-between;
-        }
-
-        .moscarossa-brand img {
-            height: auto;
-            max-width: 260px;
-            width: 100%;
-        }
-
-        .moscarossa-brand p {
-            margin: 0;
-        }
-
         .moscarossa-form-section {
-            background-color: rgba(0, 0, 0, .08);
-            border-radius: 10px;
-            margin-bottom: 20px;
-            padding: 10px 15px 2px;
+            margin-bottom: 5px;
         }
 
         .moscarossa-form-section-title {
-            border-bottom: 1px solid #d5d5d5;
-            font-size: 15px;
-            font-weight: 700;
-            margin: 0 0 12px;
-            padding-bottom: 8px;
+            display: none;
         }
 
         .moscarossa-phone-panel {
-            margin: 0 0 15px;
-            max-width: none;
-            min-height: 166px;
+            min-height: 190px;
         }
 
         .moscarossa-phone-panel .flex-checkbox {
@@ -52,98 +26,46 @@
             margin-top: 18px;
         }
 
-        .moscarossa-image-toolbar {
-            align-items: center;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 18px;
-        }
-
-        .moscarossa-add-picture {
-            align-items: center;
-            background-color: rgba(0, 0, 0, .2);
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            font-size: 15px;
-            height: 180px;
-            justify-content: center;
-            margin: 0;
-            text-align: center;
-            width: 180px;
-        }
-
-        .moscarossa-add-picture:hover {
-            background-color: rgba(0, 0, 0, .35);
-            transition: .3s;
-        }
-
-        .moscarossa-add-picture i {
-            font-size: 72px;
-            margin-bottom: 12px;
-        }
-
-        .moscarossa-image-copy {
-            max-width: 560px;
-        }
-
         .moscarossa-image-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: contents;
         }
 
         .moscarossa-image-card {
-            background-color: rgba(0, 0, 0, .2);
             border: 3px solid transparent;
-            padding: 12px;
-            width: 205px;
         }
 
         .moscarossa-image-card.is-preview {
-            background-color: #e4d792;
-            border-color: #d71939;
+            background-color: gold;
         }
 
         .moscarossa-image-card img {
-            background: #eee;
-            height: 190px;
+            height: 220px;
+            max-width: 250px;
             object-fit: cover;
-            width: 100%;
+            width: 180px;
         }
 
         .moscarossa-image-actions {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-            margin-top: 9px;
+            margin-top: 0;
         }
 
         .moscarossa-image-actions .btn {
-            flex: 1 1 42px;
-            width: 42px;
+            flex: none;
+            width: 37px;
         }
 
-        .moscarossa-preview-label {
-            display: block;
-            margin: 9px 0 0;
-            text-align: center;
+        .moscarossa-preview-button {
+            margin-top: 8px;
+            width: 100%;
         }
 
         .moscarossa-pending-note {
-            margin: 0;
+            margin: 12px 0;
         }
 
         @media (max-width: 767px) {
-            .moscarossa-brand {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .moscarossa-image-card,
-            .moscarossa-add-picture {
+            .moscarossa-image-card img {
+                height: auto;
                 width: 100%;
             }
         }
@@ -162,16 +84,6 @@
             <h1 id="moscarossaPageTitle">Nuovo Annuncio-Moscarossa</h1>
 
             <div class="innerLR">
-                <div class="widget widget-heading-simple widget-body-gray">
-                    <div class="widget-body moscarossa-brand">
-                        <img src="/assets/panels/moscarossa.png" alt="Moscarossa">
-                        <p class="text-muted">
-                            Inserisci le informazioni e le immagini dell'annuncio Moscarossa. I campi contrassegnati
-                            con * sono obbligatori.
-                        </p>
-                    </div>
-                </div>
-
                 <div class="widget widget-heading-simple widget-body-gray widget-annuncio">
                     <div class="widget-head">
                         <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
@@ -200,9 +112,10 @@
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="innerB">
-                                            <label for="moscarossaCity">Comune *</label>
-                                            <input id="moscarossaCity" name="city" type="text" class="form-control"
-                                                placeholder="Scrivi una città/comune" required>
+                                            <label for="moscarossaCityId">Comune *</label>
+                                            <input id="moscarossaCity" name="city" type="hidden">
+                                            <input id="moscarossaCityId" name="cityId" type="hidden"
+                                                style="width:100%;" data-placeholder="Scrivi una città/comune">
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -237,8 +150,7 @@
                                     </div>
                                 </div>
                                 <p class="help-block">
-                                    La ricerca automatica di Comune e zona sarà collegata quando sarà disponibile
-                                    l'API Moscarossa.
+                                    Scrivi almeno due caratteri e seleziona il Comune restituito da Moscarossa.
                                 </p>
                             </div>
 
@@ -278,13 +190,19 @@
                                     <div class="col-md-4">
                                         <div class="phone-panel moscarossa-phone-panel">
                                             <label for="moscarossaPhone">Contatto telefonico *</label>
-                                            <input id="moscarossaPhone" name="phone" type="tel" maxlength="50"
-                                                class="form-control" required>
-                                            <div class="flex-checkbox">
+                                            <div class="phone-wrapper">
+                                                <input id="moscarossaPhone" name="phone" type="tel" maxlength="50"
+                                                    class="form-control" required>
+                                                <button id="verify-button" type="button" class="btn btn-secondary">
+                                                    <span><i class="fa fa-arrow-right"></i></span>
+                                                </button>
+                                            </div>
+                                            <p id="test-label">Verifica</p>
+                                            <div class="flex-checkbox" style="margin-bottom: 5px;">
                                                 <input id="moscarossaWhatsapp" name="whatsapp" type="checkbox">
                                                 <label for="moscarossaWhatsapp">WhatsApp</label>
                                             </div>
-                                            <div class="flex-checkbox">
+                                            <div class="flex-checkbox" style="margin-bottom: 5px;">
                                                 <input id="moscarossaTelegram" name="telegram" type="checkbox">
                                                 <label for="moscarossaTelegram">Telegram</label>
                                             </div>
@@ -313,23 +231,19 @@
                     </div>
                     <div class="widget-body">
                         <div class="pics-section">
-                            <div class="moscarossa-image-toolbar">
+                            <div class="pics persistent">
                                 <input id="moscarossaImages" type="file" accept="image/*" multiple
                                     style="display:none;">
-                                <label class="moscarossa-add-picture" for="moscarossaImages">
-                                    <i class="fa fa-plus"></i>
-                                    <span>Aggiungi immagini</span>
+                                <label for="moscarossaImages">
+                                    <div class="add-pic"><b><i class="fa fa-plus"></i></b></div>
                                 </label>
-                                <div class="moscarossa-image-copy">
-                                    <p><b>Massimo 20 immagini, 5 MB per file.</b></p>
-                                    <p class="text-muted">Scegli l'anteprima e usa le frecce per ordinare le foto.</p>
-                                    <p id="moscarossaNewAdImageHelp"
-                                        class="help-block moscarossa-pending-note" style="display:none;">
-                                        Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.
-                                    </p>
-                                </div>
+                                <div id="moscarossaImageGrid" class="moscarossa-image-grid"></div>
                             </div>
-                            <div id="moscarossaImageGrid" class="moscarossa-image-grid"></div>
+                            <p><b>Massimo 20 immagini, 5 MB per file.</b> L'immagine evidenziata è l'anteprima.</p>
+                            <p id="moscarossaNewAdImageHelp"
+                                class="help-block moscarossa-pending-note" style="display:none;">
+                                Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.
+                            </p>
                             <button id="moscarossaSaveImages" type="button" class="btn btn-primary"
                                 style="width: 100%; margin-top: 20px;" disabled>
                                 <b>MODIFICA LE IMMAGINI</b>
@@ -351,7 +265,7 @@
         </div>
     </div>
 
-    <script src="/js/panels/moscarossa/main.js?v=20260803-panel-design"></script>
+    <script src="/js/panels/moscarossa/main.js?v=20260804-location-search"></script>
 </body>
 
 </html>
