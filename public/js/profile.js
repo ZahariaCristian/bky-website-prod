@@ -117,7 +117,7 @@ var getInfoDataMoscarossa = ()=>{
     return {
         username: $("#inputMoscarossaUserName").val(),
         password: $("#inputMoscarossaUserPassword").val(),
-        status: "inactive"
+        status: getPlatformStatus("Moscarossa")
     }
 }
 
