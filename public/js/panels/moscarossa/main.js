@@ -26,10 +26,21 @@
     const clean = (value) => `${value || ""}`.replace(/\s+/g, " ").trim();
     const showError = (message) => ShowAlert("custom", message, 5000);
     const imageKey = (image) => image.id ? `gallery-${image.id}` : image.key;
+    const infoForm = document.querySelector("#moscarossaInfoForm");
+    const editInfoButton = document.querySelector("#moscarossaEditInfo");
+    const saveInfoButton = document.querySelector("#moscarossaSaveInfo");
     const galleryImageSrc = (image) => {
         if (!image?.id || !image.src || !image.src.includes("?")) return image?.src || "";
         if (/[?&]id=/.test(image.src)) return image.src;
         return `${image.src}&id=${encodeURIComponent(image.id)}`;
+    };
+
+    const setFormEditing = (editing) => {
+        infoForm.querySelectorAll("input:not([type='hidden']), textarea, select").forEach((control) => {
+            control.disabled = !editing;
+        });
+        saveInfoButton.disabled = !editing;
+        editInfoButton.style.display = editing || isNew ? "none" : "block";
     };
 
     const parseMoscarossaNote = (note) => {
@@ -117,6 +128,8 @@
             if (showSuccess) ShowAlert("lblSaved");
             if (redirect) {
                 window.location.href = `/annuncio.html?edit=${saved.id}&panel=${PANEL}`;
+            } else {
+                setFormEditing(false);
             }
             return saved;
         } catch (error) {
@@ -143,8 +156,7 @@
             card.appendChild(picture);
 
             const previewLabel = document.createElement("label");
-            previewLabel.style.display = "block";
-            previewLabel.style.marginTop = "8px";
+            previewLabel.className = "moscarossa-preview-label";
             const preview = document.createElement("input");
             preview.type = "radio";
             preview.name = "moscarossaPreview";
@@ -361,6 +373,7 @@
                 state.previewKey = imageKey(state.images[0]);
             }
             renderImages();
+            setFormEditing(false);
         } catch (error) {
             showError(error.message);
         } finally {
@@ -368,10 +381,11 @@
         }
     };
 
-    document.querySelector("#moscarossaInfoForm").addEventListener("submit", async (event) => {
+    infoForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await saveInfo({ redirect: isNew });
     });
+    editInfoButton.addEventListener("click", () => setFormEditing(true));
     document.querySelector("#moscarossaImages").addEventListener("change", (event) => {
         addSelectedImages(event.target.files);
         event.target.value = "";
@@ -379,9 +393,11 @@
     document.querySelector("#moscarossaSaveImages").addEventListener("click", saveImages);
 
     if (isNew) {
+        setFormEditing(true);
         document.querySelector("#moscarossaImages").disabled = true;
         document.querySelector("#moscarossaNewAdImageHelp").style.display = "block";
     } else if (Number.isFinite(annuncioId)) {
+        setFormEditing(false);
         loadAdvertisement();
     } else {
         showError("Identificativo annuncio Moscarossa non valido.");
