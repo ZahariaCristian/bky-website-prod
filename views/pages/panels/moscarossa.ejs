@@ -5,6 +5,10 @@
     <link rel="stylesheet" href="/css/annuncio.css">
     <title>BKY - Annuncio-Moscarossa</title>
     <%- include('../../partials/head'); %>
+    <script type="text/javascript"
+        src="/assets/components/common/forms/calendar/jquery.simple-calendar.min.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="/assets/components/common/forms/calendar/css/simple-calendar.css">
     <style>
         .moscarossa-form-section {
             margin-bottom: 5px;
@@ -30,45 +34,153 @@
             display: contents;
         }
 
+        #moscarossaActiveImages {
+            position: relative;
+        }
+
+        #moscarossaActiveImages .dragHere {
+            pointer-events: none;
+        }
+
         .moscarossa-image-card {
-            border: 3px solid transparent;
+            cursor: default;
         }
 
         .moscarossa-image-card.is-preview {
             background-color: gold;
         }
 
-        .moscarossa-image-card img {
-            height: 220px;
-            max-width: 250px;
-            object-fit: cover;
-            width: 180px;
+        .moscarossa-image-card .pic-wrapper {
+            cursor: pointer;
         }
 
-        .moscarossa-image-actions {
-            margin-top: 0;
-        }
-
-        .moscarossa-image-actions .btn {
-            flex: none;
+        .moscarossa-image-card .btn {
             width: 37px;
         }
 
-        .moscarossa-preview-button {
-            margin-top: 8px;
-            width: 100%;
+        .moscarossa-image-actions .btn {
+            transform: translateY(-7px);
+        }
+
+        .pics.removed {
+            display: none;
         }
 
         .moscarossa-pending-note {
             margin: 12px 0;
         }
 
-        @media (max-width: 767px) {
-            .moscarossa-image-card img {
-                height: auto;
-                width: 100%;
+        #moscarossa-link-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        #moscarossa-link-form .form-control {
+            flex: 1;
+        }
+
+        .moscarossa-publication-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .moscarossa-date-control {
+            margin-bottom: 15px;
+        }
+
+        .moscarossa-free-header,
+        .moscarossa-slot-main,
+        .moscarossa-history-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .moscarossa-free-header {
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: #e8e8e8;
+            border-left: 4px solid #d71920;
+        }
+
+        .moscarossa-schedule-slot {
+            margin-top: 12px;
+            padding: 14px;
+            border: 1px solid #d8d8d8;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .moscarossa-slot-main .form-control {
+            width: 130px;
+        }
+
+        .moscarossa-slot-date {
+            min-width: 92px;
+            font-weight: 700;
+        }
+
+        .moscarossa-slot-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .moscarossa-slot-image {
+            position: relative;
+            padding: 6px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            background: #eee;
+        }
+
+        .moscarossa-slot-image.is-selected {
+            border-color: #5cb85c;
+        }
+
+        .moscarossa-slot-image.is-preview {
+            background: #f7d85b;
+            border-color: #e1b900;
+        }
+
+        .moscarossa-slot-image img {
+            width: 100%;
+            height: 92px;
+            object-fit: cover;
+        }
+
+        .moscarossa-slot-image-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .moscarossa-history-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .moscarossa-history-main {
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .moscarossa-history-error {
+            margin: 10px 0 0;
+            display: none;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 900px) {
+            .moscarossa-publication-layout {
+                grid-template-columns: 1fr;
             }
         }
+
     </style>
 </head>
 
@@ -84,6 +196,23 @@
             <h1 id="moscarossaPageTitle">Nuovo Annuncio-Moscarossa</h1>
 
             <div class="innerLR">
+                <div class="widget widget-heading-simple widget-body-gray" id="moscarossaImportSection">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons download"><i></i>Carica un annuncio</h3>
+                    </div>
+                    <div class="widget-body">
+                        <label for="moscarossa-link-to-scrape">Carica da link pubblico Moscarossa</label>
+                        <div id="moscarossa-link-form">
+                            <input id="moscarossa-link-to-scrape" class="form-control" type="url"
+                                placeholder="https://www.moscarossa.biz/girl-123.php">
+                            <button class="btn btn-info" type="button" id="moscarossa-caricalink-button"
+                                aria-label="Carica annuncio Moscarossa">
+                                <i class="fa fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="widget widget-heading-simple widget-body-gray widget-annuncio">
                     <div class="widget-head">
                         <h3 class="heading glyphicons edit"><i></i>Informazioni</h3>
@@ -228,34 +357,100 @@
                 <div class="widget widget-heading-simple widget-body-gray">
                     <div class="widget-head">
                         <h3 class="heading glyphicons edit"><i></i>Immagini</h3>
+                        <button class="input-editor btn btn-success pull-right" id="moscarossaShowRemoved"
+                            type="button" aria-label="Mostra immagini rimosse">
+                            <i class="fa fa-eye"></i>
+                        </button>
                     </div>
                     <div class="widget-body">
-                        <div class="pics-section">
-                            <div class="pics persistent">
-                                <input id="moscarossaImages" type="file" accept="image/*" multiple
-                                    style="display:none;">
-                                <label for="moscarossaImages">
-                                    <div class="add-pic"><b><i class="fa fa-plus"></i></b></div>
-                                </label>
-                                <div id="moscarossaImageGrid" class="moscarossa-image-grid"></div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="pics-section">
+                                    <div class="pics persistent" id="moscarossaActiveImages">
+                                        <div class="dragHere"
+                                            style="position:absolute; width:100%; height:100%; background-color:#8597d8; opacity:.8; display:none; z-index:1000;">
+                                            <div
+                                                style="position:relative; width:calc(100% - 20px); height:calc(100% - 20px); border:dashed 10px #ddd; border-radius:50px; margin:10px;">
+                                                <div style="font-size:5em; text-align:center; padding:80px 0 0;">
+                                                    <span class="fa fa-cloud-upload" style="color:white;"></span>
+                                                </div>
+                                                <h1 style="color:white; font-size:3em; text-align:center; padding:30px;">
+                                                    Trascina Qui
+                                                </h1>
+                                            </div>
+                                        </div>
+                                        <input id="moscarossaImages" type="file" accept="image/*" multiple
+                                            style="display:none;">
+                                        <label for="moscarossaImages">
+                                            <div class="add-pic"><b><i class="fa fa-plus"></i></b></div>
+                                        </label>
+                                        <div id="moscarossaImageGrid" class="moscarossa-image-grid"></div>
+                                    </div>
+                                    <div class="pics removed" id="moscarossaRemovedImages">
+                                        <div id="moscarossaRemovedImageGrid" class="moscarossa-image-grid"></div>
+                                    </div>
+                                    <p><b>Massimo 20 immagini, 5 MB per file.</b> Clicca una foto per impostarla
+                                        come anteprima.</p>
+                                    <p id="moscarossaNewAdImageHelp"
+                                        class="help-block moscarossa-pending-note" style="display:none;">
+                                        Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.
+                                    </p>
+                                    <button id="moscarossaSaveImages" type="button" class="btn btn-primary"
+                                        style="width:100%; margin-top:20px;" disabled>
+                                        <b>MODIFICA LE IMMAGINI</b>
+                                    </button>
+                                </div>
                             </div>
-                            <p><b>Massimo 20 immagini, 5 MB per file.</b> L'immagine evidenziata è l'anteprima.</p>
-                            <p id="moscarossaNewAdImageHelp"
-                                class="help-block moscarossa-pending-note" style="display:none;">
-                                Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.
-                            </p>
-                            <button id="moscarossaSaveImages" type="button" class="btn btn-primary"
-                                style="width: 100%; margin-top: 20px;" disabled>
-                                <b>MODIFICA LE IMMAGINI</b>
-                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="alert alert-warning">
-                    <i class="fa fa-info-circle"></i>
-                    Le pubblicazioni programmate saranno abilitate dopo l'integrazione del secondo passaggio
-                    Moscarossa.
+                <div class="widget widget-heading-simple widget-body-gray widget-after" id="moscarossaPublications">
+                    <div class="widget-head">
+                        <h3 class="heading glyphicons edit"><i></i>Pubblicazioni</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="moscarossa-publication-layout">
+                            <div>
+                                <label for="moscarossaScheduleDate">Data pubblicazione</label>
+                                <input id="moscarossaScheduleDate" type="date"
+                                    class="form-control moscarossa-date-control">
+                                <div id="moscarossaCalendarContainer"></div>
+                            </div>
+                            <div>
+                                <div class="moscarossa-free-header">
+                                    <div>
+                                        <strong>Free</strong>
+                                        <div class="text-muted">PUBBLICA GRATIS · massimo 3 immagini</div>
+                                    </div>
+                                    <button id="moscarossaAddSchedule" type="button" class="btn btn-primary">
+                                        <i class="fa fa-plus"></i> Aggiungi
+                                    </button>
+                                </div>
+                                <div id="moscarossaScheduleList"></div>
+                            </div>
+                        </div>
+                        <div class="separator"></div>
+                        <button id="moscarossaSaveSchedule" type="button" class="btn btn-success"
+                            style="width:100%;" disabled>
+                            <b>SALVA TUTTE LE PUBBLICAZIONI FREE</b>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="widget widget-body-gray widget-after" id="moscarossaHistory">
+                    <div class="widget-head" style="background:#eaeaea;">
+                        <h3 class="heading glyphicons edit" style="margin-left:-10px;"><i></i>Storico Pubblicazioni</h3>
+                        <button id="moscarossaRefreshHistory" type="button" class="btn btn-xs pull-right"
+                            aria-label="Aggiorna storico">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div class="widget-body">
+                        <div id="moscarossaHistoryList">
+                            <div class="row center">Nessun dato rilevato</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -265,7 +460,11 @@
         </div>
     </div>
 
-    <script src="/js/panels/moscarossa/main.js?v=20260804-location-search"></script>
+    <div class="loader">
+        <img src="/assets/loader.gif" alt="Caricamento">
+    </div>
+    <script src="/js/panels/moscarossa/main.js?v=20260804-import"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260804-free-history"></script>
 </body>
 
 </html>

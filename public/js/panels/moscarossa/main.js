@@ -12,6 +12,8 @@
         phone: "",
         cityId: "",
         images: [],
+        removedImages: [],
+        showingRemovedImages: false,
         previewKey: ""
     };
 
@@ -299,94 +301,188 @@
         }
     };
 
-    const renderImages = () => {
-        const grid = document.querySelector("#moscarossaImageGrid");
-        grid.innerHTML = "";
+    const markImagesDirty = () => {
+        document.querySelector("#moscarossaSaveImages").disabled = false;
+    };
 
-        state.images.forEach((image, index) => {
+    const createImageAction = ({ icon, className, title, disabled = false, onClick }) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `btn ${className}`;
+        button.disabled = disabled;
+        button.title = title;
+        button.setAttribute("aria-label", title);
+        button.innerHTML = `<i class="fa ${icon}"></i>`;
+        button.addEventListener("click", onClick);
+        return button;
+    };
+
+    const createImageCard = (image, index, removed = false) => {
             const key = imageKey(image);
             const card = document.createElement("div");
-            card.className = `pic-panel moscarossa-image-card${state.previewKey === key ? " is-preview" : ""}`;
+            card.className = `pic-panel moscarossa-image-card${!removed && state.previewKey === key ? " is-preview" : ""}`;
             card.dataset.key = key;
             card.dataset.id = image.id || "";
+            card.dataset.origin = image.origin || "";
 
             const actions = document.createElement("div");
             actions.className = "pic-operations moscarossa-image-actions";
-            [
-                { icon: "fa-arrow-left", action: "left", className: "btn-success", disabled: index === 0 },
-                { icon: "fa-times", action: "remove", className: "btn-danger", disabled: false },
-                { icon: "fa-arrow-right", action: "right", className: "btn-success", disabled: index === state.images.length - 1 }
-            ].forEach((definition) => {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.className = `btn ${definition.className}`;
-                button.disabled = definition.disabled;
-                button.innerHTML = `<i class="fa ${definition.icon}"></i>`;
-                button.addEventListener("click", () => handleImageAction(definition.action, index));
-                actions.appendChild(button);
-            });
+
+            if (removed) {
+                actions.appendChild(createImageAction({
+                    icon: "fa-times",
+                    className: "btn-danger",
+                    title: "Elimina definitivamente",
+                    onClick: () => handleImageAction("delete", index, true)
+                }));
+                actions.appendChild(createImageAction({
+                    icon: "fa-mail-reply",
+                    className: "btn-success",
+                    title: "Ripristina immagine",
+                    onClick: () => handleImageAction("restore", index, true)
+                }));
+            } else {
+                actions.appendChild(createImageAction({
+                    icon: "fa-arrow-left",
+                    className: "btn-success img-move-btn",
+                    title: "Sposta a sinistra",
+                    disabled: index === 0,
+                    onClick: () => handleImageAction("left", index)
+                }));
+                actions.appendChild(createImageAction({
+                    icon: "fa-times",
+                    className: "btn-danger",
+                    title: "Rimuovi immagine",
+                    onClick: () => handleImageAction("remove", index)
+                }));
+            }
 
             const download = document.createElement("a");
             download.className = "btn btn-primary";
             download.href = galleryImageSrc(image);
             download.target = "_blank";
+            download.rel = "noopener";
             download.download = image.origin || "moscarossa-image";
+            download.title = "Scarica immagine";
+            download.setAttribute("aria-label", "Scarica immagine");
             download.innerHTML = '<i class="fa fa-arrow-down" style="color:white"></i>';
             actions.appendChild(download);
+
+            if (!removed) {
+                actions.appendChild(createImageAction({
+                    icon: "fa-arrow-right",
+                    className: "btn-success img-move-btn",
+                    title: "Sposta a destra",
+                    disabled: index === state.images.length - 1,
+                    onClick: () => handleImageAction("right", index)
+                }));
+            }
             card.appendChild(actions);
 
             const pictureWrapper = document.createElement("div");
             pictureWrapper.className = "pic-wrapper";
+            if (!removed) {
+                pictureWrapper.tabIndex = 0;
+                pictureWrapper.setAttribute("role", "button");
+                pictureWrapper.title = state.previewKey === key
+                    ? "Immagine di anteprima"
+                    : "Imposta come immagine di anteprima";
+                const selectPreview = () => {
+                    if (state.previewKey === key) return;
+                    state.previewKey = key;
+                    renderImages();
+                    markImagesDirty();
+                };
+                pictureWrapper.addEventListener("click", selectPreview);
+                pictureWrapper.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    selectPreview();
+                });
+            }
 
             const picture = document.createElement("img");
             picture.src = galleryImageSrc(image);
             picture.alt = `Foto Moscarossa ${index + 1}`;
             pictureWrapper.appendChild(picture);
             card.appendChild(pictureWrapper);
-
-            const previewButton = document.createElement("button");
-            previewButton.type = "button";
-            previewButton.className = `btn moscarossa-preview-button ${state.previewKey === key ? "btn-warning" : "btn-default"}`;
-            previewButton.textContent = state.previewKey === key ? "ANTEPRIMA" : "IMPOSTA ANTEPRIMA";
-            previewButton.addEventListener("click", () => {
-                state.previewKey = key;
-                renderImages();
-                document.querySelector("#moscarossaSaveImages").disabled = false;
-            });
-            card.appendChild(previewButton);
-            grid.appendChild(card);
-        });
+            return card;
     };
 
-    const handleImageAction = async (action, index) => {
-        const image = state.images[index];
+    const renderImages = () => {
+        const activeGrid = document.querySelector("#moscarossaImageGrid");
+        const removedGrid = document.querySelector("#moscarossaRemovedImageGrid");
+        const activeContainer = document.querySelector("#moscarossaActiveImages");
+        const removedContainer = document.querySelector("#moscarossaRemovedImages");
+        const showRemovedButton = document.querySelector("#moscarossaShowRemoved");
+        activeGrid.innerHTML = "";
+        removedGrid.innerHTML = "";
+
+        state.images.forEach((image, index) => activeGrid.appendChild(createImageCard(image, index)));
+        state.removedImages.forEach((image, index) => removedGrid.appendChild(createImageCard(image, index, true)));
+
+        if (!state.removedImages.length) state.showingRemovedImages = false;
+        activeContainer.style.display = state.showingRemovedImages ? "none" : "flex";
+        removedContainer.style.display = state.showingRemovedImages ? "flex" : "none";
+        showRemovedButton.disabled = state.removedImages.length === 0;
+        showRemovedButton.classList.toggle("btn-success", !state.showingRemovedImages);
+        showRemovedButton.classList.toggle("btn-warning", state.showingRemovedImages);
+        showRemovedButton.title = state.showingRemovedImages ? "Mostra immagini attive" : "Mostra immagini rimosse";
+        showRemovedButton.setAttribute("aria-label", showRemovedButton.title);
+    };
+
+    const requestImageState = async (url, image, fallbackMessage) => {
+        if (!image?.id) return;
+        const response = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: image.id })
+        });
+        if (!response.ok) throw new Error(fallbackMessage);
+    };
+
+    const handleImageAction = async (action, index, removed = false) => {
+        const collection = removed ? state.removedImages : state.images;
+        const image = collection[index];
         if (!image) return;
 
-        if (action === "left" && index > 0) {
-            [state.images[index - 1], state.images[index]] = [state.images[index], state.images[index - 1]];
-        } else if (action === "right" && index < state.images.length - 1) {
-            [state.images[index + 1], state.images[index]] = [state.images[index], state.images[index + 1]];
-        } else if (action === "remove") {
-            if (!window.confirm("Rimuovere questa immagine?")) return;
-            if (image.id) {
-                const response = await fetch("/images/romoveImg", {
-                    method: "POST",
-                    credentials: "same-origin",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: image.id })
-                });
-                if (!response.ok) return showError("Impossibile rimuovere l'immagine.");
+        try {
+            if (action === "left" && index > 0) {
+                [state.images[index - 1], state.images[index]] = [state.images[index], state.images[index - 1]];
+            } else if (action === "right" && index < state.images.length - 1) {
+                [state.images[index + 1], state.images[index]] = [state.images[index], state.images[index + 1]];
+            } else if (action === "remove") {
+                if (!window.confirm("Rimuovere questa immagine?")) return;
+                if (image.id) {
+                    await requestImageState("/images/romoveImg", image, "Impossibile rimuovere l'immagine.");
+                    state.removedImages.push({ ...image, isHidden: true });
+                } else if (image.file) {
+                    URL.revokeObjectURL(image.src);
+                }
+                state.images.splice(index, 1);
+                if (state.previewKey === imageKey(image)) {
+                    state.previewKey = state.images.length ? imageKey(state.images[0]) : "";
+                }
+            } else if (action === "restore" && removed) {
+                if (state.images.length >= MAX_IMAGES) {
+                    return showError(`Moscarossa accetta al massimo ${MAX_IMAGES} immagini attive.`);
+                }
+                await requestImageState("/images/restoreImg", image, "Impossibile ripristinare l'immagine.");
+                state.removedImages.splice(index, 1);
+                state.images.push({ ...image, isHidden: false });
+                if (!state.previewKey) state.previewKey = imageKey(image);
+            } else if (action === "delete" && removed) {
+                if (!window.confirm("Eliminare definitivamente questa immagine?")) return;
+                await requestImageState("/images/removeDefImg", image, "Impossibile eliminare definitivamente l'immagine.");
+                state.removedImages.splice(index, 1);
             }
-            if (image.file) URL.revokeObjectURL(image.src);
-            const removedKey = imageKey(image);
-            state.images.splice(index, 1);
-            if (state.previewKey === removedKey) {
-                state.previewKey = state.images.length ? imageKey(state.images[0]) : "";
-            }
-        }
 
-        renderImages();
-        document.querySelector("#moscarossaSaveImages").disabled = false;
+            renderImages();
+            markImagesDirty();
+        } catch (error) {
+            showError(error.message);
+        }
     };
 
     const addSelectedImages = (files) => {
@@ -416,9 +512,11 @@
             });
         });
 
+        if (!accepted.length || available <= 0) return;
         if (!state.previewKey && state.images.length) state.previewKey = imageKey(state.images[0]);
+        state.showingRemovedImages = false;
         renderImages();
-        document.querySelector("#moscarossaSaveImages").disabled = state.images.length === 0;
+        markImagesDirty();
     };
 
     const registerPendingGalleryImages = async () => {
@@ -528,14 +626,15 @@
             setChecked("airConditioned", options.airConditioned);
             setPhoneVerificationState(ad.isPhoneChecked ? "verified" : "idle");
 
-            state.images = (Array.isArray(ad.images) ? ad.images : [])
-                .filter((image) => !image.isHidden)
-                .slice(0, MAX_IMAGES)
-                .map((image) => ({
+            const galleryImages = (Array.isArray(ad.images) ? ad.images : []).map((image) => ({
                     id: image.id,
                     src: image.src,
-                    origin: image.origin || `moscarossa-${image.id}.jpg`
+                    origin: image.origin || `moscarossa-${image.id}.jpg`,
+                    isHidden: image.isHidden === true || image.isHidden === 1 || image.isHidden === "1"
                 }));
+            state.images = galleryImages.filter((image) => !image.isHidden).slice(0, MAX_IMAGES);
+            state.removedImages = galleryImages.filter((image) => image.isHidden);
+            state.showingRemovedImages = false;
             state.previewKey = options.previewGalleryId
                 ? `gallery-${options.previewGalleryId}`
                 : (state.images.length ? imageKey(state.images[0]) : "");
@@ -544,6 +643,32 @@
             }
             renderImages();
             setFormEditing(false);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            toggleLoader();
+        }
+    };
+
+    const importPublicAdvertisement = async () => {
+        const input = document.querySelector("#moscarossa-link-to-scrape");
+        const url = clean(input?.value);
+        if (!url) return showError("Inserisci prima il link pubblico Moscarossa.");
+
+        toggleLoader();
+        try {
+            const response = await fetch("/annuncio/scrapeMoscarossa", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url, panel: PANEL })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || "Impossibile importare l'annuncio Moscarossa.");
+            }
+            if (!payload.id) throw new Error("Moscarossa non ha restituito un annuncio valido.");
+            window.location.href = `/annuncio.html?edit=${encodeURIComponent(payload.id)}&panel=${PANEL}`;
         } catch (error) {
             showError(error.message);
         } finally {
@@ -563,6 +688,39 @@
         event.target.value = "";
     });
     document.querySelector("#moscarossaSaveImages").addEventListener("click", saveImages);
+    document.querySelector("#moscarossa-caricalink-button").addEventListener("click", importPublicAdvertisement);
+    document.querySelector("#moscarossa-link-to-scrape").addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        importPublicAdvertisement();
+    });
+    document.querySelector("#moscarossaShowRemoved").addEventListener("click", () => {
+        if (!state.removedImages.length) return;
+        state.showingRemovedImages = !state.showingRemovedImages;
+        renderImages();
+    });
+
+    const imageDropZone = document.querySelector("#moscarossaActiveImages");
+    const dragOverlay = imageDropZone.querySelector(".dragHere");
+    const hideDragOverlay = () => { dragOverlay.style.display = "none"; };
+    ["dragenter", "dragover"].forEach((eventName) => {
+        imageDropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+            if (!document.querySelector("#moscarossaImages").disabled) dragOverlay.style.display = "block";
+        });
+    });
+    imageDropZone.addEventListener("dragleave", (event) => {
+        if (!imageDropZone.contains(event.relatedTarget)) hideDragOverlay();
+    });
+    imageDropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        hideDragOverlay();
+        if (document.querySelector("#moscarossaImages").disabled) {
+            return showError("Salva prima le informazioni dell'annuncio, quindi aggiungi le immagini.");
+        }
+        addSelectedImages(event.dataTransfer.files);
+    });
 
     initializeCityLookup();
 

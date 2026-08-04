@@ -5,6 +5,7 @@ const scrapeMegaescort = require("../lib/scraper/me");
 const scrapeTrovagnocca = require("../lib/scraper/trovagnocca");
 const scrapeIncontriamoci = require("../lib/scraper/incontriamoci");
 const scrapeAmasens = require("../lib/scraper/amasens");
+const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const axios = require("axios");
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
@@ -19,6 +20,30 @@ const amasensLocations = require("../data/amasens-locations.json");
 const normalizeLocationName = (value) => `${value || ""}`.normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, " ")
     .replace(/\s+/g, " ").trim().toLowerCase();
+
+const getMoscarossaLocationsApiUrl = () => process.env.MOSCAROSSA_LOCATIONS_API_URL
+    || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
+
+const resolveMoscarossaCityId = async (city, idAccompa = "0") => {
+    const term = `${city || ""}`.replace(/\s+/g, " ").trim();
+    if (term.length < 2) return "";
+
+    try {
+        const response = await axios.post(
+            getMoscarossaLocationsApiUrl(),
+            { term, idAccompa: /^\d+$/.test(`${idAccompa}`) ? `${idAccompa}` : "0" },
+            { headers: { accept: "application/json", "content-type": "application/json" }, timeout: 45000 }
+        );
+        const results = Array.isArray(response.data?.results) ? response.data.results : [];
+        const target = normalizeLocationName(term);
+        const exact = results.find((item) => normalizeLocationName(item?.text) === target);
+        const compatible = exact || results.find((item) => normalizeLocationName(item?.text).startsWith(`${target} `));
+        return `${compatible?.id || ""}`.trim();
+    } catch (error) {
+        console.warn("Moscarossa Comune could not be resolved while importing:", error.response?.data || error.message);
+        return "";
+    }
+};
 
 const amasensRegionsById = new Map(amasensLocations.map((region) => [`${region.id}`, region]));
 const amasensProvincesById = new Map();
@@ -94,8 +119,7 @@ router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
 
     const rawIdAccompa = `${req.query.idAccompa || ""}`.trim();
     const idAccompa = /^\d+$/.test(rawIdAccompa) ? rawIdAccompa : "0";
-    const publisherLocationsUrl = process.env.MOSCAROSSA_LOCATIONS_API_URL
-        || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
+    const publisherLocationsUrl = getMoscarossaLocationsApiUrl();
 
     try {
         const response = await axios.post(
@@ -405,7 +429,7 @@ const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     amasens: 9,
     incontriamoci: 9,
     trovagnocca: 6,
-    moscarossa: 20
+    moscarossa: 3
 });
 
 const getScheduleImageLimit = (panel) => SCHEDULE_IMAGE_LIMITS[normalizePanelPlatform(panel)] || 5;
@@ -1861,6 +1885,125 @@ router.post("/scrapeincontriamoci", authenticateKey, async (req, res) => {
     }
 });
 
+router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
+    try {
+        if (!req.body.url) {
+            return res.status(400).json({ error: "Inserisci il link pubblico Moscarossa." });
+        }
+
+        const userid = req.session.userid;
+        const user = await ctx.tblUser.findOne({ where: { OID: userid } });
+        if (!user) return res.status(401).json({ error: "Utente non autenticato." });
+        const groupM = await user.getGroup();
+        if (!groupM) return res.status(403).json({ error: "Gruppo utente non disponibile." });
+
+        console.log(req.body.url, "scrape moscarossa");
+        const scrapingResult = await scrapeMoscarossa.scrape(req.body.url);
+        if (!scrapingResult?.phone) {
+            return res.status(422).json({ error: "L'annuncio Moscarossa non contiene un numero di telefono." });
+        }
+
+        let donna = await ctx.tblDonne.findOne({
+            where: { phone: scrapingResult.phone, GCRecord: null }
+        });
+        const parsedAge = parseAgeValue(scrapingResult.age);
+        if (!donna) {
+            donna = await ctx.tblDonne.create({
+                name: scrapingResult.name || "NUOVA CLIENTE CAMBIARE NOME",
+                years: parsedAge,
+                city: scrapingResult.city,
+                phone: scrapingResult.phone,
+                isPhoneChecked: true,
+                groupOwner: groupM.group
+            });
+        } else {
+            await donna.update({
+                name: scrapingResult.name || donna.name,
+                years: parsedAge === null ? donna.years : parsedAge,
+                city: scrapingResult.city || donna.city,
+                GCRecord: null
+            });
+        }
+
+        let annuncio = await ctx.tblAnnunci.findOne({
+            where: { donna: donna.id, title: scrapingResult.title }
+        });
+        const cityId = await resolveMoscarossaCityId(scrapingResult.city, scrapingResult.remotePostID);
+        let existingNote = {};
+        try {
+            existingNote = annuncio?.note ? JSON.parse(annuncio.note) : {};
+        } catch {
+            existingNote = {};
+        }
+        const categoryIds = { DONNAUOMO: "1", TRANS: "5", UOMODONNA: "2", MASSAGGI: "12" };
+        const note = JSON.stringify({
+            ...existingNote,
+            moscarossa: {
+                ...(existingNote.moscarossa || {}),
+                categoryId: categoryIds[scrapingResult.category] || "1",
+                cityId,
+                zoneId: "",
+                zone: scrapingResult.location || scrapingResult.city || "",
+                airConditioned: Boolean(scrapingResult.airConditioned),
+                scrape: {
+                    remotePostID: scrapingResult.remotePostID || "",
+                    sourceUrl: scrapingResult.url || req.body.url,
+                    publicUrl: scrapingResult.url || req.body.url,
+                    whatsappLinks: Array.isArray(scrapingResult.whatsappLinks) ? scrapingResult.whatsappLinks : []
+                }
+            }
+        });
+        const adData = {
+            title: scrapingResult.title,
+            city: scrapingResult.city,
+            location: scrapingResult.location || scrapingResult.city,
+            description: scrapingResult.description,
+            donna: donna.id,
+            hasWhatapp: Boolean(scrapingResult.whatsapp),
+            hasTelegram: false,
+            categorie: scrapingResult.category || "DONNAUOMO",
+            sono: scrapingResult.category || "DONNAUOMO",
+            note,
+            groupOwner: groupM.group,
+            editedBy: userid,
+            cost: 0
+        };
+
+        if (!annuncio) {
+            annuncio = await ctx.tblAnnunci.create(adData);
+        } else {
+            await annuncio.update(adData);
+        }
+
+        for (let index = 0; index < (scrapingResult.imageFiles || []).length; index += 1) {
+            const fileName = scrapingResult.imageFiles[index];
+            const origin = basename(fileName);
+            const existingImage = await ctx.tblGalleria.findOne({
+                where: { donna: donna.id, origin, GCRecord: null }
+            });
+            if (existingImage) continue;
+            await ctx.tblGalleria.create({
+                donna: donna.id,
+                src: `/images/get?phone=${donna.phone}&index=${index}`,
+                GCRecord: null,
+                origin,
+                isHidden: false
+            });
+        }
+
+        return res.json({
+            id: annuncio.id,
+            donna: donna.id,
+            remotePostID: scrapingResult.remotePostID,
+            cityResolved: Boolean(cityId)
+        });
+    } catch (error) {
+        console.error("Error in /scrapeMoscarossa route:", error);
+        const status = /Sono accettati|URL Moscarossa valido/i.test(error.message) ? 400 : 500;
+        return res.status(status).json({ error: error.message || "Errore durante l'importazione Moscarossa." });
+    }
+});
+
 router.post("/scrapeAmasens", authenticateKey, async (req, res) => {
     try {
         if (!req.body.url) {
@@ -2536,13 +2679,16 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 console.log(deleteThis, 'deleteThis');
 
                 var state = task.state;
+                const platform = normalizePanelPlatform(req.body.panel);
                 console.log(state, "state Schedule");
 
                 if (s.state == "EDIT") {
                     if (task.remotePostID != null) state = "EDIT"; //remotePostId 
+                    if (platform === "moscarossa" && task.remotePostID == null && task.state === "KO") {
+                        state = null;
+                    }
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
                     for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
-                    const platform = normalizePanelPlatform(req.body.panel);
                     const imageLimit = getScheduleImageLimit(platform);
                     let scheduleImages = Array.isArray(s.images) ? s.images : [];
                     if (scheduleImages.length == 0) {
