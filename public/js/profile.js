@@ -33,6 +33,8 @@ $(()=>{
                     setPlatformStatus("Incontriamoci", res.group?.incontriamoci?.status);
                     $("#inputAmasensUserName").val(res.group?.amasens?.username);
                     setPlatformStatus("Amasens", res.group?.amasens?.status || "inactive");
+                    $("#inputMoscarossaUserName").val(res.group?.moscarossa?.username);
+                    setPlatformStatus("Moscarossa", res.group?.moscarossa?.status || "inactive");
                 });
             });
     },100);
@@ -51,7 +53,7 @@ $("#btnCreaUtente").on("click",()=>{
             },
             redirect: "follow",
             referrerPolicy: "no-referrer",
-            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca(), incontriamociGroup: getInfoDataIncontriamoci(), amasensGroup: getInfoDataAmasens()})
+            body: JSON.stringify({user: getInfoData(), group: getInfoDataBK(), bakecaGroup: getInfoDataBakeca(), megaescortGroup: getInfoDataMegaescort(), trovagnoccaGroup: getInfoDataTrovagnocca(), incontriamociGroup: getInfoDataIncontriamoci(), amasensGroup: getInfoDataAmasens(), moscarossaGroup: getInfoDataMoscarossa()})
         }).then((r) => {
             toggleLoader();
             if(r.status !== 200){
@@ -109,6 +111,13 @@ var getInfoDataAmasens = ()=>{
         username: $("#inputAmasensUserName").val(),
         password: $("#inputAmasensUserPassword").val(),
         status: getPlatformStatus("Amasens")
+    }
+}
+var getInfoDataMoscarossa = ()=>{
+    return {
+        username: $("#inputMoscarossaUserName").val(),
+        password: $("#inputMoscarossaUserPassword").val(),
+        status: "inactive"
     }
 }
 

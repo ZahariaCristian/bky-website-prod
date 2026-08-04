@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `tblPlatformPrices` (
     `platform` ENUM(
         'incontriamoci',
         'amasens',
+        'moscarossa',
         'trovagnocca',
         'megaescort',
         'incontriescort',

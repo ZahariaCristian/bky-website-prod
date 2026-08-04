@@ -6,6 +6,7 @@ dotenv.config();
 const PLATFORM_VALUES = [
     'incontriamoci',
     'amasens',
+    'moscarossa',
     'trovagnocca',
     'megaescort',
     'incontriescort',

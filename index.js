@@ -241,6 +241,9 @@ app.get("/annuncio.html", (req, res) => {
         case "amasens":
             res.render('pages/panels/amasens');
             break;
+        case "moscarossa":
+            res.render('pages/panels/moscarossa');
+            break;
         case "trovagnocca":
             res.render('pages/panels/trovagnocca');
             break;

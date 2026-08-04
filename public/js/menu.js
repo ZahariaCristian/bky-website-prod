@@ -177,6 +177,7 @@ function GetBKCredit() {
       updatePlatformCredit("#trovagnoccaCredit", res.trovagnocca);
       updatePlatformCredit("#incontriamociCredit", res.incontriamoci);
       updatePlatformCredit("#amasensCredit", res.amasens);
+      updatePlatformCredit("#moscarossaCredit", res.moscarossa);
 
       // Show/hide existing coupon notice element
       if (res.coupon === true) {

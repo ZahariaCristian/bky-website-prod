@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it" class="sidebar sidebar-discover">
+
+<head>
+    <title>BKY - Annuncio Moscarossa</title>
+    <%- include('../../partials/head'); %>
+    <style>
+        .moscarossa-panel-logo {
+            display: block;
+            width: 100%;
+            max-width: 394px;
+            height: auto;
+            margin: 0 auto 24px;
+        }
+
+        .moscarossa-panel-status {
+            max-width: 760px;
+            margin: 40px auto;
+        }
+
+        .moscarossa-panel-status .widget-body {
+            padding: 32px;
+        }
+
+        .moscarossa-panel-status .btn {
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body class="scripts-async wysihtml5-supported menu-left-visible">
+    <div class="container-fluid menu-hidden" style="visibility: visible;">
+        <%- include('../../partials/menu'); %>
+        <div id="content">
+            <%- include('../../partials/header'); %>
+            <h1>Annuncio Moscarossa</h1>
+
+            <div class="innerLR">
+                <div class="widget widget-heading-simple widget-body-gray moscarossa-panel-status">
+                    <div class="widget-head">
+                        <h3 class="heading"><i class="fa fa-cog"></i> Moscarossa</h3>
+                    </div>
+                    <div class="widget-body text-center">
+                        <img class="moscarossa-panel-logo" src="/assets/panels/moscarossa.png" alt="Moscarossa">
+                        <div class="alert alert-info text-left" role="status">
+                            Il pannello Moscarossa è registrato in BKY. La pubblicazione automatica sarà disponibile
+                            dopo aver configurato i campi e i selettori del sito Moscarossa.
+                        </div>
+                        <p class="text-muted">
+                            Le credenziali possono essere salvate ora, ma la piattaforma deve rimanere inattiva finché
+                            il publisher non viene completato.
+                        </p>
+                        <a class="btn btn-primary" href="/profile.html">
+                            <i class="fa fa-user"></i> Configura credenziali Moscarossa
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <footer>
+                <%- include('../../partials/footer'); %>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

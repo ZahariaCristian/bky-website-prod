@@ -41,6 +41,7 @@ router.post("/edit", authenticateKey, async (req, res) => {
     var trovagnoccaGroup = req.body.trovagnoccaGroup;
     var incontriamociGroup = req.body.incontriamociGroup;
     var amasensGroup = req.body.amasensGroup;
+    var moscarossaGroup = req.body.moscarossaGroup;
     if(!user.password || user.password.length == 0){
         user.storedPassword = utente.password;
     }else{
@@ -79,6 +80,9 @@ router.post("/edit", authenticateKey, async (req, res) => {
     }
     if (ctx.tblPlatform && amasensGroup) {
         await upsertPlatform(gruppo.id, "amasens", amasensGroup, true);
+    }
+    if (ctx.tblPlatform && moscarossaGroup) {
+        await upsertPlatform(gruppo.id, "moscarossa", moscarossaGroup, true);
     }
 
     res.sendStatus(200);
