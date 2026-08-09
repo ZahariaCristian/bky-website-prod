@@ -14,7 +14,9 @@
         images: [],
         removedImages: [],
         showingRemovedImages: false,
-        previewKey: ""
+        previewKey: "",
+        cropper: null,
+        cropImageKey: ""
     };
 
     const field = (name) => document.querySelector(`[name='${name}']`);
@@ -317,6 +319,84 @@
         return button;
     };
 
+    const replaceImageBlob = (image, blob) => {
+        if (image.src?.startsWith("blob:")) URL.revokeObjectURL(image.src);
+        image.file = blob;
+        image.src = URL.createObjectURL(blob);
+        markImagesDirty();
+        renderImages();
+    };
+
+    const toggleApplyPhone = async (image) => {
+        if (!image?.id) return showError("Salva prima questa immagine.");
+        const nextValue = !Boolean(image.applyPhone);
+        const response = await fetch("/images/updateImgPhone", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: image.id, applyPhone: nextValue })
+        });
+        if (!response.ok) throw new Error("Impossibile aggiornare l'immagine del telefono.");
+        image.applyPhone = nextValue;
+        renderImages();
+    };
+
+    const rotateImageLeft = async (image) => {
+        const response = await fetch(galleryImageSrc(image));
+        if (!response.ok) throw new Error("Impossibile leggere l'immagine da ruotare.");
+        const source = await createImageBitmap(await response.blob());
+        const canvas = document.createElement("canvas");
+        canvas.width = source.height;
+        canvas.height = source.width;
+        const context = canvas.getContext("2d");
+        context.translate(0, canvas.height);
+        context.rotate(-Math.PI / 2);
+        context.drawImage(source, 0, 0);
+        source.close?.();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .92));
+        if (!blob) throw new Error("Impossibile ruotare l'immagine.");
+        replaceImageBlob(image, blob);
+    };
+
+    const closeCropModal = () => {
+        state.cropper?.destroy();
+        state.cropper = null;
+        state.cropImageKey = "";
+        const modal = document.querySelector("#customModal");
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
+    };
+
+    const openCropModal = (image) => {
+        if (typeof Cropper !== "function") return showError("L'editor immagini non è disponibile.");
+        const modal = document.querySelector("#customModal");
+        const modalImage = document.querySelector("#modalImage");
+        state.cropper?.destroy();
+        state.cropImageKey = imageKey(image);
+        modalImage.src = galleryImageSrc(image);
+        modal.style.display = "block";
+        modal.setAttribute("aria-hidden", "false");
+        modalImage.onload = () => {
+            state.cropper = new Cropper(modalImage, {
+                viewMode: 1,
+                dragMode: "move",
+                autoCropArea: 1,
+                aspectRatio: 2 / 3
+            });
+        };
+    };
+
+    const saveCroppedImage = () => {
+        const image = state.images.find((entry) => imageKey(entry) === state.cropImageKey);
+        if (!image || !state.cropper) return closeCropModal();
+        const canvas = state.cropper.getCroppedCanvas({ imageSmoothingQuality: "high" });
+        canvas.toBlob((blob) => {
+            if (!blob) return showError("Impossibile salvare il ritaglio.");
+            replaceImageBlob(image, blob);
+            closeCropModal();
+        }, "image/jpeg", .92);
+    };
+
     const createImageCard = (image, index, removed = false) => {
             const key = imageKey(image);
             const card = document.createElement("div");
@@ -354,6 +434,37 @@
                     className: "btn-danger",
                     title: "Rimuovi immagine",
                     onClick: () => handleImageAction("remove", index)
+                }));
+                actions.appendChild(createImageAction({
+                    icon: "fa-phone",
+                    className: image.applyPhone ? "btn-primary" : "btn-default",
+                    title: image.applyPhone ? "Immagine usata sul telefono" : "Usa sul telefono",
+                    disabled: !image.id,
+                    onClick: async () => {
+                        try {
+                            await toggleApplyPhone(image);
+                        } catch (error) {
+                            showError(error.message);
+                        }
+                    }
+                }));
+                actions.appendChild(createImageAction({
+                    icon: "fa-edit",
+                    className: "btn-primary",
+                    title: "Ritaglia immagine",
+                    onClick: () => openCropModal(image)
+                }));
+                actions.appendChild(createImageAction({
+                    icon: "fa-rotate-left",
+                    className: "btn-primary",
+                    title: "Ruota a sinistra",
+                    onClick: async () => {
+                        try {
+                            await rotateImageLeft(image);
+                        } catch (error) {
+                            showError(error.message);
+                        }
+                    }
                 }));
             }
 
@@ -630,6 +741,8 @@
                     id: image.id,
                     src: image.src,
                     origin: image.origin || `moscarossa-${image.id}.jpg`,
+                    applyPhone: image.applyPhone === true || image.applyPhone === 1 || image.applyPhone === "1",
+                    crop: image.crop || "",
                     isHidden: image.isHidden === true || image.isHidden === 1 || image.isHidden === "1"
                 }));
             state.images = galleryImages.filter((image) => !image.isHidden).slice(0, MAX_IMAGES);
@@ -651,7 +764,7 @@
     };
 
     const importPublicAdvertisement = async () => {
-        const input = document.querySelector("#moscarossa-link-to-scrape");
+        const input = document.querySelector("#link-to-scrape");
         const url = clean(input?.value);
         if (!url) return showError("Inserisci prima il link pubblico Moscarossa.");
 
@@ -676,6 +789,41 @@
         }
     };
 
+    const loadPreviousAdvertisements = async () => {
+        const select = document.querySelector("#select2_3");
+        if (!select) return;
+        try {
+            const response = await fetch("/annuncio/getDonne", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (!response.ok) throw new Error("Impossibile caricare gli ultimi annunci.");
+            const payload = await response.json();
+            (payload.donne || []).forEach((donna) => {
+                const latestAdvertisement = [...(donna.tblAnnuncis || [])]
+                    .sort((left, right) => Number(right.id) - Number(left.id))[0];
+                if (!latestAdvertisement) return;
+                const option = document.createElement("option");
+                option.value = latestAdvertisement.id;
+                option.textContent = `${clean(donna.name)} (${clean(donna.phone)})`;
+                option.selected = Number(latestAdvertisement.id) === annuncioId;
+                select.appendChild(option);
+            });
+            if (typeof $.fn.select2 === "function" && !$(select).data("select2")) {
+                $(select).select2({ width: "100%" });
+            }
+        } catch (error) {
+            showError(error.message);
+        }
+    };
+
+    const openSelectedAdvertisement = () => {
+        const selectedId = clean(document.querySelector("#select2_3")?.value);
+        if (!selectedId) return showError("Seleziona prima una cliente.");
+        window.location.href = `/annuncio.html?edit=${encodeURIComponent(selectedId)}&panel=${PANEL}`;
+    };
+
     infoForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await saveInfo({ redirect: isNew });
@@ -688,16 +836,25 @@
         event.target.value = "";
     });
     document.querySelector("#moscarossaSaveImages").addEventListener("click", saveImages);
-    document.querySelector("#moscarossa-caricalink-button").addEventListener("click", importPublicAdvertisement);
-    document.querySelector("#moscarossa-link-to-scrape").addEventListener("keydown", (event) => {
+    document.querySelector("#caricalink-button").addEventListener("click", importPublicAdvertisement);
+    document.querySelector("#link-to-scrape").addEventListener("keydown", (event) => {
         if (event.key !== "Enter") return;
         event.preventDefault();
         importPublicAdvertisement();
+    });
+    document.querySelector("#caricaphone-button").addEventListener("click", openSelectedAdvertisement);
+    document.querySelector("#select2_3").addEventListener("change", (event) => {
+        if (event.target.value) openSelectedAdvertisement();
     });
     document.querySelector("#moscarossaShowRemoved").addEventListener("click", () => {
         if (!state.removedImages.length) return;
         state.showingRemovedImages = !state.showingRemovedImages;
         renderImages();
+    });
+    document.querySelector("#closeModalButton").addEventListener("click", closeCropModal);
+    document.querySelector("#saveCropButton").addEventListener("click", saveCroppedImage);
+    document.querySelector("#customModal").addEventListener("click", (event) => {
+        if (event.target.id === "customModal") closeCropModal();
     });
 
     const imageDropZone = document.querySelector("#moscarossaActiveImages");
@@ -723,6 +880,7 @@
     });
 
     initializeCityLookup();
+    loadPreviousAdvertisements();
 
     if (isNew) {
         setFormEditing(true);

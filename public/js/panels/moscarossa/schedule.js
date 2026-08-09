@@ -10,14 +10,17 @@
     const addButton = document.querySelector("#moscarossaAddSchedule");
     const saveButton = document.querySelector("#moscarossaSaveSchedule");
     const historyList = document.querySelector("#moscarossaHistoryList");
-    const refreshHistoryButton = document.querySelector("#moscarossaRefreshHistory");
+    const suspendedHistoryList = document.querySelector("#moscarossaHistorySuspendedList");
+    const suspendedHistoryTitle = document.querySelector("#moscarossaHistorySuspendedTitle");
+    const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
     const state = {
         advertisement: null,
         gallery: [],
         schedule: {},
         currentDay: "",
         dirty: false,
-        relativeId: 0
+        relativeId: 0,
+        historyText: []
     };
 
     const clean = (value) => `${value || ""}`.replace(/\s+/g, " ").trim();
@@ -101,23 +104,22 @@
         state.gallery.forEach((galleryImage) => {
             const galleryId = Number(galleryImage.id);
             const selected = selectedIds.has(galleryId);
-            const card = document.createElement("div");
-            card.className = `moscarossa-slot-image${selected ? " is-selected" : ""}${previewId === galleryId ? " is-preview" : ""}`;
+            const wrapper = document.createElement("div");
+            wrapper.className = "post-pic-wrapper";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "form-check-input";
+            checkbox.checked = selected;
+            checkbox.disabled = locked;
+            const imageId = `moscarossa-schedule-${galleryId}-${Math.random().toString(36).slice(2)}`;
+            checkbox.id = imageId;
 
+            const imageLabel = document.createElement("label");
+            imageLabel.htmlFor = imageId;
             const image = document.createElement("img");
             image.src = gallerySrc(galleryImage);
             image.alt = `Foto Moscarossa ${galleryId}`;
-            card.appendChild(image);
-
-            const actions = document.createElement("div");
-            actions.className = "moscarossa-slot-image-actions";
-            const selectionLabel = document.createElement("label");
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.checked = selected;
-            checkbox.disabled = locked;
-            selectionLabel.appendChild(checkbox);
-            selectionLabel.appendChild(document.createTextNode(" Usa"));
+            imageLabel.appendChild(image);
 
             checkbox.addEventListener("change", () => {
                 if (checkbox.checked) {
@@ -138,11 +140,13 @@
                 renderDay();
             });
 
-            const previewButton = createButton(
-                previewId === galleryId ? "btn btn-warning btn-xs" : "btn btn-default btn-xs",
-                "fa-star",
-                "Imposta come anteprima"
-            );
+            const previewButton = document.createElement("button");
+            previewButton.type = "button";
+            previewButton.className = previewId === galleryId
+                ? "btn btn-warning btn-anteprima"
+                : "btn btn-secondary btn-anteprima";
+            previewButton.textContent = "ANTEPRIMA";
+            previewButton.title = "Imposta come anteprima";
             previewButton.disabled = locked;
             previewButton.addEventListener("click", () => {
                 let target = slot.images.find((entry) => Number(entry.galleria) === galleryId);
@@ -158,23 +162,23 @@
                 renderDay();
             });
 
-            actions.appendChild(selectionLabel);
-            actions.appendChild(previewButton);
-            card.appendChild(actions);
-            container.appendChild(card);
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(imageLabel);
+            wrapper.appendChild(previewButton);
+            container.appendChild(wrapper);
         });
     };
 
     const renderSlot = (slot, index) => {
         const locked = Boolean(slot.remotePostID) || slot.state === "OK";
         const panel = document.createElement("div");
-        panel.className = "moscarossa-schedule-slot";
+        panel.className = "newpost-panel moscarossa-schedule-slot";
 
         const main = document.createElement("div");
-        main.className = "moscarossa-slot-main";
-        const date = document.createElement("span");
-        date.className = "moscarossa-slot-date";
-        date.textContent = state.currentDay;
+        main.className = "newpost-wrapper";
+        const date = document.createElement("label");
+        date.className = "lblDateTime";
+        date.textContent = `${state.currentDay} `;
         const time = document.createElement("input");
         time.type = "time";
         time.className = "form-control";
@@ -185,9 +189,6 @@
             slot.time = time.value;
             markDirty(slot);
         });
-        const type = document.createElement("span");
-        type.className = "label label-default";
-        type.textContent = "Free";
         const remove = createButton("btn btn-danger", "fa-times", "Rimuovi pubblicazione");
         remove.disabled = locked;
         remove.addEventListener("click", () => {
@@ -203,7 +204,6 @@
 
         main.appendChild(date);
         main.appendChild(time);
-        main.appendChild(type);
         if (slot.state === "KO" && !locked) {
             const retry = createButton("btn btn-warning", "fa-refresh", "Riprova pubblicazione");
             retry.appendChild(document.createTextNode(" Riprova"));
@@ -214,18 +214,26 @@
             main.appendChild(retry);
         }
         main.appendChild(remove);
+        const photoButton = createButton("btn btn-dark btnPhoto", "fa-camera", "Mostra o nascondi immagini");
+        main.appendChild(photoButton);
         panel.appendChild(main);
 
         const help = document.createElement("p");
         help.className = "help-block";
         help.textContent = locked
             ? "Pubblicazione già completata: i dati remoti sono in sola lettura. Crea una nuova uscita Free per ripubblicare."
-            : `${slot.images.length}/${PUBLICATION_IMAGE_LIMIT} immagini selezionate. La stella indica l'anteprima.`;
+            : `${slot.images.length}/${PUBLICATION_IMAGE_LIMIT} immagini selezionate. Il pulsante giallo indica l'anteprima.`;
         panel.appendChild(help);
         const images = document.createElement("div");
-        images.className = "moscarossa-slot-images";
+        images.className = "post-pics";
+        images.style.display = "none";
         renderImagePicker(slot, images, locked);
         panel.appendChild(images);
+        photoButton.addEventListener("click", () => {
+            const hidden = images.style.display === "none";
+            images.style.display = hidden ? "flex" : "none";
+            photoButton.className = `btn btn-${hidden ? "success" : "dark"} btnPhoto`;
+        });
         return panel;
     };
 
@@ -320,11 +328,11 @@
     };
 
     const statusClass = (status) => {
-        if (status === "OK") return "label label-success";
-        if (status === "KO") return "label label-danger";
-        if (["CLOSED", "CLOSE", "DELETE", "DELETED"].includes(status)) return "label label-default";
-        if (status === "EDIT") return "label label-warning";
-        return "label label-info";
+        if (status === "OK") return "btn btn-xs btn-success";
+        if (status === "KO") return "btn btn-xs btn-danger";
+        if (["CLOSED", "CLOSE", "DELETE", "DELETED"].includes(status)) return "btn btn-xs btn-default";
+        if (status === "EDIT") return "btn btn-xs btn-warning";
+        return "btn btn-xs btn-info";
     };
 
     const historyDate = (value) => {
@@ -333,69 +341,132 @@
         return date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
     };
 
-    const renderHistory = (records) => {
-        historyList.innerHTML = "";
+    const historyDescription = (record) => {
+        const value = `${record.data || ""}`;
+        const day = value.split("T")[0] || historyDate(value);
+        const time = value.match(/T(\d{2}:\d{2})/)?.[1] || "";
+        return `[TOP ${record.typeAnnuncio || "Free"}] del ${day}${time ? ` alle ${time}` : ""}`;
+    };
+
+    const copyText = async (value) => {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+        } else {
+            const input = document.createElement("textarea");
+            input.value = value;
+            input.style.position = "fixed";
+            input.style.opacity = "0";
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand("copy");
+            input.remove();
+        }
+        if (typeof ShowAlert === "function") ShowAlert("lblCopied");
+    };
+
+    const statusIcon = (record) => {
+        const icon = document.createElement("h3");
+        const status = `${record.state || ""}`.toUpperCase();
+        if (status === "OK") icon.className = "fa fa-check-square text-success";
+        else if (status === "KO") icon.className = "fa fa-times text-danger";
+        else if (["CLOSE", "CLOSED"].includes(status)) icon.className = "fa fa-ban text-danger";
+        else if (["DELETE", "DELETED"].includes(status)) icon.className = "fa fa-trash text-danger";
+        else icon.className = "fa fa-clock-o text-default";
+        return icon;
+    };
+
+    const renderHistoryTable = (records, container, suspended = false) => {
+        container.innerHTML = "";
         if (!records.length) {
             const empty = document.createElement("div");
-            empty.className = "row center";
+            empty.className = "row center moscarossa-history-empty";
             empty.textContent = "Nessun dato rilevato";
-            historyList.appendChild(empty);
-            return;
+            container.appendChild(empty);
+            return [];
         }
 
-        records.forEach((record) => {
-            const item = document.createElement("div");
-            item.className = "moscarossa-history-item";
-            const main = document.createElement("div");
-            main.className = "moscarossa-history-main";
-            const description = document.createElement("div");
-            const heading = document.createElement("strong");
-            heading.textContent = `${record.typeAnnuncio || "Free"} · ${record.city || state.advertisement?.city || ""}`;
-            const date = document.createElement("div");
-            date.className = "text-muted";
-            date.textContent = historyDate(record.data);
-            description.appendChild(heading);
-            description.appendChild(date);
+        return records.map((record) => {
+            const descriptionText = historyDescription(record);
+            const city = clean(record.city || state.advertisement?.city || "Non presente");
+            const shareText = `${descriptionText} (${city})`;
+            const row = document.createElement("div");
+            row.className = "row moscarossa-history-row";
+            row.dataset.id = record.id || "";
 
             const actions = document.createElement("div");
-            const status = document.createElement("span");
-            status.className = statusClass(record.state);
-            status.textContent = record.state || "PROGRAMMATO";
-            actions.appendChild(status);
-            if (record.urlBK && /^https?:\/\//i.test(record.urlBK)) {
-                const link = document.createElement("a");
-                link.className = "btn btn-primary btn-xs";
-                link.href = record.urlBK;
-                link.target = "_blank";
-                link.rel = "noopener";
-                link.textContent = "Apri annuncio";
-                actions.appendChild(document.createTextNode(" "));
-                actions.appendChild(link);
-            }
+            actions.className = "col-md-2 col-sm-2 moscarossa-history-actions";
+            const copyButton = createButton("btn", "fa-copy text-primary", "Copia pubblicazione");
+            copyButton.addEventListener("click", () => copyText(shareText).catch(() => showError("Impossibile copiare la pubblicazione.")));
+            const share = document.createElement("a");
+            share.className = "btn";
+            share.href = `whatsapp://send?text=${encodeURIComponent(shareText)}`;
+            share.target = "_blank";
+            share.title = "Condividi pubblicazione";
+            share.innerHTML = '<i class="fa fa-whatsapp text-primary"></i>';
+            actions.appendChild(copyButton);
+            actions.appendChild(share);
 
-            const error = document.createElement("div");
-            error.className = "alert alert-danger moscarossa-history-error";
-            error.textContent = clean(record.errorReason);
-            if (record.errorReason) {
-                const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
-                errorButton.addEventListener("click", () => {
-                    error.style.display = error.style.display === "block" ? "none" : "block";
-                });
-                actions.appendChild(document.createTextNode(" "));
-                actions.appendChild(errorButton);
-            }
-
-            main.appendChild(description);
-            main.appendChild(actions);
-            item.appendChild(main);
+            const description = document.createElement("div");
+            description.className = "rptDescription col-md-4 col-sm-4";
+            const heading = document.createElement("b");
+            heading.textContent = descriptionText;
+            description.appendChild(heading);
+            description.appendChild(document.createTextNode(` (${city})`));
             if (record.remotePostID) {
                 const remote = document.createElement("div");
                 remote.className = "text-muted";
                 remote.textContent = `ID Moscarossa: ${record.remotePostID}`;
-                item.appendChild(remote);
+                description.appendChild(remote);
             }
-            item.appendChild(error);
-            historyList.appendChild(item);
+
+            const statusColumn = document.createElement("div");
+            statusColumn.className = "col-md-4 col-sm-4";
+            const statusActions = document.createElement("div");
+            statusActions.className = "status-actions moscarossa-history-status";
+            statusActions.appendChild(statusIcon(record));
+            const status = document.createElement("span");
+            status.className = statusClass(record.state);
+            const statusLabels = {
+                OK: "PUBBLICATO",
+                KO: "ERRORE",
+                EDIT: "IN ATTESA",
+                DELETE: "DELETE",
+                DELETED: "DELETED"
+            };
+            status.textContent = suspended
+                ? "SOSPESO"
+                : (statusLabels[`${record.state || ""}`.toUpperCase()] || "IN ATTESA");
+            statusActions.appendChild(status);
+            if (record.urlBK && /^https?:\/\//i.test(record.urlBK)) {
+                const link = document.createElement("a");
+                link.className = "btn btn-success btn-xs";
+                link.href = record.urlBK;
+                link.target = "_blank";
+                link.rel = "noopener";
+                link.textContent = "MR";
+                statusActions.appendChild(link);
+            }
+            if (record.errorReason) {
+                const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
+                errorButton.addEventListener("click", () => showError(`Pubblicazione non riuscita: ${clean(record.errorReason)}`));
+                statusActions.appendChild(errorButton);
+            }
+            statusColumn.appendChild(statusActions);
+
+            const paid = document.createElement("div");
+            paid.className = "col-md-1 col-sm-1";
+            const paidIcon = document.createElement("h3");
+            paidIcon.className = record.payed
+                ? "fa fa-check-square text-success"
+                : "fa fa-times text-danger";
+            paid.appendChild(paidIcon);
+
+            row.appendChild(actions);
+            row.appendChild(description);
+            row.appendChild(statusColumn);
+            row.appendChild(paid);
+            container.appendChild(row);
+            return shareText;
         });
     };
 
@@ -411,13 +482,19 @@
     };
 
     const loadHistory = async () => {
-        if (!isSavedAdvertisement) return renderHistory([]);
+        if (!isSavedAdvertisement) {
+            state.historyText = renderHistoryTable([], historyList);
+            renderHistoryTable([], suspendedHistoryList, true);
+            suspendedHistoryTitle.style.display = "none";
+            return;
+        }
         try {
             const [active, suspended] = await Promise.all([fetchHistoryPart(false), fetchHistoryPart(true)]);
-            const records = [...active, ...suspended]
-                .filter((record, index, all) => all.findIndex((item) => Number(item.id) === Number(record.id)) === index)
-                .sort((left, right) => new Date(right.data) - new Date(left.data));
-            renderHistory(records);
+            const sortNewest = (records) => [...records].sort((left, right) => new Date(right.data) - new Date(left.data));
+            state.historyText = renderHistoryTable(sortNewest(active), historyList);
+            renderHistoryTable(sortNewest(suspended), suspendedHistoryList, true);
+            suspendedHistoryTitle.style.display = suspended.length ? "block" : "none";
+            whatsappHistoryButton.href = `whatsapp://send?text=${encodeURIComponent(state.historyText.join("\n"))}`;
         } catch (error) {
             showError(error.message);
         }
@@ -443,7 +520,7 @@
             dateInput.disabled = true;
             saveButton.disabled = true;
             scheduleList.innerHTML = '<div class="alert alert-info">Salva prima le informazioni dell\'annuncio per programmare una pubblicazione.</div>';
-            renderHistory([]);
+            loadHistory();
             return;
         }
 
@@ -473,7 +550,12 @@
     dateInput.addEventListener("change", () => selectDay(dateInput.value));
     addButton.addEventListener("click", addSchedule);
     saveButton.addEventListener("click", saveSchedule);
-    refreshHistoryButton.addEventListener("click", loadHistory);
+    document.querySelectorAll(".moscarossa-copy-all").forEach((element) => {
+        element.addEventListener("click", () => {
+            if (!state.historyText.length) return showError("Non ci sono pubblicazioni da copiare.");
+            copyText(state.historyText.join("\n")).catch(() => showError("Impossibile copiare le pubblicazioni."));
+        });
+    });
     initializeCalendar();
     loadAdvertisement();
 })();
