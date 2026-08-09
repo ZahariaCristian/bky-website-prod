@@ -29,6 +29,11 @@
         if (input) input.checked = Boolean(value);
     };
     const clean = (value) => `${value || ""}`.replace(/\s+/g, " ").trim();
+    const normalizeCityName = (value) => clean(value).normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/gi, " ")
+        .trim()
+        .toLowerCase();
     const showError = (message) => ShowAlert("custom", message, 5000);
     const imageKey = (image) => image.id ? `gallery-${image.id}` : image.key;
     const infoForm = document.querySelector("#moscarossaInfoForm");
@@ -109,11 +114,38 @@
             state.cityId = nextId.startsWith("legacy:") ? "" : nextId;
             setValue("city", selection?.text || "");
 
+            if (saveInfoButton.disabled) setFormEditing(true);
+
             if (previousId && state.cityId && previousId !== state.cityId) {
                 setValue("location", "");
                 setValue("zoneId", "");
             }
         });
+
+        cityLookup.on("select2-opening", () => {
+            if (saveInfoButton.disabled) setFormEditing(true);
+        });
+    };
+
+    const resolveLegacyCitySelection = async (cityName) => {
+        const city = clean(cityName);
+        if (!city || selectedCityId()) return;
+
+        try {
+            const response = await fetch(
+                `/annuncio/moscarossaLocations?term=${encodeURIComponent(city)}&idAccompa=0`,
+                { credentials: "same-origin" }
+            );
+            if (!response.ok) return;
+            const payload = await response.json();
+            const target = normalizeCityName(city);
+            const results = Array.isArray(payload?.results) ? payload.results : [];
+            const match = results.find((item) => normalizeCityName(item?.text) === target)
+                || results.find((item) => normalizeCityName(item?.text).startsWith(`${target} `));
+            if (match?.id) setCitySelection(`${match.id}`, clean(match.text));
+        } catch (error) {
+            console.warn("Moscarossa Comune legacy resolution failed:", error.message);
+        }
     };
 
     const setFormEditing = (editing) => {
@@ -125,10 +157,8 @@
         editInfoButton.style.display = editing || isNew ? "none" : "block";
         updateAllSection.style.display = isNew ? "none" : "block";
         if (cityLookup.data("select2")) {
-            if (editing && clean(field("cityId")?.value).startsWith("legacy:")) {
-                setCitySelection("", "");
-            }
-            cityLookup.select2("enable", editing);
+            // Comune remains interactive; opening it automatically activates information editing.
+            cityLookup.select2("enable", true);
         }
     };
 
@@ -758,6 +788,7 @@
             setValue("phone", ad.phone);
             setValue("age", ad.age);
             setCitySelection(options.cityId, ad.city);
+            await resolveLegacyCitySelection(ad.city);
             setValue("location", options.zone || ad.location);
             setValue("zoneId", options.zoneId);
             setValue("address", options.address);

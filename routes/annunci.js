@@ -23,6 +23,8 @@ const normalizeLocationName = (value) => `${value || ""}`.normalize("NFD")
 
 const getMoscarossaLocationsApiUrl = () => process.env.MOSCAROSSA_LOCATIONS_API_URL
     || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
+const MOSCAROSSA_LOCATION_CACHE_TTL = 6 * 60 * 60 * 1000;
+const moscarossaLocationCache = new Map();
 
 const resolveMoscarossaCityId = async (city, idAccompa = "0") => {
     const term = `${city || ""}`.replace(/\s+/g, " ").trim();
@@ -120,6 +122,11 @@ router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
     const rawIdAccompa = `${req.query.idAccompa || ""}`.trim();
     const idAccompa = /^\d+$/.test(rawIdAccompa) ? rawIdAccompa : "0";
     const publisherLocationsUrl = getMoscarossaLocationsApiUrl();
+    const cacheKey = `${idAccompa}:${normalizeLocationName(term)}`;
+    const cached = moscarossaLocationCache.get(cacheKey);
+    if (cached && Date.now() - cached.savedAt < MOSCAROSSA_LOCATION_CACHE_TTL) {
+        return res.json({ results: cached.results, cached: true });
+    }
 
     try {
         const response = await axios.post(
@@ -134,6 +141,7 @@ router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
             }
         );
         const results = Array.isArray(response.data?.results) ? response.data.results : [];
+        moscarossaLocationCache.set(cacheKey, { results, savedAt: Date.now() });
         return res.status(response.status).json({ results });
     } catch (error) {
         console.error("Moscarossa Comune proxy error:", {
@@ -141,6 +149,9 @@ router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
             status: error.response?.status,
             details: error.response?.data || error.message
         });
+        if (cached?.results?.length) {
+            return res.json({ results: cached.results, cached: true, stale: true });
+        }
         return res.status(error.response?.status || 503).json({
             error: "Il servizio Comuni Moscarossa non è disponibile.",
             details: error.response?.data?.details || error.response?.data || error.message

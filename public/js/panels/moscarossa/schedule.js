@@ -172,7 +172,9 @@
     const renderSlot = (slot, index) => {
         const locked = Boolean(slot.remotePostID) || slot.state === "OK";
         const panel = document.createElement("div");
-        panel.className = "newpost-panel moscarossa-schedule-slot";
+        panel.className = "newpost-panel";
+        panel.dataset.promoType = "Free";
+        panel.dataset.relativeId = slot.relativeID || "";
 
         const main = document.createElement("div");
         main.className = "newpost-wrapper";
@@ -189,7 +191,12 @@
             slot.time = time.value;
             markDirty(slot);
         });
-        const remove = createButton("btn btn-danger", "fa-times", "Rimuovi pubblicazione");
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-danger";
+        remove.title = "Rimuovi pubblicazione";
+        remove.setAttribute("aria-label", "Rimuovi pubblicazione");
+        remove.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="white" width="25" height="20" viewBox="0 0 503.021 503.021" style="transform:scale(.7) translate(-6px,2px)"><path d="M491.613 75.643 427.378 11.408c-15.202-15.202-39.854-15.202-55.056 0L251.507 132.222 130.686 11.407c-15.202-15.202-39.853-15.202-55.055 0L11.401 75.643c-15.202 15.202-15.202 39.854 0 55.056l120.821 120.815L11.401 372.328c-15.202 15.202-15.202 39.854 0 55.056l64.235 64.229c15.202 15.202 39.854 15.202 55.056 0l120.815-120.814 120.822 120.814c15.202 15.202 39.854 15.202 55.056 0l64.235-64.229c15.202-15.202 15.202-39.854 0-55.056L370.793 251.514l120.82-120.815c15.202-15.209 15.202-39.854 0-55.056Z"/></svg>';
         remove.disabled = locked;
         remove.addEventListener("click", () => {
             if (slot.id) {
@@ -218,12 +225,6 @@
         main.appendChild(photoButton);
         panel.appendChild(main);
 
-        const help = document.createElement("p");
-        help.className = "help-block";
-        help.textContent = locked
-            ? "Pubblicazione già completata: i dati remoti sono in sola lettura. Crea una nuova uscita Free per ripubblicare."
-            : `${slot.images.length}/${PUBLICATION_IMAGE_LIMIT} immagini selezionate. Il pulsante giallo indica l'anteprima.`;
-        panel.appendChild(help);
         const images = document.createElement("div");
         images.className = "post-pics";
         images.style.display = "none";
