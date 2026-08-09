@@ -819,6 +819,9 @@
                 state.previewKey = imageKey(state.images[0]);
             }
             renderImages();
+            document.querySelectorAll(".widget-after").forEach((section) => {
+                section.style.display = "block";
+            });
             setFormEditing(false);
         } catch (error) {
             showError(error.message);
