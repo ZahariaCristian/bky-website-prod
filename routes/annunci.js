@@ -2954,7 +2954,8 @@ router.get("/blacklist", authenticateKey, async (req, res) => {
 
 router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
     if (!req.body.id) return res.sendStatus(400);
-    if (normalizePanelPlatform(req.body.panel) === "incontriamoci") {
+    const panel = normalizePanelPlatform(req.body.panel);
+    if (panel === "incontriamoci") {
         const descriptionLength = `${req.body.info?.description || ""}`.replace(/\s+/g, " ").trim().length;
         if (descriptionLength < 50) {
             return res.status(422).json({
@@ -2964,8 +2965,20 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
             });
         }
     }
+    if (panel === "moscarossa") {
+        const descriptionLength = `${req.body.info?.description || ""}`.replace(/\s+/g, " ").trim().length;
+        if (descriptionLength < 20) {
+            return res.status(422).json({
+                error: "La descrizione deve contenere almeno 20 caratteri.",
+                minimum: 20,
+                actual: descriptionLength
+            });
+        }
+        if (!`${req.body.info?.moscarossa?.cityId || ""}`.trim()) {
+            return res.status(422).json({ error: "Seleziona un Comune dai risultati Moscarossa." });
+        }
+    }
     const userid = req.session.userid;
-    const panel = normalizePanelPlatform(req.body.panel);
     var annuncio = await ctx.tblAnnunci.findOne({ where: { id: req.body.id } });
     if (annuncio) {
         var nextCategory = panel == "incontriamoci"
@@ -2992,6 +3005,11 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                 })
                 : panel == "amasens"
                 ? buildAmasensNote(annuncio.note, req.body.info.canComment)
+                : panel == "moscarossa"
+                    ? buildMoscarossaPanelNote(annuncio.note, {
+                        moscarossa: req.body.info.moscarossa,
+                        location: req.body.info.location
+                    })
                 : (req.body.info.note || annuncio.note);
 
         await annuncio.update({

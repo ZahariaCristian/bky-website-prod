@@ -34,6 +34,8 @@
     const infoForm = document.querySelector("#moscarossaInfoForm");
     const editInfoButton = document.querySelector("#moscarossaEditInfo");
     const saveInfoButton = document.querySelector("#moscarossaSaveInfo");
+    const updateAllButton = document.querySelector("#moscarossaUpdateAll");
+    const updateAllSection = document.querySelector("#moscarossaUpdateAllSection");
     const verifyPhoneButton = document.querySelector("#verify-button");
     const verifyPhoneLabel = document.querySelector("#test-label");
     const cityLookup = $("#moscarossaCityId");
@@ -121,6 +123,7 @@
         verifyPhoneButton.disabled = !editing || verifyPhoneButton.dataset.verified === "true";
         saveInfoButton.disabled = !editing;
         editInfoButton.style.display = editing || isNew ? "none" : "block";
+        updateAllSection.style.display = isNew ? "none" : "block";
         if (cityLookup.data("select2")) {
             if (editing && clean(field("cityId")?.value).startsWith("legacy:")) {
                 setCitySelection("", "");
@@ -300,6 +303,36 @@
             return null;
         } finally {
             if (manageLoader) toggleLoader();
+        }
+    };
+
+    const updateAllAdvertisements = async () => {
+        const info = collectInfo();
+        const validationError = validateInfo(info);
+        if (validationError) return showError(validationError);
+        if (!annuncioId) return showError("Salva prima le informazioni dell'annuncio.");
+        if (!window.confirm("Modificare tutti gli annunci Moscarossa già pubblicati?")) return;
+
+        updateAllButton.disabled = true;
+        toggleLoader();
+        try {
+            const response = await fetch("/annuncio/updateAllDataSchedule", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ info, panel: PANEL, id: annuncioId })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || "Impossibile modificare tutti gli annunci Moscarossa.");
+            }
+            ShowAlert("lblSaved");
+            window.setTimeout(() => window.location.reload(), 300);
+        } catch (error) {
+            updateAllButton.disabled = false;
+            showError(error.message);
+        } finally {
+            toggleLoader();
         }
     };
 
@@ -828,6 +861,7 @@
         event.preventDefault();
         await saveInfo({ redirect: isNew });
     });
+    updateAllButton.addEventListener("click", updateAllAdvertisements);
     editInfoButton.addEventListener("click", () => setFormEditing(true));
     verifyPhoneButton.addEventListener("click", verifyPhone);
     field("phone").addEventListener("input", () => setPhoneVerificationState("idle"));
@@ -885,6 +919,7 @@
     if (isNew) {
         setFormEditing(true);
         document.querySelector("#moscarossaImages").disabled = true;
+        document.querySelector("#moscarossaSaveImages").disabled = true;
         document.querySelector("#moscarossaNewAdImageHelp").style.display = "block";
     } else if (Number.isFinite(annuncioId)) {
         setFormEditing(false);
