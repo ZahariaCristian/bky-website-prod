@@ -2029,11 +2029,17 @@ router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
             });
         }
 
-        if ((scrapingResult.imageFiles || []).length > 0) {
+        const downloadedImageCount = (scrapingResult.imageFiles || []).length;
+        const sourceImageCount = (scrapingResult.images || []).length;
+        if (downloadedImageCount > 0 && downloadedImageCount === sourceImageCount) {
             const retiredImages = await retireLegacyMoscarossaImages(donna, scrapingResult.remotePostID);
             if (retiredImages > 0) {
                 console.log(`[Moscarossa] Migrated ${retiredImages} legacy gallery image(s) to numeric filenames.`);
             }
+        } else if (downloadedImageCount > 0) {
+            console.warn(
+                `[Moscarossa] Kept legacy gallery images because only ${downloadedImageCount}/${sourceImageCount} images were downloaded.`
+            );
         }
 
         return res.json({

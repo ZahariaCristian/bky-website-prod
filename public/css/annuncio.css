@@ -146,6 +146,18 @@ label[for="age"] {
     display: flex;
     margin-bottom: 10px;
 }
+.promo .newpost-wrapper > button {
+    height: 34px !important;
+    margin-left: 12px;
+}
+.promo label.lblDateTime {
+    line-height: 34px;
+    padding-right: 8px;
+}
+.promo .widget.widget-tabs > .widget-head ul li.active {
+    background: none !important;
+    font-weight: 700;
+}
 .newpost-wrapper input[type="date"] {
     width: 160px;
 }
