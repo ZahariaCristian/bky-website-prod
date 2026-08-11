@@ -85,13 +85,15 @@
 
     const normalizeSlot = (slot = {}) => {
         const images = normalizeImages(slot.images);
+        const selectedImages = ensurePreview(images.length ? images : defaultImages());
         return {
             id: slot.id || "",
             relativeID: slot.relativeID || "",
             remotePostID: slot.remotePostID || "",
             state: slot.state || "",
             time: extractTime(slot.data),
-            images: ensurePreview(images.length ? images : defaultImages()),
+            images: selectedImages,
+            imagesExpanded: selectedImages.length > 0,
             deleted: Boolean(slot.GCRecord),
             dirty: false
         };
@@ -233,28 +235,24 @@
 
         main.appendChild(date);
         main.appendChild(time);
-        if (slot.state === "KO" && !locked) {
-            const retry = createButton("btn btn-warning", "fa-refresh", "Riprova pubblicazione");
-            retry.appendChild(document.createTextNode(" Riprova"));
-            retry.addEventListener("click", () => {
-                markDirty(slot);
-                retry.disabled = true;
-            });
-            main.appendChild(retry);
-        }
         main.appendChild(remove);
-        const photoButton = createButton("btn btn-dark btnPhoto", "fa-camera", "Mostra o nascondi immagini");
+        const photoButton = createButton(
+            `btn btn-${slot.imagesExpanded ? "success" : "dark"} btnPhoto`,
+            "fa-camera",
+            "Mostra o nascondi immagini"
+        );
         main.appendChild(photoButton);
         panel.appendChild(main);
 
         const images = document.createElement("div");
         images.className = "post-pics";
-        images.style.display = "none";
+        images.style.display = slot.imagesExpanded ? "flex" : "none";
         renderImagePicker(slot, images, locked);
         panel.appendChild(images);
         photoButton.addEventListener("click", () => {
             const hidden = images.style.display === "none";
             images.style.display = hidden ? "flex" : "none";
+            slot.imagesExpanded = hidden;
             photoButton.className = `btn btn-${hidden ? "success" : "dark"} btnPhoto`;
         });
         return panel;
@@ -288,6 +286,7 @@
             state: "",
             time: nextDefaultTime(),
             images: ensurePreview(defaultImages()),
+            imagesExpanded: false,
             deleted: false,
             dirty: true
         });
