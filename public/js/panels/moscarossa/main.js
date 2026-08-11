@@ -1,5 +1,8 @@
 (() => {
     const PANEL = "moscarossa";
+    const DETAILS_CONFIG = window.MOSCAROSSA_DETAILS_CONFIG || {
+        tariffs: [], services: [], selects: [], multiSelects: [], exclusiveMultiOptions: {}
+    };
     const MAX_IMAGES = 20;
     const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     const params = new URLSearchParams(window.location.search);
@@ -16,7 +19,8 @@
         showingRemovedImages: false,
         previewKey: "",
         cropper: null,
-        cropImageKey: ""
+        cropImageKey: "",
+        detailsRaw: {}
     };
 
     const field = (name) => document.querySelector(`[name='${name}']`);
@@ -148,6 +152,125 @@
         }
     };
 
+    const renderDetailsControls = () => {
+        const tariffs = document.querySelector("#moscarossaTariffs");
+        const services = document.querySelector("#moscarossaServices");
+        const specifications = document.querySelector("#moscarossaSpecifications");
+        const multiSpecifications = document.querySelector("#moscarossaMultiSpecifications");
+        if (!tariffs || !services || !specifications || !multiSpecifications) return;
+
+        tariffs.innerHTML = DETAILS_CONFIG.tariffs.map(([id, label]) => `
+            <div class="moscarossa-detail-item">
+                <label for="moscarossaTariff${id}">${label}</label>
+                <div class="input-group">
+                    <input id="moscarossaTariff${id}" type="number" min="0" max="9999999"
+                        class="form-control" data-moscarossa-tariff-id="${id}" inputmode="numeric">
+                    <span class="input-group-addon">&euro;</span>
+                </div>
+            </div>`).join("");
+
+        services.innerHTML = DETAILS_CONFIG.services.map(([id, label]) => `
+            <div class="moscarossa-service-item">
+                <div class="flex-checkbox">
+                    <input id="moscarossaService${id}" type="checkbox" data-moscarossa-service-id="${id}">
+                    <label for="moscarossaService${id}">${label}</label>
+                </div>
+                <div class="input-group">
+                    <input type="number" min="0" max="9999999" class="form-control"
+                        data-moscarossa-service-supplement="${id}" inputmode="numeric" disabled
+                        aria-label="Supplemento ${label}">
+                    <span class="input-group-addon">&euro;</span>
+                </div>
+            </div>`).join("");
+
+        specifications.innerHTML = DETAILS_CONFIG.selects.map(([groupId, label, options]) => `
+            <div class="moscarossa-detail-item">
+                <label for="moscarossaSpecification${groupId}">${label}</label>
+                <select id="moscarossaSpecification${groupId}" class="form-control"
+                    data-moscarossa-select-id="${groupId}">
+                    <option value="">Seleziona...</option>
+                    ${options.map(([value, text]) => `<option value="${value}">${text}</option>`).join("")}
+                </select>
+            </div>`).join("");
+
+        multiSpecifications.innerHTML = DETAILS_CONFIG.multiSelects.map(([groupId, label, options]) => `
+            <div class="moscarossa-detail-item" style="margin-bottom:18px;">
+                <h4>${label}</h4>
+                <div class="moscarossa-choice-list">
+                    ${options.map(([value, text]) => `
+                        <div class="flex-checkbox">
+                            <input id="moscarossaMulti${groupId}_${value}" type="checkbox"
+                                data-moscarossa-multi-group="${groupId}" data-moscarossa-multi-id="${value}">
+                            <label for="moscarossaMulti${groupId}_${value}">${text}</label>
+                        </div>`).join("")}
+                </div>
+            </div>`).join("");
+
+        services.querySelectorAll("[data-moscarossa-service-id]").forEach((checkbox) => {
+            checkbox.addEventListener("change", () => {
+                const supplement = services.querySelector(`[data-moscarossa-service-supplement='${checkbox.dataset.moscarossaServiceId}']`);
+                if (supplement) supplement.disabled = saveInfoButton.disabled || !checkbox.checked;
+            });
+        });
+
+        Object.entries(DETAILS_CONFIG.exclusiveMultiOptions || {}).forEach(([groupId, optionIds]) => {
+            const exclusiveIds = new Set(optionIds.map(String));
+            multiSpecifications.querySelectorAll(`[data-moscarossa-multi-group='${groupId}']`).forEach((checkbox) => {
+                checkbox.addEventListener("change", () => {
+                    if (!checkbox.checked || !exclusiveIds.has(checkbox.dataset.moscarossaMultiId)) return;
+                    multiSpecifications.querySelectorAll(`[data-moscarossa-multi-group='${groupId}']`).forEach((other) => {
+                        if (other !== checkbox && exclusiveIds.has(other.dataset.moscarossaMultiId)) other.checked = false;
+                    });
+                });
+            });
+        });
+    };
+
+    const collectDetails = () => {
+        const details = { tariffs: {}, services: {}, selects: {}, multiSelects: {}, raw: state.detailsRaw || {} };
+        document.querySelectorAll("[data-moscarossa-tariff-id]").forEach((input) => {
+            const value = clean(input.value);
+            if (value) details.tariffs[input.dataset.moscarossaTariffId] = value;
+        });
+        document.querySelectorAll("[data-moscarossa-service-id]").forEach((checkbox) => {
+            if (!checkbox.checked) return;
+            const id = checkbox.dataset.moscarossaServiceId;
+            const supplement = document.querySelector(`[data-moscarossa-service-supplement='${id}']`);
+            details.services[id] = { enabled: true, supplement: clean(supplement?.value) };
+        });
+        document.querySelectorAll("[data-moscarossa-select-id]").forEach((select) => {
+            if (select.value) details.selects[select.dataset.moscarossaSelectId] = select.value;
+        });
+        document.querySelectorAll("[data-moscarossa-multi-group]:checked").forEach((checkbox) => {
+            const groupId = checkbox.dataset.moscarossaMultiGroup;
+            if (!details.multiSelects[groupId]) details.multiSelects[groupId] = [];
+            details.multiSelects[groupId].push(checkbox.dataset.moscarossaMultiId);
+        });
+        return details;
+    };
+
+    const populateDetails = (details = {}) => {
+        const normalized = details && typeof details === "object" ? details : {};
+        state.detailsRaw = normalized.raw && typeof normalized.raw === "object" ? normalized.raw : {};
+        document.querySelectorAll("[data-moscarossa-tariff-id]").forEach((input) => {
+            input.value = normalized.tariffs?.[input.dataset.moscarossaTariffId] || "";
+        });
+        document.querySelectorAll("[data-moscarossa-service-id]").forEach((checkbox) => {
+            const id = checkbox.dataset.moscarossaServiceId;
+            const service = normalized.services?.[id];
+            checkbox.checked = Boolean(service === true || service?.enabled);
+            const supplement = document.querySelector(`[data-moscarossa-service-supplement='${id}']`);
+            if (supplement) supplement.value = service && typeof service === "object" ? (service.supplement || "") : "";
+        });
+        document.querySelectorAll("[data-moscarossa-select-id]").forEach((select) => {
+            select.value = normalized.selects?.[select.dataset.moscarossaSelectId] || "";
+        });
+        document.querySelectorAll("[data-moscarossa-multi-group]").forEach((checkbox) => {
+            const selected = normalized.multiSelects?.[checkbox.dataset.moscarossaMultiGroup];
+            checkbox.checked = Array.isArray(selected) && selected.map(String).includes(checkbox.dataset.moscarossaMultiId);
+        });
+    };
+
     const setFormEditing = (editing) => {
         infoForm.querySelectorAll("input:not([type='hidden']), textarea, select").forEach((control) => {
             control.disabled = !editing;
@@ -160,6 +283,10 @@
             // Comune remains interactive; opening it automatically activates information editing.
             cityLookup.select2("enable", true);
         }
+        infoForm.querySelectorAll("[data-moscarossa-service-id]").forEach((checkbox) => {
+            const supplement = infoForm.querySelector(`[data-moscarossa-service-supplement='${checkbox.dataset.moscarossaServiceId}']`);
+            if (supplement) supplement.disabled = !editing || !checkbox.checked;
+        });
     };
 
     const setPhoneVerificationState = (status) => {
@@ -275,7 +402,8 @@
             longitude: clean(field("longitude")?.value),
             airConditioned: Boolean(field("airConditioned")?.checked),
             website: clean(field("website")?.value),
-            previewGalleryId: state.previewKey.replace(/^gallery-/, "")
+            previewGalleryId: state.previewKey.replace(/^gallery-/, ""),
+            details: collectDetails()
         }
     });
 
@@ -799,6 +927,7 @@
             setChecked("whatsapp", ad.hasWhatapp);
             setChecked("telegram", ad.hasTelegram);
             setChecked("airConditioned", options.airConditioned);
+            populateDetails(options.details);
             setPhoneVerificationState(ad.isPhoneChecked ? "verified" : "idle");
 
             const galleryImages = (Array.isArray(ad.images) ? ad.images : []).map((image) => ({
@@ -947,6 +1076,7 @@
         addSelectedImages(event.dataTransfer.files);
     });
 
+    renderDetailsControls();
     initializeCityLookup();
     loadPreviousAdvertisements();
 

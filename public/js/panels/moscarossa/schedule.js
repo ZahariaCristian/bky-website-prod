@@ -1,6 +1,6 @@
 (() => {
     const PANEL = "moscarossa";
-    const PUBLICATION_IMAGE_LIMIT = 3;
+    const PUBLICATION_IMAGE_LIMIT = 20;
     const params = new URLSearchParams(window.location.search);
     const rawId = params.get("edit") || "";
     const annuncioId = Number.parseInt(rawId, 10);
@@ -27,7 +27,18 @@
     const isTrue = (value) => value === true || value === 1 || value === "1" || `${value}`.toLowerCase() === "true";
     const pad = (value) => `${value}`.padStart(2, "0");
     const localDateKey = (date = new Date()) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    const todayKey = () => localDateKey(new Date());
+    const romeDateParts = (date = new Date()) => Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Europe/Rome",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(date).map((part) => [part.type, part.value])
+    );
+    const todayKey = () => {
+        const parts = romeDateParts();
+        return `${parts.year}-${parts.month}-${parts.day}`;
+    };
     const showError = (message) => {
         if (typeof ShowAlert === "function") return ShowAlert("custom", message, 6000);
         window.alert(message);
@@ -39,10 +50,15 @@
     };
     const extractTime = (value) => `${value || ""}`.match(/T(\d{2}:\d{2})/)?.[1] || "08:00";
     const nextDefaultTime = () => {
-        if (state.currentDay !== todayKey()) return "08:00";
-        const now = new Date();
-        now.setMinutes(Math.ceil((now.getMinutes() + 5) / 5) * 5, 0, 0);
-        return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat("en-GB", {
+                timeZone: "Europe/Rome",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23"
+            }).formatToParts(new Date()).map((part) => [part.type, part.value])
+        );
+        return `${parts.hour}:${parts.minute}`;
     };
     const normalizeImages = (images) => (Array.isArray(images) ? images : [])
         .map((image) => ({

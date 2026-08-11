@@ -6,6 +6,7 @@ const scrapeTrovagnocca = require("../lib/scraper/trovagnocca");
 const scrapeIncontriamoci = require("../lib/scraper/incontriamoci");
 const scrapeAmasens = require("../lib/scraper/amasens");
 const scrapeMoscarossa = require("../lib/scraper/moscarossa");
+const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
 const axios = require("axios");
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
@@ -467,7 +468,7 @@ const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     amasens: 9,
     incontriamoci: 9,
     trovagnocca: 6,
-    moscarossa: 3
+    moscarossa: 20
 });
 
 const getScheduleImageLimit = (panel) => SCHEDULE_IMAGE_LIMITS[normalizePanelPlatform(panel)] || 5;
@@ -956,6 +957,65 @@ const buildIncontriamociPanelNote = (existingNote, data = {}) => {
     });
 };
 
+const moscarossaTariffIds = new Set(moscarossaDetailsConfig.tariffs.map(([id]) => `${id}`));
+const moscarossaServiceIds = new Set(moscarossaDetailsConfig.services.map(([id]) => `${id}`));
+const moscarossaSelectOptions = new Map(moscarossaDetailsConfig.selects.map(([groupId, , options]) => [
+    `${groupId}`, new Set(options.map(([id]) => `${id}`))
+]));
+const moscarossaMultiOptions = new Map(moscarossaDetailsConfig.multiSelects.map(([groupId, , options]) => [
+    `${groupId}`, new Set(options.map(([id]) => `${id}`))
+]));
+
+const sanitizeMoscarossaDetails = (input = {}) => {
+    const details = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const priceValue = (value) => {
+        const normalized = `${value ?? ""}`.trim();
+        return /^\d{1,7}$/.test(normalized) ? normalized : "";
+    };
+    const tariffs = {};
+    const services = {};
+    const selects = {};
+    const multiSelects = {};
+
+    Object.entries(details.tariffs || {}).forEach(([id, value]) => {
+        const price = priceValue(value);
+        if (moscarossaTariffIds.has(`${id}`) && price) tariffs[id] = price;
+    });
+    Object.entries(details.services || {}).forEach(([id, value]) => {
+        if (!moscarossaServiceIds.has(`${id}`)) return;
+        const enabled = value === true || Boolean(value && typeof value === "object" && value.enabled);
+        if (!enabled) return;
+        services[id] = {
+            enabled: true,
+            supplement: priceValue(value && typeof value === "object" ? value.supplement : "")
+        };
+    });
+    Object.entries(details.selects || {}).forEach(([groupId, value]) => {
+        const option = `${value || ""}`;
+        if (moscarossaSelectOptions.get(`${groupId}`)?.has(option)) selects[groupId] = option;
+    });
+    Object.entries(details.multiSelects || {}).forEach(([groupId, values]) => {
+        const allowed = moscarossaMultiOptions.get(`${groupId}`);
+        if (!allowed || !Array.isArray(values)) return;
+        const selected = [...new Set(values.map(String).filter((value) => allowed.has(value)))].slice(0, allowed.size);
+        if (selected.length) multiSelects[groupId] = selected;
+    });
+
+    const rawInput = details.raw && typeof details.raw === "object" && !Array.isArray(details.raw) ? details.raw : {};
+    const raw = {
+        tariffs: Array.isArray(rawInput.tariffs) ? rawInput.tariffs.map((value) => `${value}`.slice(0, 250)).slice(0, 30) : [],
+        services: Array.isArray(rawInput.services) ? rawInput.services.map((value) => `${value}`.slice(0, 250)).slice(0, 80) : [],
+        specifications: {}
+    };
+    if (rawInput.specifications && typeof rawInput.specifications === "object" && !Array.isArray(rawInput.specifications)) {
+        Object.entries(rawInput.specifications).slice(0, 50).forEach(([key, value]) => {
+            raw.specifications[`${key}`.slice(0, 100)] = `${value ?? ""}`.slice(0, 500);
+        });
+    }
+
+    return { tariffs, services, selects, multiSelects, raw };
+};
+
 const buildMoscarossaPanelNote = (existingNote, data = {}) => {
     let parsed = {};
     try {
@@ -980,7 +1040,8 @@ const buildMoscarossaPanelNote = (existingNote, data = {}) => {
             longitude: stringValue(options.longitude, 50),
             airConditioned: Boolean(options.airConditioned),
             website: stringValue(options.website, 250),
-            previewGalleryId: stringValue(options.previewGalleryId, 50)
+            previewGalleryId: stringValue(options.previewGalleryId, 50),
+            details: sanitizeMoscarossaDetails(options.details)
         }
     });
 };
@@ -1983,6 +2044,7 @@ router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
                 zoneId: "",
                 zone: scrapingResult.location || scrapingResult.city || "",
                 airConditioned: Boolean(scrapingResult.airConditioned),
+                details: sanitizeMoscarossaDetails(scrapingResult.details),
                 scrape: {
                     remotePostID: scrapingResult.remotePostID || "",
                     sourceUrl: scrapingResult.url || req.body.url,

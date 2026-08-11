@@ -152,6 +152,71 @@
             display: none;
         }
 
+        .moscarossa-details {
+            margin: 12px 0 18px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .moscarossa-details > summary {
+            padding: 13px 16px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            background: #f5f5f5;
+        }
+
+        .moscarossa-details-body {
+            padding: 14px 16px 4px;
+        }
+
+        .moscarossa-details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px 16px;
+            margin-bottom: 18px;
+        }
+
+        .moscarossa-details-grid.services {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .moscarossa-detail-item label {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .moscarossa-service-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 120px;
+            align-items: center;
+            gap: 8px;
+            min-height: 35px;
+        }
+
+        .moscarossa-service-item .flex-checkbox {
+            margin: 0;
+        }
+
+        .moscarossa-choice-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+        }
+
+        .moscarossa-choice-list .flex-checkbox {
+            min-width: 150px;
+            margin: 0;
+        }
+
+        @media (max-width: 767px) {
+            .moscarossa-details-grid,
+            .moscarossa-details-grid.services {
+                grid-template-columns: 1fr;
+            }
+        }
+
     </style>
 </head>
 
@@ -331,6 +396,19 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <details id="moscarossaDetails" class="moscarossa-details">
+                                <summary>Ulteriori specifiche</summary>
+                                <div class="moscarossa-details-body">
+                                    <h4>Tariffe</h4>
+                                    <div id="moscarossaTariffs" class="moscarossa-details-grid"></div>
+                                    <h4>Servizi</h4>
+                                    <div id="moscarossaServices" class="moscarossa-details-grid services"></div>
+                                    <h4>Caratteristiche</h4>
+                                    <div id="moscarossaSpecifications" class="moscarossa-details-grid"></div>
+                                    <div id="moscarossaMultiSpecifications"></div>
+                                </div>
+                            </details>
 
                             <input id="moscarossaZoneId" name="zoneId" type="hidden">
                             <input id="moscarossaLatitude" name="latitude" type="hidden">
@@ -522,8 +600,9 @@
     <div class="loader">
         <img src="/assets/loader.gif" alt="Caricamento">
     </div>
-    <script src="/js/panels/moscarossa/main.js?v=20260809-new-ad-visibility"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260811-empty-timeslot"></script>
+    <script src="/js/panels/moscarossa/details-config.js?v=20260811-details"></script>
+    <script src="/js/panels/moscarossa/main.js?v=20260811-details"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260811-rome-20-images"></script>
 </body>
 
 </html>
