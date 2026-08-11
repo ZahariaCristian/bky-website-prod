@@ -409,6 +409,33 @@ const moveGalleryFileToPhone = (oldPhone, newPhone, origin) => {
     return { moved: false, destinationExists: fs.existsSync(destination) };
 };
 
+const retireLegacyMoscarossaImages = async (donna, remotePostID) => {
+    if (!donna?.id || !/^\d+$/.test(`${remotePostID || ""}`)) return 0;
+
+    const legacyPrefix = `moscarossa-${remotePostID}-`;
+    const legacyGallery = await ctx.tblGalleria.findAll({
+        where: {
+            donna: donna.id,
+            origin: { [Op.like]: `${legacyPrefix}%` },
+            GCRecord: null
+        }
+    });
+
+    for (const galleryImage of legacyGallery) {
+        await galleryImage.update({ GCRecord: ctx.newGCRecord() });
+    }
+
+    const picturesDirectory = `${rootPath}/girls/${donna.phone}/pics`;
+    if (fs.existsSync(picturesDirectory)) {
+        for (const fileName of fs.readdirSync(picturesDirectory)) {
+            if (!fileName.startsWith(legacyPrefix) || basename(fileName) !== fileName) continue;
+            fs.unlinkSync(`${picturesDirectory}/${fileName}`);
+        }
+    }
+
+    return legacyGallery.length;
+};
+
 const normalizeMegaescortCategory = (category = "") => {
     const normalized = category.toLowerCase();
     if (normalized.includes("trans")) return "TRANS";
@@ -1995,11 +2022,18 @@ router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
             if (existingImage) continue;
             await ctx.tblGalleria.create({
                 donna: donna.id,
-                src: `/images/get?phone=${donna.phone}&index=${index}`,
+                src: getGalleryPhoneImageSrc(donna.phone, origin),
                 GCRecord: null,
                 origin,
                 isHidden: false
             });
+        }
+
+        if ((scrapingResult.imageFiles || []).length > 0) {
+            const retiredImages = await retireLegacyMoscarossaImages(donna, scrapingResult.remotePostID);
+            if (retiredImages > 0) {
+                console.log(`[Moscarossa] Migrated ${retiredImages} legacy gallery image(s) to numeric filenames.`);
+            }
         }
 
         return res.json({
