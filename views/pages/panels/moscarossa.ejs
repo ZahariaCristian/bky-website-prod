@@ -182,6 +182,39 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .moscarossa-tariff-list {
+            margin-bottom: 18px;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .moscarossa-tariff-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            min-height: 44px;
+            padding: 4px 0 4px 16px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .moscarossa-tariff-row > label {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .moscarossa-tariff-input {
+            width: 130px;
+            flex: 0 0 130px;
+        }
+
+        .moscarossa-tariff-heading {
+            margin: 0;
+            padding: 14px 16px 9px;
+            border-bottom: 1px solid #e5e5e5;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
         .moscarossa-detail-item label {
             display: block;
             margin-bottom: 4px;
@@ -214,6 +247,10 @@
             .moscarossa-details-grid,
             .moscarossa-details-grid.services {
                 grid-template-columns: 1fr;
+            }
+
+            .moscarossa-tariff-row {
+                padding-left: 8px;
             }
         }
 
@@ -401,7 +438,7 @@
                                 <summary>Ulteriori specifiche</summary>
                                 <div class="moscarossa-details-body">
                                     <h4>Tariffe</h4>
-                                    <div id="moscarossaTariffs" class="moscarossa-details-grid"></div>
+                                    <div id="moscarossaTariffs" class="moscarossa-tariff-list"></div>
                                     <h4>Servizi</h4>
                                     <div id="moscarossaServices" class="moscarossa-details-grid services"></div>
                                     <h4>Caratteristiche</h4>
@@ -600,8 +637,8 @@
     <div class="loader">
         <img src="/assets/loader.gif" alt="Caricamento">
     </div>
-    <script src="/js/panels/moscarossa/details-config.js?v=20260811-details"></script>
-    <script src="/js/panels/moscarossa/main.js?v=20260811-details"></script>
+    <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
+    <script src="/js/panels/moscarossa/main.js?v=20260811-scraped-details"></script>
     <script src="/js/panels/moscarossa/schedule.js?v=20260811-rome-20-images"></script>
 </body>
 

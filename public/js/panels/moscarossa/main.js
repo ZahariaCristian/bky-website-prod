@@ -1,7 +1,7 @@
 (() => {
     const PANEL = "moscarossa";
     const DETAILS_CONFIG = window.MOSCAROSSA_DETAILS_CONFIG || {
-        tariffs: [], services: [], selects: [], multiSelects: [], exclusiveMultiOptions: {}
+        tariffs: [], tariffGroups: [], services: [], selects: [], multiSelects: [], exclusiveMultiOptions: {}
     };
     const MAX_IMAGES = 20;
     const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -159,15 +159,23 @@
         const multiSpecifications = document.querySelector("#moscarossaMultiSpecifications");
         if (!tariffs || !services || !specifications || !multiSpecifications) return;
 
-        tariffs.innerHTML = DETAILS_CONFIG.tariffs.map(([id, label]) => `
-            <div class="moscarossa-detail-item">
+        const tariffsById = new Map(DETAILS_CONFIG.tariffs.map((tariff) => [tariff[0], tariff]));
+        const tariffRow = ([id, label]) => `
+            <div class="moscarossa-tariff-row">
                 <label for="moscarossaTariff${id}">${label}</label>
-                <div class="input-group">
+                <div class="input-group moscarossa-tariff-input">
+                    <span class="input-group-addon">&euro;</span>
                     <input id="moscarossaTariff${id}" type="number" min="0" max="9999999"
                         class="form-control" data-moscarossa-tariff-id="${id}" inputmode="numeric">
-                    <span class="input-group-addon">&euro;</span>
                 </div>
-            </div>`).join("");
+            </div>`;
+        const tariffGroups = DETAILS_CONFIG.tariffGroups?.length
+            ? DETAILS_CONFIG.tariffGroups
+            : [["", DETAILS_CONFIG.tariffs.map(([id]) => id)]];
+        tariffs.innerHTML = tariffGroups.map(([heading, ids]) => `
+            ${heading ? `<h4 class="moscarossa-tariff-heading">${heading}</h4>` : ""}
+            ${ids.map((id) => tariffsById.get(id)).filter(Boolean).map(tariffRow).join("")}
+        `).join("");
 
         services.innerHTML = DETAILS_CONFIG.services.map(([id, label]) => `
             <div class="moscarossa-service-item">
@@ -269,6 +277,12 @@
             const selected = normalized.multiSelects?.[checkbox.dataset.moscarossaMultiGroup];
             checkbox.checked = Array.isArray(selected) && selected.map(String).includes(checkbox.dataset.moscarossaMultiId);
         });
+        const hasMappedDetails = Object.keys(normalized.tariffs || {}).length > 0 ||
+            Object.keys(normalized.services || {}).length > 0 ||
+            Object.keys(normalized.selects || {}).length > 0 ||
+            Object.values(normalized.multiSelects || {}).some((values) => Array.isArray(values) && values.length > 0);
+        const detailsSection = document.querySelector("#moscarossaDetails");
+        if (detailsSection && hasMappedDetails) detailsSection.open = true;
     };
 
     const setFormEditing = (editing) => {

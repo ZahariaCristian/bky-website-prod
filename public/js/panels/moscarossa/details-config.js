@@ -12,6 +12,11 @@
             ["191", "Outcall 15 minuti"], ["192", "Outcall 30 minuti"], ["193", "Outcall 45 minuti"],
             ["194", "Outcall 1 ora"], ["195", "Outcall 2 ore"]
         ],
+        tariffGroups: [
+            ["", ["185"]],
+            ["Incall", ["186", "187", "188", "189", "190"]],
+            ["Outcall", ["191", "192", "193", "194", "195"]]
+        ],
         services: [
             ["184", "Baci alla Francese"], ["214", "Body massage"], ["108", "CIM (venuta in bocca)"],
             ["110", "COB (venuta sul corpo)"], ["109", "COF (venuta in faccia)"], ["98", "Dildo - Toys"],

@@ -2001,6 +2001,12 @@ router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
         if (!scrapingResult?.phone) {
             return res.status(422).json({ error: "L'annuncio Moscarossa non contiene un numero di telefono." });
         }
+        console.log("[moscarossa:import] Scraped details summary", scrapingResult.detailsSummary || {
+            tariffs: Object.keys(scrapingResult.details?.tariffs || {}).length,
+            services: Object.keys(scrapingResult.details?.services || {}).length,
+            selects: Object.keys(scrapingResult.details?.selects || {}).length,
+            multi: Object.values(scrapingResult.details?.multiSelects || {}).flat().length
+        });
 
         let donna = await ctx.tblDonne.findOne({
             where: { phone: scrapingResult.phone, GCRecord: null }
@@ -2108,7 +2114,8 @@ router.post("/scrapeMoscarossa", authenticateKey, async (req, res) => {
             id: annuncio.id,
             donna: donna.id,
             remotePostID: scrapingResult.remotePostID,
-            cityResolved: Boolean(cityId)
+            cityResolved: Boolean(cityId),
+            detailsExtracted: scrapingResult.detailsSummary || null
         });
     } catch (error) {
         console.error("Error in /scrapeMoscarossa route:", error);
