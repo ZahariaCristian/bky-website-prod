@@ -243,12 +243,6 @@
         const slots = state.schedule[state.currentDay] || [];
         const visibleSlots = slots.filter((slot) => !slot.deleted);
         visibleSlots.forEach((slot) => scheduleList.appendChild(renderSlot(slot, slots.indexOf(slot))));
-        if (!visibleSlots.length) {
-            const empty = document.createElement("div");
-            empty.className = "center text-muted innerTB";
-            empty.textContent = "Nessuna pubblicazione Free per la data selezionata.";
-            scheduleList.appendChild(empty);
-        }
         addButton.disabled = !isSavedAdvertisement || state.currentDay < todayKey();
     }
 
