@@ -318,12 +318,12 @@
         return payload;
     };
 
-    const saveSchedule = async () => {
-        if (!state.dirty) return;
+    const saveSchedule = async ({ reload = true } = {}) => {
+        if (!state.dirty) return { ok: true, skipped: true };
         const activeSlots = Object.values(state.schedule).flat().filter((slot) => !slot.deleted);
-        if (activeSlots.some((slot) => !slot.time)) return showError("Inserisci un orario per ogni pubblicazione Free.");
-        if (activeSlots.some((slot) => !slot.images.length)) return showError("Seleziona almeno un'immagine per ogni pubblicazione Free.");
-        if (!clean(state.advertisement?.city)) return showError("Seleziona prima il Comune Moscarossa.");
+        if (activeSlots.some((slot) => !slot.time)) throw new Error("Inserisci un orario per ogni pubblicazione Free.");
+        if (activeSlots.some((slot) => !slot.images.length)) throw new Error("Seleziona almeno un'immagine per ogni pubblicazione Free.");
+        if (!clean(state.advertisement?.city)) throw new Error("Seleziona prima il Comune Moscarossa.");
 
         saveButton.disabled = true;
         try {
@@ -335,12 +335,26 @@
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.error || "Impossibile salvare le pubblicazioni Moscarossa.");
-            const reloadUrl = new URL(window.location.href);
-            reloadUrl.searchParams.set("day", state.currentDay);
-            window.location.href = reloadUrl.toString();
+            (payload.schedulato || []).forEach((savedSlot) => {
+                if (!savedSlot?.relativeID) return;
+                Object.values(state.schedule).flat().forEach((slot) => {
+                    if (`${slot.relativeID || ""}` !== `${savedSlot.relativeID}`) return;
+                    slot.id = savedSlot.id || slot.id;
+                    slot.state = savedSlot.state || slot.state;
+                });
+            });
+            Object.values(state.schedule).flat().forEach((slot) => { slot.dirty = false; });
+            state.dirty = false;
+            saveButton.disabled = true;
+            if (reload) {
+                const reloadUrl = new URL(window.location.href);
+                reloadUrl.searchParams.set("day", state.currentDay);
+                window.location.href = reloadUrl.toString();
+            }
+            return { ok: true, payload };
         } catch (error) {
-            showError(error.message);
             saveButton.disabled = false;
+            throw error;
         }
     };
 
@@ -566,13 +580,20 @@
 
     dateInput.addEventListener("change", () => selectDay(dateInput.value));
     addButton.addEventListener("click", addSchedule);
-    saveButton.addEventListener("click", saveSchedule);
+    saveButton.addEventListener("click", () => {
+        saveSchedule().catch((error) => showError(error.message));
+    });
     document.querySelectorAll(".moscarossa-copy-all").forEach((element) => {
         element.addEventListener("click", () => {
             if (!state.historyText.length) return showError("Non ci sono pubblicazioni da copiare.");
             copyText(state.historyText.join("\n")).catch(() => showError("Impossibile copiare le pubblicazioni."));
         });
     });
+    window.MoscarossaSchedule = {
+        hasPendingChanges: () => state.dirty,
+        savePending: () => saveSchedule({ reload: false })
+    };
+
     initializeCalendar();
     loadAdvertisement();
 })();

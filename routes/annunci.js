@@ -3160,6 +3160,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         if (donnaExist) {
             await annuncio.update({ donna: donnaExist.id });
             await donnaExist.update({ name: req.body.info.name, GCRecord: null });
+            donna = donnaExist;
         } else {
             await donna.update({ phone: req.body.info.phone, name: req.body.info.name, GCRecord: null });
         }
@@ -3190,17 +3191,24 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         var schedulazioni = await ctx.tblSchedulazioni.findAll({ where: schedulazioniWhere });
 
         const galleryLimit = getScheduleImageLimit(panel);
-        var newGallery = await donna.getTblGalleria({ limit: galleryLimit, where: { isHidden: 0, GCRecord: null } });
+        var newGallery = await donna.getTblGalleria({
+            limit: galleryLimit,
+            where: {
+                GCRecord: null,
+                [Op.or]: [{ isHidden: false }, { isHidden: null }]
+            }
+        });
 
         var recentPublishLimit = new Date();
         recentPublishLimit.setDate(recentPublishLimit.getDate() - 8);
         for (ad of schedulazioni) {
             if (ad.data > recentPublishLimit) {
                 const existingScheduleGallery = await ad.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
-                const sourceImages = panel === "incontriamoci" && existingScheduleGallery.length
+                const preserveSelectedImages = ["incontriamoci", "moscarossa"].includes(panel) && existingScheduleGallery.length;
+                const sourceImages = preserveSelectedImages
                     ? existingScheduleGallery.map((image) => ({
                         galleria: image.galleria,
-                        isAnteprima: image.isAnteprima === true
+                        isAnteprima: isSchedulePreviewImage(image)
                     }))
                     : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
                 const normalizedImages = normalizeScheduleImages(sourceImages, galleryLimit);

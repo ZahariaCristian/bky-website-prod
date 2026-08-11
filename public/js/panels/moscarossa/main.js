@@ -488,6 +488,9 @@
         updateAllButton.disabled = true;
         toggleLoader();
         try {
+            if (window.MoscarossaSchedule?.savePending) {
+                await window.MoscarossaSchedule.savePending();
+            }
             const response = await fetch("/annuncio/updateAllDataSchedule", {
                 method: "POST",
                 credentials: "same-origin",
