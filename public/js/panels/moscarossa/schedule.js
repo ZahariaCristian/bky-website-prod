@@ -116,6 +116,12 @@
     const renderImagePicker = (slot, container, locked = false) => {
         const selectedIds = new Set(slot.images.map((image) => Number(image.galleria)));
         const previewId = Number(slot.images.find((image) => image.isAnteprima)?.galleria || 0);
+        const refreshPicker = () => {
+            const currentDisplay = container.style.display;
+            container.innerHTML = "";
+            renderImagePicker(slot, container, locked);
+            container.style.display = currentDisplay;
+        };
 
         state.gallery.forEach((galleryImage) => {
             const galleryId = Number(galleryImage.id);
@@ -153,7 +159,7 @@
                     ensurePreview(slot.images);
                 }
                 markDirty(slot);
-                renderDay();
+                refreshPicker();
             });
 
             const previewButton = document.createElement("button");
@@ -175,7 +181,7 @@
                 }
                 slot.images.forEach((entry) => { entry.isAnteprima = entry === target; });
                 markDirty(slot);
-                renderDay();
+                refreshPicker();
             });
 
             wrapper.appendChild(checkbox);
