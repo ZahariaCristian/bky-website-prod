@@ -325,7 +325,10 @@
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const error = new Error(body.error || body.details || "Verifica Moscarossa non riuscita.");
+            const message = body.reasonCode === "MOSCAROSSA_REQUIRES_DRAFT"
+                ? "Avvia prima una pubblicazione Moscarossa. Dopo la creazione dell'annuncio remoto potrai verificare il telefono e completare la pubblicazione."
+                : (body.error || body.details || "Verifica Moscarossa non riuscita.");
+            const error = new Error(message);
             error.status = response.status;
             throw error;
         }

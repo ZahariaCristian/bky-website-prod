@@ -184,24 +184,49 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
     });
     if (!annuncio) return res.status(404).json({ error: "Annuncio non trovato." });
 
-    const scheduleWhere = {
+    const scheduleBaseWhere = {
         annuncio: annuncioId,
         platform: "moscarossa",
         GCRecord: null
     };
-    if (requestedScheduleId) scheduleWhere.id = requestedScheduleId;
-    else {
-        scheduleWhere.state = "ALERT";
-        scheduleWhere.remotePostID = { [Op.ne]: null };
-        scheduleWhere.errorReason = { [Op.like]: "%verifica SMS%" };
+    let schedule = null;
+    if (requestedScheduleId) {
+        schedule = await ctx.tblSchedulazioni.findOne({
+            where: { ...scheduleBaseWhere, id: requestedScheduleId }
+        });
+    } else {
+        schedule = await ctx.tblSchedulazioni.findOne({
+            where: {
+                ...scheduleBaseWhere,
+                state: "ALERT",
+                remotePostID: { [Op.ne]: null },
+                errorReason: { [Op.like]: "%verifica SMS%" }
+            },
+            order: [["id", "DESC"]]
+        });
+        if (!schedule) {
+            schedule = await ctx.tblSchedulazioni.findOne({
+                where: { ...scheduleBaseWhere, remotePostID: { [Op.ne]: null } },
+                order: [["id", "DESC"]]
+            });
+        }
     }
-    const schedule = await ctx.tblSchedulazioni.findOne({
-        where: scheduleWhere,
-        order: [["id", "DESC"]]
-    });
     if (requestedScheduleId && !schedule) {
         return res.status(404).json({ error: "Pubblicazione Moscarossa in attesa non trovata." });
     }
+
+    let importedRemoteId = "";
+    try {
+        const parsedNote = typeof annuncio.note === "string" ? JSON.parse(annuncio.note || "{}") : (annuncio.note || {});
+        importedRemoteId = `${parsedNote.moscarossa?.scrape?.remotePostID || ""}`.trim();
+    } catch {
+        importedRemoteId = "";
+    }
+    const remoteId = /^\d{4,9}$/.test(`${schedule?.remotePostID || ""}`)
+        ? `${schedule.remotePostID}`
+        : (/^\d{4,9}$/.test(importedRemoteId) ? importedRemoteId : "");
+    const waitingForSms = Boolean(schedule) && `${schedule.state || ""}`.toUpperCase() === "ALERT" &&
+        /verifica sms|waiting_sms|verifica.*telefon/i.test(`${schedule.errorReason || ""}`);
 
     const publisherUrl = getMoscarossaPhoneVerificationApiUrl();
     try {
@@ -210,9 +235,9 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
             phone,
             code: action === "verify" ? code : undefined,
             scheduleId: schedule?.id || undefined,
-            remoteId: schedule?.remotePostID || undefined,
+            remoteId: remoteId || undefined,
             groupId: groupMembership.group,
-            resume: action === "verify" && Boolean(schedule)
+            resume: action === "verify" && waitingForSms
         }, {
             headers: { accept: "application/json", "content-type": "application/json" },
             timeout: 180000
@@ -225,7 +250,10 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
         return res.status(response.status).json(response.data);
     } catch (error) {
         const payload = error.response?.data || {};
-        console.error("Moscarossa phone verification proxy error:", {
+        const log = error.response?.status === 409 && payload.reasonCode === "MOSCAROSSA_REQUIRES_DRAFT"
+            ? console.warn
+            : console.error;
+        log("Moscarossa phone verification proxy:", {
             publisherUrl,
             status: error.response?.status,
             details: payload.details || payload.error || error.message
