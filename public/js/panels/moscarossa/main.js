@@ -9,6 +9,7 @@
     const editValue = params.get("edit") || "new";
     const isNew = editValue === "new";
     const annuncioId = isNew ? null : Number.parseInt(editValue, 10);
+    const isSavedAdvertisement = Number.isFinite(annuncioId) && annuncioId > 0;
 
     const state = {
         donnaId: null,
