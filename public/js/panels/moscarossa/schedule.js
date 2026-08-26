@@ -91,6 +91,8 @@
             relativeID: slot.relativeID || "",
             remotePostID: slot.remotePostID || "",
             state: slot.state || "",
+            errorReason: slot.errorReason || "",
+            urlBK: slot.urlBK || "",
             time: extractTime(slot.data),
             images: selectedImages,
             imagesExpanded: selectedImages.length > 0,
@@ -242,6 +244,32 @@
             "Mostra o nascondi immagini"
         );
         main.appendChild(photoButton);
+        const waitingForSms = `${slot.state || ""}`.toUpperCase() === "ALERT" &&
+            /verifica sms|waiting_sms|verifica.*telefon/i.test(`${slot.errorReason || ""}`);
+        if (waitingForSms) {
+            const verifyButton = createButton(
+                "btn btn-warning moscarossa-verify-sms",
+                "fa-mobile",
+                "Verifica telefono e completa la pubblicazione"
+            );
+            verifyButton.appendChild(document.createTextNode(" Verifica telefono"));
+            verifyButton.addEventListener("click", async () => {
+                if (!window.MoscarossaPhoneVerification?.start) {
+                    return showError("Il servizio di verifica Moscarossa non è disponibile.");
+                }
+                verifyButton.disabled = true;
+                try {
+                    await window.MoscarossaPhoneVerification.start({
+                        scheduleId: slot.id,
+                        remoteId: slot.remotePostID,
+                        resume: true
+                    });
+                } catch {
+                    verifyButton.disabled = false;
+                }
+            });
+            main.appendChild(verifyButton);
+        }
         panel.appendChild(main);
 
         const images = document.createElement("div");
@@ -459,6 +487,7 @@
             const statusLabels = {
                 OK: "PUBBLICATO",
                 KO: "ERRORE",
+                ALERT: "VERIFICA SMS",
                 EDIT: "IN ATTESA",
                 DELETE: "DELETE",
                 DELETED: "DELETED"
@@ -467,6 +496,31 @@
                 ? "SOSPESO"
                 : (statusLabels[`${record.state || ""}`.toUpperCase()] || "IN ATTESA");
             statusActions.appendChild(status);
+            const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
+                /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
+            if (waitingForSms) {
+                const verifyButton = createButton(
+                    "btn btn-warning btn-xs",
+                    "fa-mobile",
+                    "Verifica telefono e completa la pubblicazione"
+                );
+                verifyButton.addEventListener("click", async () => {
+                    if (!window.MoscarossaPhoneVerification?.start) {
+                        return showError("Il servizio di verifica Moscarossa non è disponibile.");
+                    }
+                    verifyButton.disabled = true;
+                    try {
+                        await window.MoscarossaPhoneVerification.start({
+                            scheduleId: record.id,
+                            remoteId: record.remotePostID,
+                            resume: true
+                        });
+                    } catch {
+                        verifyButton.disabled = false;
+                    }
+                });
+                statusActions.appendChild(verifyButton);
+            }
             if (record.urlBK && /^https?:\/\//i.test(record.urlBK)) {
                 const link = document.createElement("a");
                 link.className = "btn btn-success btn-xs";

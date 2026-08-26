@@ -289,7 +289,7 @@
         infoForm.querySelectorAll("input:not([type='hidden']), textarea, select").forEach((control) => {
             control.disabled = !editing;
         });
-        verifyPhoneButton.disabled = !editing || verifyPhoneButton.dataset.verified === "true";
+        verifyPhoneButton.disabled = !isSavedAdvertisement;
         saveInfoButton.disabled = !editing;
         editInfoButton.style.display = editing || isNew ? "none" : "block";
         updateAllSection.style.display = isNew ? "none" : "block";
@@ -311,70 +311,102 @@
         verifyPhoneButton.innerHTML = verified
             ? "<i class='fa fa-check'></i>"
             : "<span><i class='fa fa-arrow-right'></i></span>";
-        verifyPhoneButton.disabled = verified || loading || saveInfoButton.disabled;
+        verifyPhoneButton.disabled = loading || !isSavedAdvertisement;
         verifyPhoneLabel.textContent = verified ? "Verificato" : (loading ? "In corso.." : "Verifica");
     };
 
-    const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-    const postPhoneOperation = (operation) => fetch("/contactVerify", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ operation })
-    });
-
-    const waitForPhoneOperation = async (operation) => {
-        for (let attempt = 0; attempt < 40; attempt += 1) {
-            const response = await postPhoneOperation(operation);
-            if (response.status !== 202) return response;
-            await delay(3000);
+    const postPhoneOperation = async (payload) => {
+        const response = await fetch("/annuncio/moscarossaPhoneVerification", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const error = new Error(body.error || body.details || "Verifica Moscarossa non riuscita.");
+            error.status = response.status;
+            throw error;
         }
-        throw new Error("La verifica telefonica non ha risposto in tempo.");
+        return body;
     };
 
-    const verifyPhone = async () => {
-        const phone = clean(field("phone")?.value);
-        const city = clean(field("city")?.value);
-        if (!/^\d+$/.test(phone)) return showError("Il numero di telefono non è valido.");
-        if (!city) return showError("Inserisci il Comune prima di verificare il telefono.");
-
-        const operation = {
-            id: btoa(`${Date.now()}-${Math.random()}`).replace(/[^a-z0-9]/gi, "").slice(-16),
-            action: "check",
-            status: false,
-            approved: false,
-            phone,
-            city
-        };
+    const runPhoneVerification = async ({ scheduleId = 0, remoteId = "", resume = false } = {}) => {
+        const phone = clean(field("phone")?.value || state.phone);
+        if (!isSavedAdvertisement) {
+            throw new Error("Salva prima l'annuncio Moscarossa. La verifica SMS richiede un annuncio remoto associato.");
+        }
+        if (!/^\d{6,15}$/.test(phone.replace(/\D/g, ""))) {
+            throw new Error("Il numero di telefono non è valido.");
+        }
 
         setPhoneVerificationState("loading");
         try {
-            let response = await postPhoneOperation(operation);
-            if (response.status !== 204) response = await waitForPhoneOperation(operation);
-            if (response.status === 204) return setPhoneVerificationState("verified");
-
-            let firstAttempt = true;
-            while (response.status === 402 || response.status === 403) {
-                const code = window.prompt(firstAttempt
-                    ? "Inserisci il codice di verifica:"
-                    : "Codice errato. Inserisci di nuovo il codice di verifica:");
+            const sent = await postPhoneOperation({
+                action: "send",
+                annuncioId,
+                phone,
+                scheduleId: scheduleId || undefined,
+                remoteId: remoteId || undefined
+            });
+            let verified = null;
+            for (let attempt = 0; attempt < 3 && !verified; attempt += 1) {
+                const code = window.prompt(attempt === 0
+                    ? "Codice SMS inviato da Moscarossa. Inserisci il codice ricevuto:"
+                    : "Codice errato o scaduto. Inserisci nuovamente il codice SMS:");
                 if (code === null) {
-                    await postPhoneOperation({ ...operation, code: "cancel" });
                     setPhoneVerificationState("idle");
-                    return;
+                    return { ok: false, cancelled: true };
                 }
-
-                const operationWithCode = { ...operation, code: clean(code) };
-                await postPhoneOperation(operationWithCode);
-                response = await waitForPhoneOperation(operationWithCode);
-                if (response.status === 204) return setPhoneVerificationState("verified");
-                firstAttempt = false;
+                const normalizedCode = clean(code).replace(/\D/g, "");
+                if (!/^\d{4,8}$/.test(normalizedCode)) {
+                    if (attempt < 2) continue;
+                    throw new Error("Inserisci un codice SMS valido da 4 a 8 cifre.");
+                }
+                try {
+                    verified = await postPhoneOperation({
+                        action: "verify",
+                        annuncioId,
+                        phone,
+                        code: normalizedCode,
+                        scheduleId: scheduleId || sent.scheduleId || undefined,
+                        remoteId: sent.remoteId || remoteId || undefined,
+                        resume
+                    });
+                } catch (error) {
+                    if (error.status !== 422 || attempt === 2) throw error;
+                }
             }
-
-            throw new Error("Non è stato possibile verificare il numero di telefono.");
+            setPhoneVerificationState("verified");
+            if (verified.status === "published") {
+                if (typeof ShowAlert === "function") {
+                    ShowAlert("custom", "Telefono verificato e annuncio Moscarossa pubblicato.", 6000);
+                }
+                window.setTimeout(() => window.location.reload(), 500);
+            }
+            return verified;
         } catch (error) {
             setPhoneVerificationState("idle");
+            throw error;
+        }
+    };
+
+    const verifyPhone = async () => {
+        try {
+            await runPhoneVerification();
+        } catch (error) {
             showError(error.message);
+        }
+    };
+
+    window.MoscarossaPhoneVerification = {
+        start: async (options = {}) => {
+            try {
+                return await runPhoneVerification(options);
+            } catch (error) {
+                showError(error.message);
+                throw error;
+            }
         }
     };
 

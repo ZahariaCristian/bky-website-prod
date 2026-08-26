@@ -24,6 +24,8 @@ const normalizeLocationName = (value) => `${value || ""}`.normalize("NFD")
 
 const getMoscarossaLocationsApiUrl = () => process.env.MOSCAROSSA_LOCATIONS_API_URL
     || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
+const getMoscarossaPhoneVerificationApiUrl = () => process.env.MOSCAROSSA_PHONE_VERIFICATION_API_URL
+    || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/phone-verification`;
 const MOSCAROSSA_LOCATION_CACHE_TTL = 6 * 60 * 60 * 1000;
 const moscarossaLocationCache = new Map();
 
@@ -156,6 +158,82 @@ router.get("/moscarossaLocations", authenticateKey, async (req, res) => {
         return res.status(error.response?.status || 503).json({
             error: "Il servizio Comuni Moscarossa non è disponibile.",
             details: error.response?.data?.details || error.response?.data || error.message
+        });
+    }
+});
+
+router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) => {
+    const action = `${req.body.action || ""}`.trim().toLowerCase();
+    const phone = `${req.body.phone || ""}`.replace(/\D/g, "");
+    const code = `${req.body.code || ""}`.replace(/\D/g, "");
+    const annuncioId = Number.parseInt(req.body.annuncioId, 10) || 0;
+    const requestedScheduleId = Number.parseInt(req.body.scheduleId, 10) || 0;
+
+    if (!["send", "verify"].includes(action) || !/^\d{6,15}$/.test(phone) || !annuncioId) {
+        return res.status(400).json({ error: "Richiesta di verifica Moscarossa non valida." });
+    }
+    if (action === "verify" && !/^\d{4,8}$/.test(code)) {
+        return res.status(400).json({ error: "Il codice SMS deve contenere da 4 a 8 cifre." });
+    }
+
+    const user = await ctx.tblUser.findOne({ where: { OID: req.session.userid } });
+    const groupMembership = user ? await user.getGroup() : null;
+    if (!groupMembership) return res.status(403).json({ error: "Gruppo utente non disponibile." });
+    const annuncio = await ctx.tblAnnunci.findOne({
+        where: { id: annuncioId, groupOwner: groupMembership.group, GCRecord: null }
+    });
+    if (!annuncio) return res.status(404).json({ error: "Annuncio non trovato." });
+
+    const scheduleWhere = {
+        annuncio: annuncioId,
+        platform: "moscarossa",
+        GCRecord: null
+    };
+    if (requestedScheduleId) scheduleWhere.id = requestedScheduleId;
+    else {
+        scheduleWhere.state = "ALERT";
+        scheduleWhere.remotePostID = { [Op.ne]: null };
+        scheduleWhere.errorReason = { [Op.like]: "%verifica SMS%" };
+    }
+    const schedule = await ctx.tblSchedulazioni.findOne({
+        where: scheduleWhere,
+        order: [["id", "DESC"]]
+    });
+    if (requestedScheduleId && !schedule) {
+        return res.status(404).json({ error: "Pubblicazione Moscarossa in attesa non trovata." });
+    }
+
+    const publisherUrl = getMoscarossaPhoneVerificationApiUrl();
+    try {
+        const response = await axios.post(publisherUrl, {
+            action,
+            phone,
+            code: action === "verify" ? code : undefined,
+            scheduleId: schedule?.id || undefined,
+            remoteId: schedule?.remotePostID || undefined,
+            groupId: groupMembership.group,
+            resume: action === "verify" && Boolean(schedule)
+        }, {
+            headers: { accept: "application/json", "content-type": "application/json" },
+            timeout: 180000
+        });
+
+        if (action === "verify" && response.data?.ok) {
+            const donna = await annuncio.getTblDonne();
+            if (donna) await donna.update({ isPhoneChecked: true });
+        }
+        return res.status(response.status).json(response.data);
+    } catch (error) {
+        const payload = error.response?.data || {};
+        console.error("Moscarossa phone verification proxy error:", {
+            publisherUrl,
+            status: error.response?.status,
+            details: payload.details || payload.error || error.message
+        });
+        return res.status(error.response?.status || 503).json({
+            error: payload.error || "Il servizio di verifica telefonica Moscarossa non è disponibile.",
+            reasonCode: payload.reasonCode || null,
+            details: payload.details || error.message
         });
     }
 });
@@ -2663,7 +2741,7 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         donnaInfo.years = parsedAge
     }
     if (!donna) {
-        donnaInfo.isPhoneChecked = true;
+        donnaInfo.isPhoneChecked = panel === "moscarossa" ? false : true;
         donnaInfo.groupOwner = groupM.group;
         donna = await ctx.tblDonne.create({
             ...donnaInfo
@@ -2672,6 +2750,9 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         oldPhone = donna.phone;
     } else {
         oldPhone = donna.phone;
+        if (panel === "moscarossa" && `${oldPhone || ""}` !== `${info.phone || ""}`) {
+            donnaInfo.isPhoneChecked = false;
+        }
         if (panel !== 'bakeca') {
             if (parsedAge !== null) donnaInfo.years = parsedAge
             donnaInfo.GCRecord = null
