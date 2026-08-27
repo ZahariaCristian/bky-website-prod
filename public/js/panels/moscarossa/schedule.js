@@ -8,6 +8,12 @@
         Gold: { imageLimit: 20, paid: true }
     });
     const PROMOTION_DURATIONS = [1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30];
+    const PROMOTION_PRICES = Object.freeze({
+        Premium: Object.freeze({ 1: 18, 2: 28, 3: 36, 4: 46, 5: 54, 6: 63, 7: 72, 10: 90, 15: 108, 20: 144, 25: 164, 30: 180 }),
+        Top: Object.freeze({ 1: 20, 2: 33, 3: 45, 4: 58, 5: 70, 6: 83, 7: 95, 10: 125, 15: 165, 20: 220, 25: 260, 30: 300 }),
+        Red: Object.freeze({ 1: 25, 2: 43, 3: 60, 4: 78, 5: 95, 6: 113, 7: 130, 10: 175, 15: 240, 20: 320, 25: 385, 30: 450 }),
+        Gold: Object.freeze({ 1: 37, 2: 67, 3: 95, 4: 125, 5: 154, 6: 183, 7: 212, 10: 292, 15: 415, 20: 554, 25: 677, 30: 800 })
+    });
     const params = new URLSearchParams(window.location.search);
     const rawId = params.get("edit") || "";
     const annuncioId = Number.parseInt(rawId, 10);
@@ -265,6 +271,12 @@
             const duration = document.createElement("select");
             duration.className = "form-control moscarossa-promotion-duration";
             duration.title = `Durata ${slot.plan}`;
+            const price = document.createElement("span");
+            price.className = "moscarossa-promotion-price";
+            const renderPrice = () => {
+                const credits = PROMOTION_PRICES[slot.plan]?.[slot.days];
+                price.textContent = Number.isFinite(credits) ? `${credits} €/crediti` : "";
+            };
             PROMOTION_DURATIONS.forEach((days) => {
                 const option = document.createElement("option");
                 option.value = `${days}`;
@@ -275,9 +287,12 @@
             duration.disabled = locked;
             duration.addEventListener("change", () => {
                 slot.days = Number.parseInt(duration.value, 10) || 1;
+                renderPrice();
                 markDirty(slot);
             });
             main.appendChild(duration);
+            renderPrice();
+            main.appendChild(price);
         }
         main.appendChild(remove);
         const photoButton = createButton(

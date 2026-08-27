@@ -171,6 +171,14 @@ label[for="age"] {
     min-width: 140px;
     margin-left: 8px;
 }
+.newpost-wrapper .moscarossa-promotion-price {
+    flex: 0 0 auto;
+    min-width: 90px;
+    margin-left: 10px;
+    line-height: 34px;
+    white-space: nowrap;
+    font-weight: 700;
+}
 .newpost-wrapper .btn-danger {
     width: 40px;
     height: 40px;
