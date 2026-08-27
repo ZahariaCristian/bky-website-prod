@@ -22,6 +22,7 @@
     const scheduleList = document.querySelector("#moscarossaScheduleList");
     const addButton = document.querySelector("#moscarossaAddSchedule");
     const saveButton = document.querySelector("#moscarossaSaveSchedule");
+    const wizardBody = document.querySelector("#moscarossaWizardBody");
     const historyList = document.querySelector("#moscarossaHistoryList");
     const suspendedHistoryList = document.querySelector("#moscarossaHistorySuspendedList");
     const suspendedHistoryTitle = document.querySelector("#moscarossaHistorySuspendedTitle");
@@ -66,6 +67,10 @@
     const extractTime = (value) => `${value || ""}`.match(/T(\d{2}:\d{2})/)?.[1] || "08:00";
     const normalizePlan = (value) => Object.keys(PROMOTION_PLANS)
         .find((plan) => plan.toLowerCase() === clean(value).toLowerCase()) || "Free";
+    const applyPromotionTheme = (link) => {
+        if (!wizardBody || !link) return;
+        wizardBody.style.backgroundColor = window.getComputedStyle(link).backgroundColor;
+    };
     const parsePeriod = (value, fallbackPlan) => {
         let parsed = {};
         try { parsed = typeof value === "string" ? JSON.parse(value || "{}") : (value || {}); } catch { parsed = {}; }
@@ -691,6 +696,7 @@
             promotionTabs.forEach((tab) => {
                 tab.closest("li")?.classList.toggle("active", normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan);
             });
+            applyPromotionTheme(promotionTabs.find((tab) => normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan));
             const requestedDay = params.get("day") || "";
             selectDay(/^\d{4}-\d{2}-\d{2}$/.test(requestedDay) ? requestedDay : todayKey());
             await loadHistory();
@@ -706,6 +712,7 @@
             event.preventDefault();
             state.currentPlan = normalizePlan(link.dataset.moscarossaPlan);
             promotionTabs.forEach((tab) => tab.closest("li")?.classList.toggle("active", tab === link));
+            applyPromotionTheme(link);
             renderDay();
         });
     });
@@ -724,5 +731,6 @@
     };
 
     initializeCalendar();
+    applyPromotionTheme(promotionTabs.find((tab) => tab.closest("li")?.classList.contains("active")));
     loadAdvertisement();
 })();
