@@ -20,7 +20,6 @@
     const suspendedHistoryList = document.querySelector("#moscarossaHistorySuspendedList");
     const suspendedHistoryTitle = document.querySelector("#moscarossaHistorySuspendedTitle");
     const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
-    const promotionHelp = document.querySelector("#moscarossaPromotionHelp");
     const promotionTabs = Array.from(document.querySelectorAll("[data-moscarossa-plan]"));
     const state = {
         advertisement: null,
@@ -335,10 +334,6 @@
         const visibleSlots = slots.filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
         visibleSlots.forEach((slot) => scheduleList.appendChild(renderSlot(slot, slots.indexOf(slot))));
         addButton.disabled = !isSavedAdvertisement || state.currentDay < todayKey();
-        const plan = PROMOTION_PLANS[state.currentPlan];
-        promotionHelp.textContent = plan.paid
-            ? `${state.currentPlan}: massimo ${plan.imageLimit} immagini. Seleziona la durata per calcolare e acquistare la promozione con i crediti Moscarossa.`
-            : `Free: massimo ${plan.imageLimit} immagini. Moscarossa può richiedere la verifica SMS del telefono.`;
     }
 
     const selectDay = (day) => {

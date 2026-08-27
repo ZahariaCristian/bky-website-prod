@@ -165,6 +165,12 @@ label[for="age"] {
     width: 95px;
     min-width: 95px;
 }
+.newpost-wrapper .moscarossa-promotion-duration {
+    flex: 0 0 140px;
+    width: 140px;
+    min-width: 140px;
+    margin-left: 8px;
+}
 .newpost-wrapper .btn-danger {
     width: 40px;
     height: 40px;
