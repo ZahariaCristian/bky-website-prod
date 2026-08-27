@@ -380,7 +380,9 @@
                 relativeID: slot.relativeID || "",
                 state: slot.id && slot.dirty ? "EDIT" : slot.state,
                 GCRecord: slot.deleted ? true : null,
-                typeAnnuncio: slot.plan,
+                // tblSchedulazioni.typeAnnuncio is a legacy ENUM. Moscarossa's
+                // real plan is stored in period to avoid a database migration.
+                typeAnnuncio: "Free",
                 typePeriodic: "Top",
                 period: slot.plan === "Free" ? "" : JSON.stringify({ moscarossa: { plan: slot.plan, days: slot.days } }),
                 city: state.advertisement?.city || "",
@@ -454,7 +456,8 @@
         const value = `${record.data || ""}`;
         const day = value.split("T")[0] || historyDate(value);
         const time = value.match(/T(\d{2}:\d{2})/)?.[1] || "";
-        return `[TOP ${record.typeAnnuncio || "Free"}] del ${day}${time ? ` alle ${time}` : ""}`;
+        const plan = parsePeriod(record.period, record.typeAnnuncio).plan;
+        return `[TOP ${plan}] del ${day}${time ? ` alle ${time}` : ""}`;
     };
 
     const copyText = async (value) => {
