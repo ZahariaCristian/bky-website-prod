@@ -442,7 +442,7 @@
             saveButton.disabled = true;
             if (reload) {
                 const reloadUrl = new URL(window.location.href);
-                reloadUrl.searchParams.set("day", state.currentDay);
+                reloadUrl.searchParams.delete("day");
                 reloadUrl.searchParams.set("promo", state.currentPlan);
                 window.location.href = reloadUrl.toString();
             }
@@ -697,8 +697,12 @@
                 tab.closest("li")?.classList.toggle("active", normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan);
             });
             applyPromotionTheme(promotionTabs.find((tab) => normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan));
-            const requestedDay = params.get("day") || "";
-            selectDay(/^\d{4}-\d{2}-\d{2}$/.test(requestedDay) ? requestedDay : todayKey());
+            selectDay(todayKey());
+            if (params.has("day")) {
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete("day");
+                window.history.replaceState({}, "", cleanUrl.toString());
+            }
             await loadHistory();
         } catch (error) {
             showError(error.message);
