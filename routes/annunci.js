@@ -577,7 +577,21 @@ const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     moscarossa: 20
 });
 
-const getScheduleImageLimit = (panel) => SCHEDULE_IMAGE_LIMITS[normalizePanelPlatform(panel)] || 5;
+const MOSCAROSSA_PROMOTION_IMAGE_LIMITS = Object.freeze({
+    free: 5,
+    premium: 10,
+    top: 10,
+    red: 15,
+    gold: 20
+});
+
+const getScheduleImageLimit = (panel, typeAnnuncio = "") => {
+    const platform = normalizePanelPlatform(panel);
+    if (platform === "moscarossa") {
+        return MOSCAROSSA_PROMOTION_IMAGE_LIMITS[`${typeAnnuncio || "Free"}`.trim().toLowerCase()] || 5;
+    }
+    return SCHEDULE_IMAGE_LIMITS[platform] || 5;
+};
 
 const isSchedulePreviewImage = (image) => image?.isAnteprima === true ||
     image?.isAnteprima === 1 || `${image?.isAnteprima || ""}`.toLowerCase() === "true";
@@ -2850,6 +2864,42 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
         }
     }
     var allSchedulazioni = req.body.schedule;
+    const schedulePlatform = normalizePanelPlatform(req.body.panel);
+    if (schedulePlatform === "moscarossa") {
+        const allowedPlans = new Map([
+            ["free", "Free"],
+            ["premium", "Premium"],
+            ["top", "Top"],
+            ["red", "Red"],
+            ["gold", "Gold"]
+        ]);
+        const allowedDurations = new Set([1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30]);
+        for (const slots of Object.values(allSchedulazioni)) {
+            for (const slot of (Array.isArray(slots) ? slots : [])) {
+                const normalizedPlan = allowedPlans.get(`${slot.typeAnnuncio || "Free"}`.trim().toLowerCase());
+                if (!normalizedPlan) {
+                    return res.status(422).json({ error: `Promozione Moscarossa non valida: ${slot.typeAnnuncio || ""}.` });
+                }
+                slot.typeAnnuncio = normalizedPlan;
+                if (normalizedPlan !== "Free") {
+                    let details = {};
+                    try { details = JSON.parse(slot.period || "{}").moscarossa || {}; } catch { details = {}; }
+                    const days = Number.parseInt(details.days, 10);
+                    if (details.plan !== normalizedPlan || !allowedDurations.has(days)) {
+                        return res.status(422).json({ error: `Durata Moscarossa non valida per ${normalizedPlan}.` });
+                    }
+                } else {
+                    slot.period = "";
+                }
+                const imageLimit = getScheduleImageLimit(schedulePlatform, normalizedPlan);
+                if (Array.isArray(slot.images) && slot.images.length > imageLimit) {
+                    return res.status(422).json({
+                        error: `${normalizedPlan} consente massimo ${imageLimit} immagini.`
+                    });
+                }
+            }
+        }
+    }
     var onlySchedulazioni = [];
     for (let date of Object.keys(allSchedulazioni)) {
         for (s of allSchedulazioni[date]) {
@@ -2881,7 +2931,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     });
                     s.id = schedulato.id;
                     if (s.images) {
-                        const imageLimit = getScheduleImageLimit(platform);
+                        const imageLimit = getScheduleImageLimit(platform, s.typeAnnuncio);
                         let scheduleImages = s.images;
                         if (scheduleImages.length == 0) {
                             var donna = await girl.getTblDonne()
@@ -2918,7 +2968,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     }
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
                     for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
-                    const imageLimit = getScheduleImageLimit(platform);
+                    const imageLimit = getScheduleImageLimit(platform, s.typeAnnuncio);
                     let scheduleImages = Array.isArray(s.images) ? s.images : [];
                     if (scheduleImages.length == 0) {
                         var donna = await girl.getTblDonne();
@@ -2940,6 +2990,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     await task.update({
                         data: s.data,
                         period,
+                        typeAnnuncio: s.typeAnnuncio,
                         GCRecord: deleteThis,
                         editedBy: userid,
                         hasPremium: s.hasPremium,
@@ -3299,7 +3350,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         }
         var schedulazioni = await ctx.tblSchedulazioni.findAll({ where: schedulazioniWhere });
 
-        const galleryLimit = getScheduleImageLimit(panel);
+        const galleryLimit = getScheduleImageLimit(panel, panel === "moscarossa" ? "Gold" : "");
         var newGallery = await donna.getTblGalleria({
             limit: galleryLimit,
             where: {
@@ -3312,6 +3363,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         recentPublishLimit.setDate(recentPublishLimit.getDate() - 8);
         for (ad of schedulazioni) {
             if (ad.data > recentPublishLimit) {
+                const scheduleGalleryLimit = getScheduleImageLimit(panel, ad.typeAnnuncio);
                 const existingScheduleGallery = await ad.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
                 const preserveSelectedImages = ["incontriamoci", "moscarossa"].includes(panel) && existingScheduleGallery.length;
                 const sourceImages = preserveSelectedImages
@@ -3320,7 +3372,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                         isAnteprima: isSchedulePreviewImage(image)
                     }))
                     : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
-                const normalizedImages = normalizeScheduleImages(sourceImages, galleryLimit);
+                const normalizedImages = normalizeScheduleImages(sourceImages, scheduleGalleryLimit);
 
                 if (shouldRepublishBakeca) {
                     var republishSchedule = await ctx.tblSchedulazioni.create({

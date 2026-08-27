@@ -491,10 +491,14 @@
                                             </div>
                                         </div>
                                         <div class="promoType widget-head" style="margin-bottom:0;">
-                                            <ul>
+                                            <ul id="moscarossaPromotionTabs">
                                                 <li class="active">
-                                                    <a href="#moscarossaTabFree" data-toggle="tab">Free</a>
+                                                    <a href="#moscarossaTabFree" data-moscarossa-plan="Free">Free</a>
                                                 </li>
+                                                <li><a href="#moscarossaTabFree" data-moscarossa-plan="Premium">Premium</a></li>
+                                                <li><a href="#moscarossaTabFree" data-moscarossa-plan="Top">Top</a></li>
+                                                <li><a href="#moscarossaTabFree" data-moscarossa-plan="Red">Red</a></li>
+                                                <li><a href="#moscarossaTabFree" data-moscarossa-plan="Gold">Gold</a></li>
                                             </ul>
                                         </div>
                                         <div class="widget-body" id="moscarossaWizardBody">
@@ -502,6 +506,7 @@
                                                 <div class="promoPanel promoFree tab-pane active animated fadeInUp"
                                                     id="moscarossaTabFree">
                                                     <div class="posts">
+                                                        <p id="moscarossaPromotionHelp" class="text-muted"></p>
                                                         <div id="moscarossaScheduleList" class="post-list"></div>
                                                         <button id="moscarossaAddSchedule" type="button"
                                                             class="btn btn-primary free-add-schedule">
@@ -639,7 +644,7 @@
     </div>
     <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
     <script src="/js/panels/moscarossa/main.js?v=20260826-phone-verification-remote-id"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260826-phone-verification"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260826-all-promotions"></script>
 </body>
 
 </html>

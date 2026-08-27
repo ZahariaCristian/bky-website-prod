@@ -1,6 +1,13 @@
 (() => {
     const PANEL = "moscarossa";
-    const PUBLICATION_IMAGE_LIMIT = 20;
+    const PROMOTION_PLANS = Object.freeze({
+        Free: { imageLimit: 5, paid: false },
+        Premium: { imageLimit: 10, paid: true },
+        Top: { imageLimit: 10, paid: true },
+        Red: { imageLimit: 15, paid: true },
+        Gold: { imageLimit: 20, paid: true }
+    });
+    const PROMOTION_DURATIONS = [1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30];
     const params = new URLSearchParams(window.location.search);
     const rawId = params.get("edit") || "";
     const annuncioId = Number.parseInt(rawId, 10);
@@ -13,11 +20,14 @@
     const suspendedHistoryList = document.querySelector("#moscarossaHistorySuspendedList");
     const suspendedHistoryTitle = document.querySelector("#moscarossaHistorySuspendedTitle");
     const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
+    const promotionHelp = document.querySelector("#moscarossaPromotionHelp");
+    const promotionTabs = Array.from(document.querySelectorAll("[data-moscarossa-plan]"));
     const state = {
         advertisement: null,
         gallery: [],
         schedule: {},
         currentDay: "",
+        currentPlan: "Free",
         dirty: false,
         relativeId: 0,
         historyText: []
@@ -49,6 +59,16 @@
         return `${src}&id=${encodeURIComponent(image.id)}`;
     };
     const extractTime = (value) => `${value || ""}`.match(/T(\d{2}:\d{2})/)?.[1] || "08:00";
+    const normalizePlan = (value) => Object.keys(PROMOTION_PLANS)
+        .find((plan) => plan.toLowerCase() === clean(value).toLowerCase()) || "Free";
+    const parsePeriod = (value, fallbackPlan) => {
+        let parsed = {};
+        try { parsed = typeof value === "string" ? JSON.parse(value || "{}") : (value || {}); } catch { parsed = {}; }
+        const details = parsed.moscarossa || parsed;
+        const plan = normalizePlan(details.plan || fallbackPlan);
+        const requestedDays = Number.parseInt(details.days || details.duration || 1, 10);
+        return { plan, days: PROMOTION_DURATIONS.includes(requestedDays) ? requestedDays : 1 };
+    };
     const nextDefaultTime = () => {
         const parts = Object.fromEntries(
             new Intl.DateTimeFormat("en-GB", {
@@ -60,14 +80,14 @@
         );
         return `${parts.hour}:${parts.minute}`;
     };
-    const normalizeImages = (images) => (Array.isArray(images) ? images : [])
+    const normalizeImages = (images, limit = 20) => (Array.isArray(images) ? images : [])
         .map((image) => ({
             galleria: Number(image?.galleria || image?.id || 0),
             isAnteprima: isTrue(image?.isAnteprima)
         }))
         .filter((image) => image.galleria)
-        .slice(0, PUBLICATION_IMAGE_LIMIT);
-    const defaultImages = () => state.gallery.slice(0, PUBLICATION_IMAGE_LIMIT).map((image, index) => ({
+        .slice(0, limit);
+    const defaultImages = (limit = 20) => state.gallery.slice(0, limit).map((image, index) => ({
         galleria: Number(image.id),
         isAnteprima: index === 0
     }));
@@ -84,8 +104,10 @@
     };
 
     const normalizeSlot = (slot = {}) => {
-        const images = normalizeImages(slot.images);
-        const selectedImages = ensurePreview(images.length ? images : defaultImages());
+        const period = parsePeriod(slot.period, slot.typeAnnuncio);
+        const imageLimit = PROMOTION_PLANS[period.plan].imageLimit;
+        const images = normalizeImages(slot.images, imageLimit);
+        const selectedImages = ensurePreview(images.length ? images : defaultImages(imageLimit));
         return {
             id: slot.id || "",
             relativeID: slot.relativeID || "",
@@ -94,6 +116,8 @@
             errorReason: slot.errorReason || "",
             urlBK: slot.urlBK || "",
             time: extractTime(slot.data),
+            plan: period.plan,
+            days: period.days,
             images: selectedImages,
             imagesExpanded: selectedImages.length > 0,
             deleted: Boolean(slot.GCRecord),
@@ -118,6 +142,7 @@
     };
 
     const renderImagePicker = (slot, container, locked = false) => {
+        const imageLimit = PROMOTION_PLANS[slot.plan].imageLimit;
         const selectedIds = new Set(slot.images.map((image) => Number(image.galleria)));
         const previewId = Number(slot.images.find((image) => image.isAnteprima)?.galleria || 0);
         const refreshPicker = () => {
@@ -149,15 +174,15 @@
 
             checkbox.addEventListener("change", () => {
                 if (checkbox.checked) {
-                    if (slot.images.length >= PUBLICATION_IMAGE_LIMIT) {
+                    if (slot.images.length >= imageLimit) {
                         checkbox.checked = false;
-                        return showError(`Puoi selezionare massimo ${PUBLICATION_IMAGE_LIMIT} immagini per la pubblicazione Free.`);
+                        return showError(`Puoi selezionare massimo ${imageLimit} immagini per la pubblicazione ${slot.plan}.`);
                     }
                     slot.images.push({ galleria: galleryId, isAnteprima: slot.images.length === 0 });
                 } else {
                     if (slot.images.length === 1) {
                         checkbox.checked = true;
-                        return showError("La pubblicazione Free deve contenere almeno un'immagine.");
+                        return showError(`La pubblicazione ${slot.plan} deve contenere almeno un'immagine.`);
                     }
                     slot.images = slot.images.filter((entry) => Number(entry.galleria) !== galleryId);
                     ensurePreview(slot.images);
@@ -177,8 +202,8 @@
             previewButton.addEventListener("click", () => {
                 let target = slot.images.find((entry) => Number(entry.galleria) === galleryId);
                 if (!target) {
-                    if (slot.images.length >= PUBLICATION_IMAGE_LIMIT) {
-                        return showError(`Puoi selezionare massimo ${PUBLICATION_IMAGE_LIMIT} immagini per la pubblicazione Free.`);
+                    if (slot.images.length >= imageLimit) {
+                        return showError(`Puoi selezionare massimo ${imageLimit} immagini per la pubblicazione ${slot.plan}.`);
                     }
                     target = { galleria: galleryId, isAnteprima: false };
                     slot.images.push(target);
@@ -199,7 +224,7 @@
         const locked = Boolean(slot.remotePostID) || slot.state === "OK";
         const panel = document.createElement("div");
         panel.className = "newpost-panel";
-        panel.dataset.promoType = "Free";
+        panel.dataset.promoType = slot.plan;
         panel.dataset.relativeId = slot.relativeID || "";
 
         const main = document.createElement("div");
@@ -237,6 +262,24 @@
 
         main.appendChild(date);
         main.appendChild(time);
+        if (PROMOTION_PLANS[slot.plan].paid) {
+            const duration = document.createElement("select");
+            duration.className = "form-control moscarossa-promotion-duration";
+            duration.title = `Durata ${slot.plan}`;
+            PROMOTION_DURATIONS.forEach((days) => {
+                const option = document.createElement("option");
+                option.value = `${days}`;
+                option.textContent = `${days} ${days === 1 ? "giorno" : "giorni"}`;
+                duration.appendChild(option);
+            });
+            duration.value = `${slot.days}`;
+            duration.disabled = locked;
+            duration.addEventListener("change", () => {
+                slot.days = Number.parseInt(duration.value, 10) || 1;
+                markDirty(slot);
+            });
+            main.appendChild(duration);
+        }
         main.appendChild(remove);
         const photoButton = createButton(
             `btn btn-${slot.imagesExpanded ? "success" : "dark"} btnPhoto`,
@@ -289,9 +332,13 @@
     function renderDay() {
         scheduleList.innerHTML = "";
         const slots = state.schedule[state.currentDay] || [];
-        const visibleSlots = slots.filter((slot) => !slot.deleted);
+        const visibleSlots = slots.filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
         visibleSlots.forEach((slot) => scheduleList.appendChild(renderSlot(slot, slots.indexOf(slot))));
         addButton.disabled = !isSavedAdvertisement || state.currentDay < todayKey();
+        const plan = PROMOTION_PLANS[state.currentPlan];
+        promotionHelp.textContent = plan.paid
+            ? `${state.currentPlan}: massimo ${plan.imageLimit} immagini. Seleziona la durata per calcolare e acquistare la promozione con i crediti Moscarossa.`
+            : `Free: massimo ${plan.imageLimit} immagini. Moscarossa può richiedere la verifica SMS del telefono.`;
     }
 
     const selectDay = (day) => {
@@ -305,15 +352,18 @@
     const addSchedule = () => {
         if (!isSavedAdvertisement) return showError("Salva prima le informazioni dell'annuncio.");
         if (state.currentDay < todayKey()) return showError("Non puoi aggiungere una pubblicazione nel passato.");
-        if (!state.gallery.length) return showError("Aggiungi almeno un'immagine prima di programmare la pubblicazione Free.");
+        if (!state.gallery.length) return showError(`Aggiungi almeno un'immagine prima di programmare la pubblicazione ${state.currentPlan}.`);
+        const imageLimit = PROMOTION_PLANS[state.currentPlan].imageLimit;
         state.relativeId += 1;
         state.schedule[state.currentDay].push({
             id: "",
-            relativeID: `moscarossa-${Date.now()}-${state.relativeId}`,
+            relativeID: `moscarossa-${state.currentPlan.toLowerCase()}-${Date.now()}-${state.relativeId}`,
             remotePostID: "",
             state: "",
             time: nextDefaultTime(),
-            images: ensurePreview(defaultImages()),
+            plan: state.currentPlan,
+            days: 1,
+            images: ensurePreview(defaultImages(imageLimit)),
             imagesExpanded: false,
             deleted: false,
             dirty: true
@@ -330,16 +380,16 @@
                 relativeID: slot.relativeID || "",
                 state: slot.id && slot.dirty ? "EDIT" : slot.state,
                 GCRecord: slot.deleted ? true : null,
-                typeAnnuncio: "Free",
+                typeAnnuncio: slot.plan,
                 typePeriodic: "Top",
-                period: "",
+                period: slot.plan === "Free" ? "" : JSON.stringify({ moscarossa: { plan: slot.plan, days: slot.days } }),
                 city: state.advertisement?.city || "",
-                hasPremium: false,
+                hasPremium: PROMOTION_PLANS[slot.plan].paid,
                 hasVideo: false,
                 hasHighlight: false,
                 hasEtichetta: false,
                 data: `${day}T${slot.time || "08:00"}:00.000Z`,
-                images: ensurePreview(normalizeImages(slot.images))
+                images: ensurePreview(normalizeImages(slot.images, PROMOTION_PLANS[slot.plan].imageLimit))
             }));
         });
         return payload;
@@ -348,8 +398,8 @@
     const saveSchedule = async ({ reload = true } = {}) => {
         if (!state.dirty) return { ok: true, skipped: true };
         const activeSlots = Object.values(state.schedule).flat().filter((slot) => !slot.deleted);
-        if (activeSlots.some((slot) => !slot.time)) throw new Error("Inserisci un orario per ogni pubblicazione Free.");
-        if (activeSlots.some((slot) => !slot.images.length)) throw new Error("Seleziona almeno un'immagine per ogni pubblicazione Free.");
+        if (activeSlots.some((slot) => !slot.time)) throw new Error("Inserisci un orario per ogni pubblicazione Moscarossa.");
+        if (activeSlots.some((slot) => !slot.images.length)) throw new Error("Seleziona almeno un'immagine per ogni pubblicazione Moscarossa.");
         if (!clean(state.advertisement?.city)) throw new Error("Seleziona prima il Comune Moscarossa.");
 
         saveButton.disabled = true;
@@ -376,6 +426,7 @@
             if (reload) {
                 const reloadUrl = new URL(window.location.href);
                 reloadUrl.searchParams.set("day", state.currentDay);
+                reloadUrl.searchParams.set("promo", state.currentPlan);
                 window.location.href = reloadUrl.toString();
             }
             return { ok: true, payload };
@@ -623,6 +674,10 @@
             Object.entries(advertisement.schedule || {}).forEach(([day, slots]) => {
                 state.schedule[day] = (slots || []).map(normalizeSlot);
             });
+            state.currentPlan = normalizePlan(params.get("promo") || "Free");
+            promotionTabs.forEach((tab) => {
+                tab.closest("li")?.classList.toggle("active", normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan);
+            });
             const requestedDay = params.get("day") || "";
             selectDay(/^\d{4}-\d{2}-\d{2}$/.test(requestedDay) ? requestedDay : todayKey());
             await loadHistory();
@@ -633,6 +688,14 @@
 
     dateInput.addEventListener("change", () => selectDay(dateInput.value));
     addButton.addEventListener("click", addSchedule);
+    promotionTabs.forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            state.currentPlan = normalizePlan(link.dataset.moscarossaPlan);
+            promotionTabs.forEach((tab) => tab.closest("li")?.classList.toggle("active", tab === link));
+            renderDay();
+        });
+    });
     saveButton.addEventListener("click", () => {
         saveSchedule().catch((error) => showError(error.message));
     });
