@@ -2588,7 +2588,7 @@ router.post("/getByID", authenticateKey, async (req, res) => {
                 GCRecord: null,
                 [Op.or]: [
                     { state: null },
-                    { state: { [Op.notIn]: ["CLOSED", "CLOSE", "DELETE"] } }
+                    { state: { [Op.notIn]: ["CLOSED", "CLOSE", "DELETE", "DELETED"] } }
                 ]
             },
             order: [["data", "ASC"]]
@@ -3213,7 +3213,7 @@ router.post("/storico", authenticateKey, async (req, res) => {
     if (req.body.sus) {
         schedulazioni = await ctx.tblSchedulazioni.findAll({ where: { annuncio: req.body.id, platform, GCRecord: null, [Op.or]: [{ state: "CLOSED" }, { state: "CLOSE" }, { state: "DELETE" }] }, order: [['data', 'DESC']] });
     } else {
-        schedulazioni = await ctx.tblSchedulazioni.findAll({ where: { annuncio: req.body.id, platform, GCRecord: null, [Op.or]: [{ [Op.and]: [{ state: { [Op.ne]: "CLOSED" } }, { state: { [Op.ne]: "CLOSE" } }, { state: { [Op.ne]: "DELETE" } }] }, { state: null }] }, order: [['data', 'DESC']] });
+        schedulazioni = await ctx.tblSchedulazioni.findAll({ where: { annuncio: req.body.id, platform, GCRecord: null, [Op.or]: [{ state: null }, { state: { [Op.notIn]: ["CLOSED", "CLOSE", "DELETE", "DELETED"] } }] }, order: [['data', 'DESC']] });
     }
 
     var response = [];
@@ -3443,10 +3443,48 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
     res.sendStatus(201);
 });
 
-router.post("/suspend", authenticateKey, async (req, res) => {
+const queueHistoryManagementAction = async (req, res, nextState) => {
     if (!req.body.id) return res.sendStatus(400);
-    await ctx.tblSchedulazioni.update({ state: "CLOSE" }, { where: { id: req.body.id } });
-    res.sendStatus(200);
+
+    const platform = normalizePanelPlatform(req.body.panel);
+    if (platform !== "moscarossa") {
+        await ctx.tblSchedulazioni.update({ state: nextState }, { where: { id: req.body.id } });
+        return res.sendStatus(200);
+    }
+
+    const user = await ctx.tblUser.findOne({ where: { OID: req.session.userid } });
+    const membership = user ? await user.getGroup() : null;
+    if (!membership) return res.sendStatus(403);
+
+    const scheduleWhere = {
+        id: req.body.id,
+        platform: "moscarossa",
+        GCRecord: null
+    };
+    if (req.body.annuncio) scheduleWhere.annuncio = req.body.annuncio;
+    if (req.body.remotePostID) scheduleWhere.remotePostID = `${req.body.remotePostID}`;
+
+    const schedule = await ctx.tblSchedulazioni.findOne({ where: scheduleWhere });
+    if (!schedule) return res.sendStatus(404);
+
+    const advertisement = await ctx.tblAnnunci.findOne({
+        where: { id: schedule.annuncio, groupOwner: membership.group }
+    });
+    if (!advertisement) return res.sendStatus(403);
+    const currentState = `${schedule.state || ""}`.toUpperCase();
+    const allowedStates = nextState === "DELETE" ? ["OK", "CLOSED"] : ["OK"];
+    if (!allowedStates.includes(currentState) || !schedule.remotePostID) {
+        return res.status(409).json({
+            error: "L'annuncio Moscarossa deve essere pubblicato e avere un identificativo remoto."
+        });
+    }
+
+    await schedule.update({ state: nextState, editedBy: req.session.userid, errorReason: null });
+    return res.sendStatus(200);
+};
+
+router.post("/suspend", authenticateKey, async (req, res) => {
+    return queueHistoryManagementAction(req, res, "CLOSE");
 });
 
 router.post("/republishSchedule", authenticateKey, async (req, res) => {
@@ -3456,9 +3494,7 @@ router.post("/republishSchedule", authenticateKey, async (req, res) => {
 });
 
 router.post("/deleteSchedule", authenticateKey, async (req, res) => {
-    if (!req.body.id) return res.sendStatus(400);
-    await ctx.tblSchedulazioni.update({ state: "DELETE" }, { where: { id: req.body.id } });
-    res.sendStatus(200);
+    return queueHistoryManagementAction(req, res, "DELETE");
 });
 
 router.post("/suspendAllPublished", authenticateKey, async (req, res) => {

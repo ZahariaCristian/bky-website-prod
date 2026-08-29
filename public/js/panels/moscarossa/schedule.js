@@ -502,6 +502,42 @@
         return icon;
     };
 
+    const queueHistoryAction = async (record, operation, buttons) => {
+        const isDelete = operation === "delete";
+        const prompt = isDelete
+            ? "Eliminare definitivamente questo annuncio da Moscarossa? L'operazione non può essere annullata."
+            : "Sospendere questo annuncio su Moscarossa?";
+        if (!window.confirm(prompt)) return;
+
+        buttons.forEach((button) => { button.disabled = true; });
+        try {
+            const response = await fetch(isDelete ? "/annuncio/deleteSchedule" : "/annuncio/suspend", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: record.id,
+                    annuncio: annuncioId,
+                    panel: PANEL,
+                    remotePostID: record.remotePostID
+                })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || `Impossibile ${isDelete ? "eliminare" : "sospendere"} l'annuncio Moscarossa.`);
+            }
+            if (typeof ShowAlert === "function") {
+                ShowAlert("custom", isDelete
+                    ? "Eliminazione Moscarossa accodata."
+                    : "Sospensione Moscarossa accodata.", 5000);
+            }
+            await loadHistory();
+        } catch (error) {
+            buttons.forEach((button) => { button.disabled = false; });
+            showError(error.message);
+        }
+    };
+
     const renderHistoryTable = (records, container, suspended = false) => {
         container.innerHTML = "";
         if (!records.length) {
@@ -532,6 +568,28 @@
             share.innerHTML = '<i class="fa fa-whatsapp text-primary"></i>';
             actions.appendChild(copyButton);
             actions.appendChild(share);
+            const recordState = `${record.state || ""}`.toUpperCase();
+            const managementButtons = [];
+            if (!suspended && recordState === "OK" && record.remotePostID) {
+                const suspendButton = createButton(
+                    "btn btn-warning btn-xs",
+                    "fa-pause",
+                    "Sospendi annuncio Moscarossa"
+                );
+                managementButtons.push(suspendButton);
+                suspendButton.addEventListener("click", () => queueHistoryAction(record, "suspend", managementButtons));
+                actions.appendChild(suspendButton);
+            }
+            if (record.remotePostID && ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"))) {
+                const deleteButton = createButton(
+                    "btn btn-danger btn-xs",
+                    "fa-trash",
+                    "Elimina annuncio Moscarossa"
+                );
+                managementButtons.push(deleteButton);
+                deleteButton.addEventListener("click", () => queueHistoryAction(record, "delete", managementButtons));
+                actions.appendChild(deleteButton);
+            }
 
             const description = document.createElement("div");
             description.className = "rptDescription col-md-4 col-sm-4";
@@ -562,8 +620,12 @@
                 DELETED: "DELETED"
             };
             status.textContent = suspended
-                ? "SOSPESO"
-                : (statusLabels[`${record.state || ""}`.toUpperCase()] || "IN ATTESA");
+                ? ({
+                    CLOSE: "SOSPENSIONE IN ATTESA",
+                    CLOSED: "SOSPESO",
+                    DELETE: "ELIMINAZIONE IN ATTESA"
+                }[recordState] || "SOSPESO")
+                : (statusLabels[recordState] || "IN ATTESA");
             statusActions.appendChild(status);
             const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
                 /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);

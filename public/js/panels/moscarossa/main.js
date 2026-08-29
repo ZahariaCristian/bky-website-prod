@@ -1093,9 +1093,11 @@
         importPublicAdvertisement();
     });
     document.querySelector("#caricaphone-button").addEventListener("click", openSelectedAdvertisement);
-    document.querySelector("#select2_3").addEventListener("change", (event) => {
-        if (event.target.value) openSelectedAdvertisement();
-    });
+    $("#select2_3")
+        .off("change.moscarossaPreviousAdvertisement")
+        .on("change.moscarossaPreviousAdvertisement", (event) => {
+            if (clean(event.target.value)) openSelectedAdvertisement();
+        });
     document.querySelector("#moscarossaShowRemoved").addEventListener("click", () => {
         if (!state.removedImages.length) return;
         state.showingRemovedImages = !state.showingRemovedImages;
