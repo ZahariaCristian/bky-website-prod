@@ -569,27 +569,6 @@
             actions.appendChild(copyButton);
             actions.appendChild(share);
             const recordState = `${record.state || ""}`.toUpperCase();
-            const managementButtons = [];
-            if (!suspended && recordState === "OK" && record.remotePostID) {
-                const suspendButton = createButton(
-                    "btn btn-warning btn-xs",
-                    "fa-pause",
-                    "Sospendi annuncio Moscarossa"
-                );
-                managementButtons.push(suspendButton);
-                suspendButton.addEventListener("click", () => queueHistoryAction(record, "suspend", managementButtons));
-                actions.appendChild(suspendButton);
-            }
-            if (record.remotePostID && ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"))) {
-                const deleteButton = createButton(
-                    "btn btn-danger btn-xs",
-                    "fa-trash",
-                    "Elimina annuncio Moscarossa"
-                );
-                managementButtons.push(deleteButton);
-                deleteButton.addEventListener("click", () => queueHistoryAction(record, "delete", managementButtons));
-                actions.appendChild(deleteButton);
-            }
 
             const description = document.createElement("div");
             description.className = "rptDescription col-md-4 col-sm-4";
@@ -626,7 +605,9 @@
                     DELETE: "ELIMINAZIONE IN ATTESA"
                 }[recordState] || "SOSPESO")
                 : (statusLabels[recordState] || "IN ATTESA");
-            statusActions.appendChild(status);
+            const hasManagedStateButton = Boolean(record.remotePostID) &&
+                ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"));
+            if (!hasManagedStateButton) statusActions.appendChild(status);
             const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
                 /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
             if (waitingForSms) {
@@ -665,6 +646,37 @@
                 const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
                 errorButton.addEventListener("click", () => showError(`Pubblicazione non riuscita: ${clean(record.errorReason)}`));
                 statusActions.appendChild(errorButton);
+            }
+            const managementButtons = [];
+            if (!suspended && recordState === "OK" && record.remotePostID) {
+                const publishedState = document.createElement("span");
+                publishedState.className = "btn btn-success btn-xs btnPublishState";
+                publishedState.textContent = "PUBBLICATO";
+                statusActions.appendChild(publishedState);
+
+                const suspendButton = document.createElement("button");
+                suspendButton.type = "button";
+                suspendButton.className = "btn btn-danger btn-xs btnSuspend";
+                suspendButton.textContent = "SOSPENDI";
+                suspendButton.title = "Sospendi annuncio Moscarossa";
+                managementButtons.push(suspendButton);
+                suspendButton.addEventListener("click", () => queueHistoryAction(record, "suspend", managementButtons));
+                statusActions.appendChild(suspendButton);
+            } else if (suspended && recordState === "CLOSED") {
+                const suspendedState = document.createElement("span");
+                suspendedState.className = "btn btn-danger btn-xs btnPublishState";
+                suspendedState.textContent = "SOSPESO";
+                statusActions.appendChild(suspendedState);
+            }
+            if (record.remotePostID && ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"))) {
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "btn btn-default btn-xs btnDeleteState";
+                deleteButton.textContent = "DELETE";
+                deleteButton.title = "Elimina annuncio Moscarossa";
+                managementButtons.push(deleteButton);
+                deleteButton.addEventListener("click", () => queueHistoryAction(record, "delete", managementButtons));
+                statusActions.appendChild(deleteButton);
             }
             statusColumn.appendChild(statusActions);
 
