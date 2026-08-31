@@ -114,7 +114,7 @@
                     days: PROMOTION_DURATIONS.includes(vetrinaDays) ? vetrinaDays : 1
                 },
                 diamond: {
-                    enabled: isTrue(rawAddons.diamond?.enabled) && diamondDates.length > 0,
+                    enabled: PROMOTION_PLANS[plan].paid && isTrue(rawAddons.diamond?.enabled) && diamondDates.length > 0,
                     dates: diamondDates
                 }
             }
@@ -275,6 +275,10 @@
     const renderAddons = (slot, locked = false) => {
         const addons = document.createElement("div");
         addons.className = "moscarossa-addons";
+        if (!PROMOTION_PLANS[slot.plan].paid) {
+            addons.style.display = "none";
+            return addons;
+        }
         slot.addons ||= {
             vetrina: { enabled: false, days: slot.days || 1 },
             diamond: { enabled: false, dates: [] }
@@ -288,7 +292,7 @@
         const vetrinaCheck = document.createElement("input");
         vetrinaCheck.type = "checkbox";
         vetrinaCheck.checked = Boolean(slot.addons.vetrina.enabled);
-        vetrinaCheck.disabled = locked || !PROMOTION_PLANS[slot.plan].paid;
+        vetrinaCheck.disabled = locked;
         vetrinaLabel.appendChild(vetrinaCheck);
         vetrinaLabel.appendChild(document.createTextNode(" Vetrina prima pagina del sito! (costo 8 al giorno)"));
         vetrina.appendChild(vetrinaLabel);
@@ -322,12 +326,6 @@
         vetrinaControls.appendChild(vetrinaDays);
         vetrinaControls.appendChild(vetrinaPrice);
         vetrina.appendChild(vetrinaControls);
-        if (!PROMOTION_PLANS[slot.plan].paid) {
-            const warning = document.createElement("div");
-            warning.className = "text-danger small";
-            warning.textContent = "La Vetrina richiede prima una promozione a pagamento.";
-            vetrina.appendChild(warning);
-        }
         updateVetrinaPrice();
 
         const diamond = document.createElement("div");
@@ -588,7 +586,8 @@
                     a: {
                         v: [PROMOTION_PLANS[slot.plan].paid && Boolean(slot.addons?.vetrina?.enabled) ? 1 : 0,
                             Number.parseInt(slot.addons?.vetrina?.days, 10) || slot.days || 1],
-                        d: [Boolean(slot.addons?.diamond?.enabled) && Boolean(slot.addons?.diamond?.dates?.length) ? 1 : 0,
+                        d: [PROMOTION_PLANS[slot.plan].paid && Boolean(slot.addons?.diamond?.enabled) &&
+                            Boolean(slot.addons?.diamond?.dates?.length) ? 1 : 0,
                             [...new Set(slot.addons?.diamond?.dates || [])].sort().slice(0, 30).map(dateToEpochDay)]
                     }
                 } }),
