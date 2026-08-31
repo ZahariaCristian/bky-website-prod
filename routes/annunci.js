@@ -9,9 +9,11 @@ const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
 const axios = require("axios");
 const fs = require("fs");
+const os = require("os");
+const multer = require("multer");
 const { authenticateKey } = require("../lib/authentication");
 const ctx = require("../ctx/model");
-const { dirname, basename } = require('path');
+const { dirname, basename, extname } = require('path');
 const { platform } = require("os");
 const appDir = dirname((require.main && require.main.filename) || __filename);
 var rootPath;
@@ -26,6 +28,18 @@ const getMoscarossaLocationsApiUrl = () => process.env.MOSCAROSSA_LOCATIONS_API_
     || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/locations`;
 const getMoscarossaPhoneVerificationApiUrl = () => process.env.MOSCAROSSA_PHONE_VERIFICATION_API_URL
     || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/phone-verification`;
+const getMoscarossaStoryApiUrl = () => process.env.MOSCAROSSA_STORY_API_URL
+    || `http://127.0.0.1:${process.env.PUBLISHER_API_PORT || "9998"}/api/moscarossa/story`;
+const moscarossaStoryUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, callback) => callback(null, os.tmpdir()),
+        filename: (_req, file, callback) => callback(
+            null,
+            `bky-moscarossa-story-${Date.now()}-${Math.random().toString(36).slice(2)}${extname(file.originalname).toLowerCase()}`
+        )
+    }),
+    limits: { files: 1, fileSize: 30 * 1024 * 1024 }
+});
 const MOSCAROSSA_LOCATION_CACHE_TTL = 6 * 60 * 60 * 1000;
 const moscarossaLocationCache = new Map();
 
@@ -263,6 +277,69 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
             reasonCode: payload.reasonCode || null,
             details: payload.details || error.message
         });
+    }
+});
+
+router.post("/moscarossaStory", authenticateKey, moscarossaStoryUpload.single("story"), async (req, res) => {
+    const temporaryPath = req.file?.path || "";
+    try {
+        const annuncioId = Number.parseInt(req.body.annuncioId, 10) || 0;
+        const scheduleId = Number.parseInt(req.body.scheduleId, 10) || 0;
+        const remotePostID = `${req.body.remotePostID || ""}`.trim();
+        const allowedTypes = new Set([
+            "video/mp4", "video/quicktime", "image/jpeg", "image/png", "image/gif"
+        ]);
+        if (!annuncioId || !scheduleId || !/^\d{4,9}$/.test(remotePostID) || !req.file ||
+            !allowedTypes.has(`${req.file.mimetype || ""}`.toLowerCase())) {
+            return res.status(400).json({ error: "File o pubblicazione Storia Moscarossa non validi." });
+        }
+
+        const user = await ctx.tblUser.findOne({ where: { OID: req.session.userid } });
+        const groupMembership = user ? await user.getGroup() : null;
+        if (!groupMembership) return res.status(403).json({ error: "Gruppo utente non disponibile." });
+        const annuncio = await ctx.tblAnnunci.findOne({
+            where: { id: annuncioId, groupOwner: groupMembership.group, GCRecord: null }
+        });
+        if (!annuncio) return res.status(404).json({ error: "Annuncio non trovato." });
+        const schedule = await ctx.tblSchedulazioni.findOne({
+            where: {
+                id: scheduleId,
+                annuncio: annuncioId,
+                platform: "moscarossa",
+                state: "OK",
+                remotePostID,
+                GCRecord: null
+            }
+        });
+        if (!schedule) {
+            return res.status(409).json({ error: "La Storia richiede una pubblicazione Moscarossa attiva." });
+        }
+        const plan = getMoscarossaPromotionPlan(schedule.period, schedule.typeAnnuncio);
+        if (!schedule.payed && plan === "Free") {
+            return res.status(409).json({ error: "Le Storie sono disponibili solo per annunci con promozione a pagamento." });
+        }
+
+        const publisherUrl = getMoscarossaStoryApiUrl();
+        const response = await axios.post(publisherUrl, {
+            groupId: groupMembership.group,
+            remoteId: remotePostID,
+            filePath: temporaryPath,
+            originalName: basename(req.file.originalname || "storia"),
+            mimeType: req.file.mimetype
+        }, {
+            headers: { accept: "application/json", "content-type": "application/json" },
+            timeout: 180000
+        });
+        return res.status(response.status).json(response.data);
+    } catch (error) {
+        const payload = error.response?.data || {};
+        console.error("Moscarossa Story proxy:", payload.details || payload.error || error.message);
+        return res.status(error.response?.status || 503).json({
+            error: payload.error || "Il servizio Storie Moscarossa non è disponibile.",
+            details: payload.details || error.message
+        });
+    } finally {
+        if (temporaryPath) fs.promises.unlink(temporaryPath).catch(() => {});
     }
 });
 
@@ -3472,7 +3549,9 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     });
     if (!advertisement) return res.sendStatus(403);
     const currentState = `${schedule.state || ""}`.toUpperCase();
-    const allowedStates = nextState === "DELETE" ? ["OK", "CLOSED"] : ["OK"];
+    const allowedStates = nextState === "DELETE"
+        ? ["OK", "CLOSED"]
+        : (nextState === "REPUBLISH" ? ["CLOSED"] : ["OK"]);
     if (!allowedStates.includes(currentState) || !schedule.remotePostID) {
         return res.status(409).json({
             error: "L'annuncio Moscarossa deve essere pubblicato e avere un identificativo remoto."
@@ -3489,6 +3568,9 @@ router.post("/suspend", authenticateKey, async (req, res) => {
 
 router.post("/republishSchedule", authenticateKey, async (req, res) => {
     if (!req.body.id) return res.sendStatus(400);
+    if (normalizePanelPlatform(req.body.panel) === "moscarossa") {
+        return queueHistoryManagementAction(req, res, "REPUBLISH");
+    }
     await ctx.tblSchedulazioni.update({ state: "REPUBLISH", editedBy: req.session.userid }, { where: { id: req.body.id } });
     res.sendStatus(200);
 });

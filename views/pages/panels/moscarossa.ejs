@@ -131,25 +131,70 @@
             display: none;
         }
 
-        .moscarossa-history-row {
-            padding: 10px 0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .moscarossa-history-status {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .moscarossa-history-actions .btn {
-            padding-left: 8px;
-            padding-right: 8px;
-        }
-
         #moscarossaHistorySuspendedTitle {
             display: none;
+        }
+
+        #moscarossaHistorySuspendedList {
+            display: none;
+        }
+
+        .moscarossa-history-bulk .btn {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .moscarossa-addons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            width: 100%;
+            margin: 10px 0 4px;
+        }
+
+        .moscarossa-addon {
+            flex: 1 1 360px;
+            padding: 12px;
+            border: 1px solid #eadfb6;
+            border-radius: 4px;
+            background: #fffbea;
+        }
+
+        .moscarossa-addon-diamond {
+            border-color: #ead1e7;
+            background: #fff0fc;
+        }
+
+        .moscarossa-addon-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .moscarossa-addon-controls .form-control {
+            width: auto;
+            min-width: 145px;
+        }
+
+        .moscarossa-diamond-dates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .moscarossa-diamond-date {
+            padding: 4px 8px;
+            border: 0;
+            border-radius: 3px;
+            color: #fff;
+            background: #a43b91;
+        }
+
+        .moscarossa-story-input {
+            display: none !important;
         }
 
         .moscarossa-details {
@@ -614,7 +659,7 @@
                         <div class="col-md-2 col-sm-2"><div class="row"><h4 class="heading"> </h4></div></div>
                         <div class="col-md-4 col-sm-4"><div class="row"><h4 class="heading">Descrizione (citt&agrave;)</h4></div></div>
                         <div class="col-md-4 col-sm-4"><div class="row"><h4 class="heading" style="float:none;">Stato</h4></div></div>
-                        <div class="col-md-1 col-sm-1"><div class="row"><h4 class="heading" style="float:none;">Pagati Cliente</h4></div></div>
+                        <div class="col-md-1 col-sm-1"><div class="row"><h4 class="heading" style="float:none;">Pagati</h4></div></div>
                     </div>
                     <div class="widget-body" style="padding-top:0;">
                         <div class="row">
@@ -630,6 +675,28 @@
                             </div>
                             <div id="moscarossaHistorySuspendedList" class="col-md-12">
                                 <div class="row center moscarossa-history-empty">Nessun dato rilevato</div>
+                            </div>
+                            <div class="col-md-4 moscarossa-history-bulk">
+                                <button id="moscarossaShowSuspended" type="button" class="btn btn-primary">
+                                    <b>MOSTRA SOSPESI</b>
+                                </button>
+                            </div>
+                            <div class="col-md-4 moscarossa-history-bulk">
+                                <button id="moscarossaSuspendPublished" type="button" class="btn btn-danger strong">
+                                    <b>SOSPENDI PUBBLICATI</b>
+                                </button>
+                            </div>
+                            <div class="col-md-4 moscarossa-history-bulk">
+                                <button id="moscarossaDeletePublished" type="button" class="btn btn-default strong">
+                                    <b>DELETE PUBBLICATI</b>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 moscarossa-history-bulk">
+                                <button id="moscarossaSuspendExpired" type="button" class="btn btn-danger strong">
+                                    <b>SOSPENDI SCADUTI</b>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -647,7 +714,7 @@
     </div>
     <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
     <script src="/js/panels/moscarossa/main.js?v=20260829-previous-ad-select"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260829-history-status-layout"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260831-addons-stories"></script>
 </body>
 
 </html>

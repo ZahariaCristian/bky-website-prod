@@ -26,6 +26,10 @@
     const historyList = document.querySelector("#moscarossaHistoryList");
     const suspendedHistoryList = document.querySelector("#moscarossaHistorySuspendedList");
     const suspendedHistoryTitle = document.querySelector("#moscarossaHistorySuspendedTitle");
+    const showSuspendedButton = document.querySelector("#moscarossaShowSuspended");
+    const suspendPublishedButton = document.querySelector("#moscarossaSuspendPublished");
+    const deletePublishedButton = document.querySelector("#moscarossaDeletePublished");
+    const suspendExpiredButton = document.querySelector("#moscarossaSuspendExpired");
     const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
     const promotionTabs = Array.from(document.querySelectorAll("[data-moscarossa-plan]"));
     const state = {
@@ -34,6 +38,7 @@
         schedule: {},
         currentDay: "",
         currentPlan: "Free",
+        showSuspended: false,
         dirty: false,
         relativeId: 0,
         historyText: []
@@ -67,6 +72,13 @@
     const extractTime = (value) => `${value || ""}`.match(/T(\d{2}:\d{2})/)?.[1] || "08:00";
     const normalizePlan = (value) => Object.keys(PROMOTION_PLANS)
         .find((plan) => plan.toLowerCase() === clean(value).toLowerCase()) || "Free";
+    const dateToEpochDay = (date) => Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
+    const epochDayToDate = (day) => {
+        const numericDay = Number(day);
+        return Number.isInteger(numericDay) && numericDay > 10000 && numericDay < 100000
+            ? new Date(numericDay * 86400000).toISOString().slice(0, 10)
+            : "";
+    };
     const applyPromotionTheme = (link) => {
         if (!wizardBody || !link) return;
         wizardBody.style.backgroundColor = window.getComputedStyle(link).backgroundColor;
@@ -77,7 +89,36 @@
         const details = parsed.moscarossa || parsed;
         const plan = normalizePlan(details.plan || fallbackPlan);
         const requestedDays = Number.parseInt(details.days || details.duration || 1, 10);
-        return { plan, days: PROMOTION_DURATIONS.includes(requestedDays) ? requestedDays : 1 };
+        const compactAddons = details.a && typeof details.a === "object" ? details.a : {};
+        const rawAddons = details.addons && typeof details.addons === "object"
+            ? details.addons
+            : {
+                vetrina: { enabled: compactAddons.v?.[0], days: compactAddons.v?.[1] },
+                diamond: {
+                    enabled: compactAddons.d?.[0],
+                    dates: Array.isArray(compactAddons.d?.[1])
+                        ? compactAddons.d[1].map(epochDayToDate).filter(Boolean)
+                        : []
+                }
+            };
+        const vetrinaDays = Number.parseInt(rawAddons.vetrina?.days || requestedDays || 1, 10);
+        const diamondDates = Array.isArray(rawAddons.diamond?.dates)
+            ? [...new Set(rawAddons.diamond.dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(`${date}`)))].sort().slice(0, 30)
+            : [];
+        return {
+            plan,
+            days: PROMOTION_DURATIONS.includes(requestedDays) ? requestedDays : 1,
+            addons: {
+                vetrina: {
+                    enabled: PROMOTION_PLANS[plan].paid && isTrue(rawAddons.vetrina?.enabled),
+                    days: PROMOTION_DURATIONS.includes(vetrinaDays) ? vetrinaDays : 1
+                },
+                diamond: {
+                    enabled: isTrue(rawAddons.diamond?.enabled) && diamondDates.length > 0,
+                    dates: diamondDates
+                }
+            }
+        };
     };
     const nextDefaultTime = () => {
         const parts = Object.fromEntries(
@@ -128,6 +169,7 @@
             time: extractTime(slot.data),
             plan: period.plan,
             days: period.days,
+            addons: period.addons,
             images: selectedImages,
             imagesExpanded: selectedImages.length > 0,
             deleted: Boolean(slot.GCRecord),
@@ -228,6 +270,140 @@
             wrapper.appendChild(previewButton);
             container.appendChild(wrapper);
         });
+    };
+
+    const renderAddons = (slot, locked = false) => {
+        const addons = document.createElement("div");
+        addons.className = "moscarossa-addons";
+        slot.addons ||= {
+            vetrina: { enabled: false, days: slot.days || 1 },
+            diamond: { enabled: false, dates: [] }
+        };
+        slot.addons.vetrina ||= { enabled: false, days: slot.days || 1 };
+        slot.addons.diamond ||= { enabled: false, dates: [] };
+
+        const vetrina = document.createElement("div");
+        vetrina.className = "moscarossa-addon";
+        const vetrinaLabel = document.createElement("label");
+        const vetrinaCheck = document.createElement("input");
+        vetrinaCheck.type = "checkbox";
+        vetrinaCheck.checked = Boolean(slot.addons.vetrina.enabled);
+        vetrinaCheck.disabled = locked || !PROMOTION_PLANS[slot.plan].paid;
+        vetrinaLabel.appendChild(vetrinaCheck);
+        vetrinaLabel.appendChild(document.createTextNode(" Vetrina prima pagina del sito! (costo 8 al giorno)"));
+        vetrina.appendChild(vetrinaLabel);
+        const vetrinaControls = document.createElement("div");
+        vetrinaControls.className = "moscarossa-addon-controls";
+        const vetrinaDays = document.createElement("select");
+        vetrinaDays.className = "form-control";
+        PROMOTION_DURATIONS.forEach((days) => {
+            const option = document.createElement("option");
+            option.value = `${days}`;
+            option.textContent = `${days} ${days === 1 ? "giorno" : "giorni"}`;
+            vetrinaDays.appendChild(option);
+        });
+        vetrinaDays.value = `${slot.addons.vetrina.days || slot.days || 1}`;
+        vetrinaDays.disabled = locked || !vetrinaCheck.checked;
+        const vetrinaPrice = document.createElement("strong");
+        const updateVetrinaPrice = () => {
+            vetrinaPrice.textContent = vetrinaCheck.checked ? `${(Number(vetrinaDays.value) || 1) * 8} €/crediti` : "";
+        };
+        vetrinaCheck.addEventListener("change", () => {
+            slot.addons.vetrina.enabled = vetrinaCheck.checked;
+            if (vetrinaCheck.checked) slot.addons.diamond.enabled = false;
+            markDirty(slot);
+            renderDay();
+        });
+        vetrinaDays.addEventListener("change", () => {
+            slot.addons.vetrina.days = Number.parseInt(vetrinaDays.value, 10) || 1;
+            updateVetrinaPrice();
+            markDirty(slot);
+        });
+        vetrinaControls.appendChild(vetrinaDays);
+        vetrinaControls.appendChild(vetrinaPrice);
+        vetrina.appendChild(vetrinaControls);
+        if (!PROMOTION_PLANS[slot.plan].paid) {
+            const warning = document.createElement("div");
+            warning.className = "text-danger small";
+            warning.textContent = "La Vetrina richiede prima una promozione a pagamento.";
+            vetrina.appendChild(warning);
+        }
+        updateVetrinaPrice();
+
+        const diamond = document.createElement("div");
+        diamond.className = "moscarossa-addon moscarossa-addon-diamond";
+        const diamondLabel = document.createElement("label");
+        const diamondCheck = document.createElement("input");
+        diamondCheck.type = "checkbox";
+        diamondCheck.checked = Boolean(slot.addons.diamond.enabled);
+        diamondCheck.disabled = locked;
+        diamondLabel.appendChild(diamondCheck);
+        diamondLabel.appendChild(document.createTextNode(" Aggiungi il DIAMOND (costo 50 al giorno) · 20 foto + 3 video"));
+        diamond.appendChild(diamondLabel);
+        const diamondControls = document.createElement("div");
+        diamondControls.className = "moscarossa-addon-controls";
+        const diamondDate = document.createElement("input");
+        diamondDate.type = "date";
+        diamondDate.className = "form-control";
+        diamondDate.min = todayKey();
+        diamondDate.disabled = locked || !diamondCheck.checked;
+        const addDiamondDate = document.createElement("button");
+        addDiamondDate.type = "button";
+        addDiamondDate.className = "btn btn-primary btn-sm";
+        addDiamondDate.textContent = "Aggiungi giorno";
+        addDiamondDate.disabled = locked || !diamondCheck.checked;
+        const diamondPrice = document.createElement("strong");
+        const dateList = document.createElement("div");
+        dateList.className = "moscarossa-diamond-dates";
+        const renderDiamondDates = () => {
+            dateList.innerHTML = "";
+            (slot.addons.diamond.dates || []).forEach((date) => {
+                const chip = document.createElement("button");
+                chip.type = "button";
+                chip.className = "moscarossa-diamond-date";
+                chip.disabled = locked;
+                chip.textContent = `${date} ×`;
+                chip.addEventListener("click", () => {
+                    slot.addons.diamond.dates = slot.addons.diamond.dates.filter((item) => item !== date);
+                    if (!slot.addons.diamond.dates.length) slot.addons.diamond.enabled = false;
+                    markDirty(slot);
+                    renderDay();
+                });
+                dateList.appendChild(chip);
+            });
+            diamondPrice.textContent = diamondCheck.checked
+                ? `${slot.addons.diamond.dates.length * 50} €/crediti`
+                : "";
+        };
+        diamondCheck.addEventListener("change", () => {
+            slot.addons.diamond.enabled = diamondCheck.checked;
+            if (diamondCheck.checked) slot.addons.vetrina.enabled = false;
+            markDirty(slot);
+            renderDay();
+        });
+        addDiamondDate.addEventListener("click", () => {
+            const value = diamondDate.value;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < todayKey()) {
+                return showError("Seleziona una data Diamond valida.");
+            }
+            if (!slot.addons.diamond.dates.includes(value) && slot.addons.diamond.dates.length >= 30) {
+                return showError("Puoi selezionare massimo 30 giorni Diamond.");
+            }
+            slot.addons.diamond.dates = [...new Set([...(slot.addons.diamond.dates || []), value])].sort();
+            diamondDate.value = "";
+            markDirty(slot);
+            renderDay();
+        });
+        diamondControls.appendChild(diamondDate);
+        diamondControls.appendChild(addDiamondDate);
+        diamondControls.appendChild(diamondPrice);
+        diamond.appendChild(diamondControls);
+        diamond.appendChild(dateList);
+        renderDiamondDates();
+
+        addons.appendChild(vetrina);
+        addons.appendChild(diamond);
+        return addons;
     };
 
     const renderSlot = (slot, index) => {
@@ -333,6 +509,7 @@
             main.appendChild(verifyButton);
         }
         panel.appendChild(main);
+        panel.appendChild(renderAddons(slot, locked));
 
         const images = document.createElement("div");
         images.className = "post-pics";
@@ -378,6 +555,10 @@
             time: nextDefaultTime(),
             plan: state.currentPlan,
             days: 1,
+            addons: {
+                vetrina: { enabled: false, days: 1 },
+                diamond: { enabled: false, dates: [] }
+            },
             images: ensurePreview(defaultImages(imageLimit)),
             imagesExpanded: false,
             deleted: false,
@@ -399,7 +580,18 @@
                 // real plan is stored in period to avoid a database migration.
                 typeAnnuncio: "Free",
                 typePeriodic: "Top",
-                period: slot.plan === "Free" ? "" : JSON.stringify({ moscarossa: { plan: slot.plan, days: slot.days } }),
+                // Compact add-on keys keep the payload inside tblSchedulazioni.period VARCHAR(255),
+                // including a full 30-day Diamond selection.
+                period: JSON.stringify({ moscarossa: {
+                    plan: slot.plan,
+                    days: slot.days,
+                    a: {
+                        v: [PROMOTION_PLANS[slot.plan].paid && Boolean(slot.addons?.vetrina?.enabled) ? 1 : 0,
+                            Number.parseInt(slot.addons?.vetrina?.days, 10) || slot.days || 1],
+                        d: [Boolean(slot.addons?.diamond?.enabled) && Boolean(slot.addons?.diamond?.dates?.length) ? 1 : 0,
+                            [...new Set(slot.addons?.diamond?.dates || [])].sort().slice(0, 30).map(dateToEpochDay)]
+                    }
+                } }),
                 city: state.advertisement?.city || "",
                 hasPremium: PROMOTION_PLANS[slot.plan].paid,
                 hasVideo: false,
@@ -504,14 +696,20 @@
 
     const queueHistoryAction = async (record, operation, buttons) => {
         const isDelete = operation === "delete";
+        const isRepublish = operation === "republish";
         const prompt = isDelete
             ? "Eliminare definitivamente questo annuncio da Moscarossa? L'operazione non può essere annullata."
-            : "Sospendere questo annuncio su Moscarossa?";
+            : (isRepublish
+                ? "Ripubblicare questo annuncio su Moscarossa?"
+                : "Sospendere questo annuncio su Moscarossa?");
         if (!window.confirm(prompt)) return;
 
         buttons.forEach((button) => { button.disabled = true; });
         try {
-            const response = await fetch(isDelete ? "/annuncio/deleteSchedule" : "/annuncio/suspend", {
+            const endpoint = isDelete
+                ? "/annuncio/deleteSchedule"
+                : (isRepublish ? "/annuncio/republishSchedule" : "/annuncio/suspend");
+            const response = await fetch(endpoint, {
                 method: "POST",
                 credentials: "same-origin",
                 headers: { "Content-Type": "application/json" },
@@ -524,18 +722,140 @@
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(payload.error || `Impossibile ${isDelete ? "eliminare" : "sospendere"} l'annuncio Moscarossa.`);
+                const action = isDelete ? "eliminare" : (isRepublish ? "ripubblicare" : "sospendere");
+                throw new Error(payload.error || `Impossibile ${action} l'annuncio Moscarossa.`);
             }
             if (typeof ShowAlert === "function") {
                 ShowAlert("custom", isDelete
                     ? "Eliminazione Moscarossa accodata."
-                    : "Sospensione Moscarossa accodata.", 5000);
+                    : (isRepublish
+                        ? "Ripubblicazione Moscarossa accodata."
+                        : "Sospensione Moscarossa accodata."), 5000);
             }
             await loadHistory();
         } catch (error) {
             buttons.forEach((button) => { button.disabled = false; });
             showError(error.message);
         }
+    };
+
+    const deleteHistoryRecord = async (record, button) => {
+        if (!window.confirm("Eliminare questa voce dallo storico pubblicazioni?")) return;
+        button.disabled = true;
+        try {
+            const response = await fetch("/annuncio/deleteStorico", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: record.id, annuncio: annuncioId })
+            });
+            if (!response.ok) throw new Error("Impossibile eliminare la voce dallo storico.");
+            await loadHistory();
+        } catch (error) {
+            button.disabled = false;
+            showError(error.message);
+        }
+    };
+
+    const bulkHistoryActions = {
+        suspendPublished: {
+            endpoint: "/annuncio/suspendAllPublished",
+            prompt: "Sospendere tutti gli annunci Moscarossa pubblicati? Verranno sospesi anche se risultano a pagamento.",
+            pending: "IN SOSPENSIONE...",
+            completed: "Sospensione degli annunci pubblicati accodata."
+        },
+        deletePublished: {
+            endpoint: "/annuncio/deleteAllPublished",
+            prompt: "Eliminare tutti gli annunci Moscarossa pubblicati? L'operazione non può essere annullata.",
+            pending: "IN CANCELLAZIONE...",
+            completed: "Eliminazione degli annunci pubblicati accodata."
+        },
+        suspendExpired: {
+            endpoint: "/annuncio/suspendAll",
+            prompt: "Sospendere gli annunci Moscarossa scaduti? Verranno sospesi anche se risultano a pagamento.",
+            pending: "IN SOSPENSIONE...",
+            completed: "Sospensione degli annunci scaduti accodata."
+        }
+    };
+
+    const runBulkHistoryAction = async (button, actionName) => {
+        const action = bulkHistoryActions[actionName];
+        if (!action || !isSavedAdvertisement || !window.confirm(action.prompt)) return;
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<b>${action.pending}</b>`;
+        try {
+            const response = await fetch(action.endpoint, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ annuncio: annuncioId, panel: PANEL })
+            });
+            if (!response.ok) throw new Error("Operazione massiva Moscarossa non riuscita.");
+            if (typeof ShowAlert === "function") ShowAlert("custom", action.completed, 5000);
+            await loadHistory();
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    };
+
+    const syncSuspendedHistoryVisibility = () => {
+        const display = state.showSuspended ? "block" : "none";
+        suspendedHistoryTitle.style.display = display;
+        suspendedHistoryList.style.display = display;
+        showSuspendedButton.innerHTML = state.showSuspended
+            ? "<b>NASCONDI SOSPESI</b>"
+            : "<b>MOSTRA SOSPESI</b>";
+    };
+
+    const uploadStory = (record, button) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.name = "story";
+        input.accept = ".mp4,.mov,.jpg,.jpeg,.png,.gif";
+        input.className = "moscarossa-story-input";
+        document.body.appendChild(input);
+        input.addEventListener("change", async () => {
+            const file = input.files?.[0];
+            if (!file) {
+                input.remove();
+                return;
+            }
+            if (file.size > 30 * 1024 * 1024) {
+                input.remove();
+                return showError("La Storia Moscarossa non può superare 30 MB.");
+            }
+            button.disabled = true;
+            const original = button.innerHTML;
+            button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> CARICAMENTO';
+            try {
+                const form = new FormData();
+                form.append("story", file, file.name);
+                form.append("annuncioId", `${annuncioId}`);
+                form.append("scheduleId", `${record.id || ""}`);
+                form.append("remotePostID", `${record.remotePostID || ""}`);
+                const response = await fetch("/annuncio/moscarossaStory", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: form
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.error || "Caricamento Storia Moscarossa non riuscito.");
+                if (typeof ShowAlert === "function") {
+                    ShowAlert("custom", "Storia Moscarossa creata. Sarà visibile per 24 ore.", 6000);
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = original;
+                input.remove();
+            }
+        }, { once: true });
+        input.click();
     };
 
     const renderHistoryTable = (records, container, suspended = false) => {
@@ -558,6 +878,8 @@
 
             const actions = document.createElement("div");
             actions.className = "col-md-2 col-sm-2 moscarossa-history-actions";
+            const removeButton = createButton("btn", "fa-times text-danger", "Elimina dallo storico");
+            removeButton.addEventListener("click", () => deleteHistoryRecord(record, removeButton));
             const copyButton = createButton("btn", "fa-copy text-primary", "Copia pubblicazione");
             copyButton.addEventListener("click", () => copyText(shareText).catch(() => showError("Impossibile copiare la pubblicazione.")));
             const share = document.createElement("a");
@@ -566,6 +888,7 @@
             share.target = "_blank";
             share.title = "Condividi pubblicazione";
             share.innerHTML = '<i class="fa fa-whatsapp text-primary"></i>';
+            actions.appendChild(removeButton);
             actions.appendChild(copyButton);
             actions.appendChild(share);
             const recordState = `${record.state || ""}`.toUpperCase();
@@ -576,17 +899,10 @@
             heading.textContent = descriptionText;
             description.appendChild(heading);
             description.appendChild(document.createTextNode(` (${city})`));
-            if (record.remotePostID) {
-                const remote = document.createElement("div");
-                remote.className = "text-muted";
-                remote.textContent = `ID Moscarossa: ${record.remotePostID}`;
-                description.appendChild(remote);
-            }
-
             const statusColumn = document.createElement("div");
             statusColumn.className = "col-md-4 col-sm-4";
             const statusActions = document.createElement("div");
-            statusActions.className = "status-actions moscarossa-history-status";
+            statusActions.className = "status-actions";
             statusActions.appendChild(statusIcon(record));
             const status = document.createElement("span");
             status.className = statusClass(record.state);
@@ -648,12 +964,19 @@
                 statusActions.appendChild(errorButton);
             }
             const managementButtons = [];
+            const recordPlan = parsePeriod(record.period, record.typeAnnuncio).plan;
+            const storyEligible = !suspended && recordState === "OK" && Boolean(record.remotePostID) &&
+                (isTrue(record.payed) || PROMOTION_PLANS[recordPlan].paid);
+            if (storyEligible) {
+                const storyButton = document.createElement("button");
+                storyButton.type = "button";
+                storyButton.className = "btn btn-info btn-xs btnStory";
+                storyButton.innerHTML = '<i class="fa fa-plus-circle"></i> CREA STORIA';
+                storyButton.title = "Crea una Storia Moscarossa visibile per 24 ore";
+                storyButton.addEventListener("click", () => uploadStory(record, storyButton));
+                statusActions.appendChild(storyButton);
+            }
             if (!suspended && recordState === "OK" && record.remotePostID) {
-                const publishedState = document.createElement("span");
-                publishedState.className = "btn btn-success btn-xs btnPublishState";
-                publishedState.textContent = "PUBBLICATO";
-                statusActions.appendChild(publishedState);
-
                 const suspendButton = document.createElement("button");
                 suspendButton.type = "button";
                 suspendButton.className = "btn btn-danger btn-xs btnSuspend";
@@ -663,10 +986,14 @@
                 suspendButton.addEventListener("click", () => queueHistoryAction(record, "suspend", managementButtons));
                 statusActions.appendChild(suspendButton);
             } else if (suspended && recordState === "CLOSED") {
-                const suspendedState = document.createElement("span");
-                suspendedState.className = "btn btn-danger btn-xs btnPublishState";
-                suspendedState.textContent = "SOSPESO";
-                statusActions.appendChild(suspendedState);
+                const publishButton = document.createElement("button");
+                publishButton.type = "button";
+                publishButton.className = "btn btn-danger btn-xs btnPublishState";
+                publishButton.textContent = "PUBBLICA";
+                publishButton.title = "Ripubblica annuncio Moscarossa";
+                managementButtons.push(publishButton);
+                publishButton.addEventListener("click", () => queueHistoryAction(record, "republish", managementButtons));
+                statusActions.appendChild(publishButton);
             }
             if (record.remotePostID && ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"))) {
                 const deleteButton = document.createElement("button");
@@ -712,7 +1039,7 @@
         if (!isSavedAdvertisement) {
             state.historyText = renderHistoryTable([], historyList);
             renderHistoryTable([], suspendedHistoryList, true);
-            suspendedHistoryTitle.style.display = "none";
+            syncSuspendedHistoryVisibility();
             return;
         }
         try {
@@ -720,7 +1047,7 @@
             const sortNewest = (records) => [...records].sort((left, right) => new Date(right.data) - new Date(left.data));
             state.historyText = renderHistoryTable(sortNewest(active), historyList);
             renderHistoryTable(sortNewest(suspended), suspendedHistoryList, true);
-            suspendedHistoryTitle.style.display = suspended.length ? "block" : "none";
+            syncSuspendedHistoryVisibility();
             whatsappHistoryButton.href = `whatsapp://send?text=${encodeURIComponent(state.historyText.join("\n"))}`;
         } catch (error) {
             showError(error.message);
@@ -797,6 +1124,13 @@
     saveButton.addEventListener("click", () => {
         saveSchedule().catch((error) => showError(error.message));
     });
+    showSuspendedButton.addEventListener("click", () => {
+        state.showSuspended = !state.showSuspended;
+        syncSuspendedHistoryVisibility();
+    });
+    suspendPublishedButton.addEventListener("click", () => runBulkHistoryAction(suspendPublishedButton, "suspendPublished"));
+    deletePublishedButton.addEventListener("click", () => runBulkHistoryAction(deletePublishedButton, "deletePublished"));
+    suspendExpiredButton.addEventListener("click", () => runBulkHistoryAction(suspendExpiredButton, "suspendExpired"));
     document.querySelectorAll(".moscarossa-copy-all").forEach((element) => {
         element.addEventListener("click", () => {
             if (!state.historyText.length) return showError("Non ci sono pubblicazioni da copiare.");
