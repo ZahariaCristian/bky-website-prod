@@ -902,9 +902,25 @@
             statusColumn.className = "col-md-4 col-sm-4";
             const statusActions = document.createElement("div");
             statusActions.className = "status-actions";
-            statusActions.appendChild(statusIcon(record));
+            const hasRemotePublication = recordState === "OK" && Boolean(record.remotePostID || record.urlBK);
+            if (hasRemotePublication) {
+                const platformBadge = record.urlBK && /^https?:\/\//i.test(record.urlBK)
+                    ? document.createElement("a")
+                    : document.createElement("span");
+                platformBadge.className = "btn btn-success btn-xs moscarossa-platform-badge";
+                platformBadge.textContent = "MR";
+                platformBadge.title = "Moscarossa";
+                if (platformBadge.tagName === "A") {
+                    platformBadge.href = record.urlBK;
+                    platformBadge.target = "_blank";
+                    platformBadge.rel = "noopener";
+                }
+                statusActions.appendChild(platformBadge);
+            } else {
+                statusActions.appendChild(statusIcon(record));
+            }
             const status = document.createElement("span");
-            status.className = statusClass(record.state);
+            status.className = `${statusClass(record.state)} btnPublishState`;
             const statusLabels = {
                 OK: "PUBBLICATO",
                 KO: "ERRORE",
@@ -920,9 +936,7 @@
                     DELETE: "ELIMINAZIONE IN ATTESA"
                 }[recordState] || "SOSPESO")
                 : (statusLabels[recordState] || "IN ATTESA");
-            const hasManagedStateButton = Boolean(record.remotePostID) &&
-                ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"));
-            if (!hasManagedStateButton) statusActions.appendChild(status);
+            statusActions.appendChild(status);
             const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
                 /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
             if (waitingForSms) {
@@ -947,15 +961,6 @@
                     }
                 });
                 statusActions.appendChild(verifyButton);
-            }
-            if (record.urlBK && /^https?:\/\//i.test(record.urlBK)) {
-                const link = document.createElement("a");
-                link.className = "btn btn-success btn-xs";
-                link.href = record.urlBK;
-                link.target = "_blank";
-                link.rel = "noopener";
-                link.textContent = "MR";
-                statusActions.appendChild(link);
             }
             if (record.errorReason) {
                 const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
