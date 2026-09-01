@@ -212,6 +212,50 @@
             background: #a43b91;
         }
 
+        .moscarossa-price-summary {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px 24px;
+            margin-top: 14px;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .moscarossa-price-summary-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .moscarossa-price-total {
+            font-size: 18px;
+        }
+
+        .moscarossa-price-list {
+            margin-top: 10px;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .moscarossa-price-list[hidden] {
+            display: none !important;
+        }
+
+        .moscarossa-price-list .table {
+            margin-bottom: 12px;
+        }
+
+        .moscarossa-price-list-actions {
+            margin-top: 10px;
+            text-align: right;
+        }
+
         .moscarossa-story-input {
             display: none !important;
         }
@@ -583,6 +627,28 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div id="moscarossaPriceSummary" class="moscarossa-price-summary"
+                                            aria-live="polite">
+                                            <span class="moscarossa-price-summary-item">
+                                                <span>Pacchetti:</span>
+                                                <strong id="moscarossaPackageTotal">0 €/crediti</strong>
+                                            </span>
+                                            <span class="moscarossa-price-summary-item">
+                                                <span>Extra:</span>
+                                                <strong id="moscarossaAddonTotal">0 €/crediti</strong>
+                                            </span>
+                                            <span class="moscarossa-price-summary-item moscarossa-price-total">
+                                                <span>Totale:</span>
+                                                <strong id="moscarossaGrandTotal">0 €/crediti</strong>
+                                            </span>
+                                        </div>
+                                        <div class="moscarossa-price-list-actions">
+                                            <button id="moscarossaTogglePriceList" type="button"
+                                                class="btn btn-default btn-sm">
+                                                <i class="fa fa-eye"></i> MOSTRA LISTINO PREZZI
+                                            </button>
+                                        </div>
+                                        <div id="moscarossaPriceList" class="moscarossa-price-list" hidden></div>
                                     </div>
                                     <div class="separator"></div>
                                     <button id="moscarossaSaveSchedule" type="button" class="btn btn-success"
@@ -733,7 +799,7 @@
     </div>
     <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
     <script src="/js/panels/moscarossa/main.js?v=20260829-previous-ad-select"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260831-history-status-style"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260901-db-prices"></script>
 </body>
 
 </html>

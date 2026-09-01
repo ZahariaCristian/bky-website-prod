@@ -8,12 +8,13 @@
         Gold: { imageLimit: 20, paid: true }
     });
     const PROMOTION_DURATIONS = [1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30];
-    const PROMOTION_PRICES = Object.freeze({
-        Premium: Object.freeze({ 1: 18, 2: 28, 3: 36, 4: 46, 5: 54, 6: 63, 7: 72, 10: 90, 15: 108, 20: 144, 25: 164, 30: 180 }),
-        Top: Object.freeze({ 1: 20, 2: 33, 3: 45, 4: 58, 5: 70, 6: 83, 7: 95, 10: 125, 15: 165, 20: 220, 25: 260, 30: 300 }),
-        Red: Object.freeze({ 1: 25, 2: 43, 3: 60, 4: 78, 5: 95, 6: 113, 7: 130, 10: 175, 15: 240, 20: 320, 25: 385, 30: 450 }),
-        Gold: Object.freeze({ 1: 37, 2: 67, 3: 95, 4: 125, 5: 154, 6: 183, 7: 212, 10: 292, 15: 415, 20: 554, 25: 677, 30: 800 })
-    });
+    const PROMOTION_PRICES = {
+        Premium: { 1: 18, 2: 28, 3: 36, 4: 46, 5: 54, 6: 63, 7: 72, 10: 90, 15: 108, 20: 144, 25: 164, 30: 180 },
+        Top: { 1: 20, 2: 33, 3: 45, 4: 58, 5: 70, 6: 83, 7: 95, 10: 125, 15: 165, 20: 220, 25: 260, 30: 300 },
+        Red: { 1: 25, 2: 43, 3: 60, 4: 78, 5: 95, 6: 113, 7: 130, 10: 175, 15: 240, 20: 320, 25: 385, 30: 450 },
+        Gold: { 1: 37, 2: 67, 3: 95, 4: 125, 5: 154, 6: 183, 7: 212, 10: 292, 15: 415, 20: 554, 25: 677, 30: 800 }
+    };
+    const ADDON_PRICES = { vetrina: 8, diamond: 50 };
     const params = new URLSearchParams(window.location.search);
     const rawId = params.get("edit") || "";
     const annuncioId = Number.parseInt(rawId, 10);
@@ -31,6 +32,11 @@
     const deletePublishedButton = document.querySelector("#moscarossaDeletePublished");
     const suspendExpiredButton = document.querySelector("#moscarossaSuspendExpired");
     const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
+    const packageTotal = document.querySelector("#moscarossaPackageTotal");
+    const addonTotal = document.querySelector("#moscarossaAddonTotal");
+    const grandTotal = document.querySelector("#moscarossaGrandTotal");
+    const togglePriceListButton = document.querySelector("#moscarossaTogglePriceList");
+    const priceList = document.querySelector("#moscarossaPriceList");
     const promotionTabs = Array.from(document.querySelectorAll("[data-moscarossa-plan]"));
     const state = {
         advertisement: null,
@@ -82,6 +88,101 @@
     const applyPromotionTheme = (link) => {
         if (!wizardBody || !link) return;
         wizardBody.style.backgroundColor = window.getComputedStyle(link).backgroundColor;
+    };
+    const formatCredits = (credits) => `${Number(credits || 0)} €/crediti`;
+    const applyStoredPrices = (rows = []) => {
+        const planNames = { premium: "Premium", top: "Top", red: "Red", gold: "Gold" };
+        rows.forEach((row) => {
+            const product = clean(row.product).toLowerCase();
+            const price = Number(row.price);
+            if (!Number.isFinite(price) || price < 0) return;
+            if (planNames[product] && PROMOTION_DURATIONS.includes(Number(row.days))) {
+                PROMOTION_PRICES[planNames[product]][Number(row.days)] = price;
+            } else if (
+                Object.prototype.hasOwnProperty.call(ADDON_PRICES, product) &&
+                Number(row.days) === 1
+            ) {
+                ADDON_PRICES[product] = price;
+            }
+        });
+    };
+    const loadStoredPrices = async () => {
+        try {
+            const response = await fetch("/gestPagamenti/getMoscarossaPrices", {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin"
+            });
+            if (!response.ok) return false;
+            const result = await response.json().catch(() => ({}));
+            applyStoredPrices(Array.isArray(result.prices) ? result.prices : []);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+    const getSlotPrice = (slot) => {
+        if (!slot || slot.deleted || slot.remotePostID || `${slot.state || ""}`.toUpperCase() === "OK") {
+            return { packageCredits: 0, addonCredits: 0, totalCredits: 0 };
+        }
+        const paidPlan = PROMOTION_PLANS[slot.plan]?.paid;
+        const packageCredits = paidPlan ? Number(PROMOTION_PRICES[slot.plan]?.[slot.days] || 0) : 0;
+        const vetrinaCredits = paidPlan && slot.addons?.vetrina?.enabled
+            ? (Number.parseInt(slot.addons.vetrina.days, 10) || 1) * ADDON_PRICES.vetrina
+            : 0;
+        const diamondDays = paidPlan && slot.addons?.diamond?.enabled
+            ? new Set(slot.addons.diamond.dates || []).size
+            : 0;
+        const addonCredits = vetrinaCredits + diamondDays * ADDON_PRICES.diamond;
+        return { packageCredits, addonCredits, totalCredits: packageCredits + addonCredits };
+    };
+    const updatePriceSummary = () => {
+        const visibleSlots = (state.schedule[state.currentDay] || [])
+            .filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
+        const totals = visibleSlots.reduce((sum, slot) => {
+            const price = getSlotPrice(slot);
+            sum.packageCredits += price.packageCredits;
+            sum.addonCredits += price.addonCredits;
+            sum.totalCredits += price.totalCredits;
+            return sum;
+        }, { packageCredits: 0, addonCredits: 0, totalCredits: 0 });
+        if (packageTotal) packageTotal.textContent = formatCredits(totals.packageCredits);
+        if (addonTotal) addonTotal.textContent = formatCredits(totals.addonCredits);
+        if (grandTotal) grandTotal.textContent = formatCredits(totals.totalCredits);
+    };
+    const renderPriceList = () => {
+        if (!priceList) return;
+        const header = ["Durata", "Premium", "Top", "Red", "Gold"];
+        const rows = PROMOTION_DURATIONS.map((days) => [
+            `${days} ${days === 1 ? "giorno" : "giorni"}`,
+            ...["Premium", "Top", "Red", "Gold"].map((plan) => formatCredits(PROMOTION_PRICES[plan][days]))
+        ]);
+        const table = document.createElement("table");
+        table.className = "table table-striped table-condensed";
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        header.forEach((label) => {
+            const cell = document.createElement("th");
+            cell.textContent = label;
+            headerRow.appendChild(cell);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        const tbody = document.createElement("tbody");
+        rows.forEach((values) => {
+            const row = document.createElement("tr");
+            values.forEach((value) => {
+                const cell = document.createElement("td");
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        const extras = document.createElement("div");
+        extras.className = "alert alert-info";
+        extras.innerHTML = `<strong>Extra Moscarossa:</strong> Vetrina ${formatCredits(ADDON_PRICES.vetrina)} al giorno · Diamond ${formatCredits(ADDON_PRICES.diamond)} per giorno selezionato.`;
+        priceList.replaceChildren(table, extras);
     };
     const parsePeriod = (value, fallbackPlan) => {
         let parsed = {};
@@ -310,7 +411,9 @@
         vetrinaDays.disabled = locked || !vetrinaCheck.checked;
         const vetrinaPrice = document.createElement("strong");
         const updateVetrinaPrice = () => {
-            vetrinaPrice.textContent = vetrinaCheck.checked ? `${(Number(vetrinaDays.value) || 1) * 8} €/crediti` : "";
+            vetrinaPrice.textContent = vetrinaCheck.checked
+                ? formatCredits((Number(vetrinaDays.value) || 1) * ADDON_PRICES.vetrina)
+                : "";
         };
         vetrinaCheck.addEventListener("change", () => {
             slot.addons.vetrina.enabled = vetrinaCheck.checked;
@@ -322,6 +425,7 @@
             slot.addons.vetrina.days = Number.parseInt(vetrinaDays.value, 10) || 1;
             updateVetrinaPrice();
             markDirty(slot);
+            updatePriceSummary();
         });
         vetrinaControls.appendChild(vetrinaDays);
         vetrinaControls.appendChild(vetrinaPrice);
@@ -370,7 +474,7 @@
                 dateList.appendChild(chip);
             });
             diamondPrice.textContent = diamondCheck.checked
-                ? `${slot.addons.diamond.dates.length * 50} €/crediti`
+                ? formatCredits(slot.addons.diamond.dates.length * ADDON_PRICES.diamond)
                 : "";
         };
         diamondCheck.addEventListener("change", () => {
@@ -468,6 +572,7 @@
                 slot.days = Number.parseInt(duration.value, 10) || 1;
                 renderPrice();
                 markDirty(slot);
+                updatePriceSummary();
             });
             main.appendChild(duration);
             renderPrice();
@@ -529,6 +634,7 @@
         const visibleSlots = slots.filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
         visibleSlots.forEach((slot) => scheduleList.appendChild(renderSlot(slot, slots.indexOf(slot))));
         addButton.disabled = !isSavedAdvertisement || state.currentDay < todayKey();
+        updatePriceSummary();
     }
 
     const selectDay = (day) => {
@@ -1135,6 +1241,13 @@
     suspendPublishedButton.addEventListener("click", () => runBulkHistoryAction(suspendPublishedButton, "suspendPublished"));
     deletePublishedButton.addEventListener("click", () => runBulkHistoryAction(deletePublishedButton, "deletePublished"));
     suspendExpiredButton.addEventListener("click", () => runBulkHistoryAction(suspendExpiredButton, "suspendExpired"));
+    togglePriceListButton?.addEventListener("click", () => {
+        const willShow = priceList.hidden;
+        priceList.hidden = !willShow;
+        togglePriceListButton.innerHTML = willShow
+            ? '<i class="fa fa-eye-slash"></i> NASCONDI LISTINO PREZZI'
+            : '<i class="fa fa-eye"></i> MOSTRA LISTINO PREZZI';
+    });
     document.querySelectorAll(".moscarossa-copy-all").forEach((element) => {
         element.addEventListener("click", () => {
             if (!state.historyText.length) return showError("Non ci sono pubblicazioni da copiare.");
@@ -1147,6 +1260,13 @@
     };
 
     initializeCalendar();
+    renderPriceList();
+    updatePriceSummary();
     applyPromotionTheme(promotionTabs.find((tab) => tab.closest("li")?.classList.contains("active")));
+    loadStoredPrices().then(() => {
+        renderPriceList();
+        updatePriceSummary();
+        if (state.currentDay) renderDay();
+    });
     loadAdvertisement();
 })();

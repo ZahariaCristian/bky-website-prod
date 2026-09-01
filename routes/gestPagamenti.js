@@ -16,11 +16,16 @@ const {
     AMASENS_PLATFORM,
     getDefaultAmasensPrices
 } = require("../config/amasensPrices");
+const {
+    MOSCAROSSA_PLATFORM,
+    getDefaultMoscarossaPrices
+} = require("../config/moscarossaPrices");
 const { getPlatformPriceKey } = require("../config/platformPrices");
 
 const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
 const defaultBakecaPrices = getDefaultBakecaPrices();
 const defaultAmasensPrices = getDefaultAmasensPrices();
+const defaultMoscarossaPrices = getDefaultMoscarossaPrices();
 const validIncontriamociPriceKeys = new Set(
     defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
@@ -29,6 +34,9 @@ const validBakecaPriceKeys = new Set(
 );
 const validAmasensPriceKeys = new Set(
     defaultAmasensPrices.map(getPlatformPriceKey)
+);
+const validMoscarossaPriceKeys = new Set(
+    defaultMoscarossaPrices.map(getPlatformPriceKey)
 );
 let platformPriceTablePromise;
 
@@ -140,6 +148,30 @@ const normalizeAmasensPrice = (row = {}) => {
     }
     if (!Number.isFinite(normalized.price) || normalized.price < 0) {
         throw new Error("Amasens price must be a valid non-negative value.");
+    }
+
+    return normalized;
+};
+
+const normalizeMoscarossaPrice = (row = {}) => {
+    const product = `${row.product || ""}`.toLowerCase();
+    const isAddon = product === "vetrina" || product === "diamond";
+    const normalized = {
+        platform: MOSCAROSSA_PLATFORM,
+        product,
+        days: Number(row.days),
+        variantKey: "default",
+        optionsJson: isAddon ? { billing: "per-day" } : {},
+        price: Number(row.price),
+        standardPrice: null,
+        active: true
+    };
+
+    if (!validMoscarossaPriceKeys.has(getPlatformPriceKey(normalized))) {
+        throw new Error("Invalid Moscarossa price combination.");
+    }
+    if (!Number.isFinite(normalized.price) || normalized.price < 0) {
+        throw new Error("Moscarossa price must be a valid non-negative value.");
     }
 
     return normalized;
@@ -570,6 +602,74 @@ router.post("/updateAmasensPrices", authenticateKey, async (req, res) => {
         }
         console.error("Unable to save Amasens prices:", error);
         res.status(500).json({ error: "Unable to save Amasens prices." });
+    }
+});
+
+router.get("/getMoscarossaPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        await seedPlatformPrices(group, MOSCAROSSA_PLATFORM, defaultMoscarossaPrices);
+        const prices = await findPlatformPrices(group, MOSCAROSSA_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        console.error("Unable to load Moscarossa prices:", error);
+        res.status(500).json({ error: "Unable to load Moscarossa prices." });
+    }
+});
+
+router.post("/updateMoscarossaPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > defaultMoscarossaPrices.length
+    ) {
+        return res.status(400).json({ error: "A valid Moscarossa price list is required." });
+    }
+
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const normalizedRows = req.body.rows.map(normalizeMoscarossaPrice);
+        const rows = Array.from(new Map(
+            normalizedRows.map((row) => [getPlatformPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    platform: row.platform,
+                    product: row.product,
+                    days: row.days,
+                    variantKey: row.variantKey
+                };
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    optionsJson: row.optionsJson,
+                    price: row.price,
+                    standardPrice: null,
+                    active: true
+                }, { transaction });
+            }
+        });
+
+        const prices = await findPlatformPrices(group, MOSCAROSSA_PLATFORM);
+        res.json({ prices });
+    } catch (error) {
+        const validationMessage = error?.message?.startsWith("Invalid") ||
+            error?.message?.startsWith("Moscarossa price");
+        if (validationMessage) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Moscarossa prices:", error);
+        res.status(500).json({ error: "Unable to save Moscarossa prices." });
     }
 });
 

@@ -59,7 +59,8 @@
         }
         .incontriamoci-price-toolbar,
         .bakeca-price-toolbar,
-        .amasens-price-toolbar {
+        .amasens-price-toolbar,
+        .moscarossa-price-toolbar {
             align-items: flex-end;
             display: flex;
             flex-wrap: wrap;
@@ -69,28 +70,33 @@
         }
         .incontriamoci-price-toolbar .form-group,
         .bakeca-price-toolbar .form-group,
-        .amasens-price-toolbar .form-group {
+        .amasens-price-toolbar .form-group,
+        .moscarossa-price-toolbar .form-group {
             margin-bottom: 0;
         }
         .incontriamoci-price-editor input[type="number"],
         .bakeca-price-editor input[type="number"],
-        .amasens-price-editor input[type="number"] {
+        .amasens-price-editor input[type="number"],
+        .moscarossa-price-editor input[type="number"] {
             min-width: 100px;
             width: 100%;
         }
         .incontriamoci-price-editor table,
         .bakeca-price-editor table,
-        .amasens-price-editor table {
+        .amasens-price-editor table,
+        .moscarossa-price-editor table {
             margin-bottom: 0;
         }
         .incontriamoci-price-editor [hidden],
         .bakeca-price-editor [hidden],
-        .amasens-price-editor [hidden] {
+        .amasens-price-editor [hidden],
+        .moscarossa-price-editor [hidden] {
             display: none;
         }
         .incontriamoci-price-status,
         .bakeca-price-status,
-        .amasens-price-status {
+        .amasens-price-status,
+        .moscarossa-price-status {
             margin: 12px 0 0;
         }
     </style>
@@ -475,6 +481,60 @@
                     </div>
                 </div>
 
+                <div class="widget widget-body-gray moscarossa-price-editor" id="moscarossaPriceEditor">
+                    <div class="widget-head" style="background: #eaeaea;">
+                        <h3 class="heading glyphicons euro"><i></i>Listino Moscarossa</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="moscarossa-price-toolbar">
+                            <div class="btn-group" role="group" aria-label="Prodotto Moscarossa">
+                                <button type="button" class="btn btn-primary"
+                                    data-moscarossa-editor-product="premium"
+                                    aria-pressed="true">Premium</button>
+                                <button type="button" class="btn btn-default"
+                                    data-moscarossa-editor-product="top"
+                                    aria-pressed="false">Top</button>
+                                <button type="button" class="btn btn-default"
+                                    data-moscarossa-editor-product="red"
+                                    aria-pressed="false">Red</button>
+                                <button type="button" class="btn btn-default"
+                                    data-moscarossa-editor-product="gold"
+                                    aria-pressed="false">Gold</button>
+                                <button type="button" class="btn btn-default"
+                                    data-moscarossa-editor-product="vetrina"
+                                    aria-pressed="false">Vetrina</button>
+                                <button type="button" class="btn btn-default"
+                                    data-moscarossa-editor-product="diamond"
+                                    aria-pressed="false">Diamond</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th id="moscarossaPriceDurationHeading">Durata</th>
+                                        <th>Prezzo (€/crediti)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="moscarossaPriceEditorRows">
+                                    <tr>
+                                        <td colspan="2" class="text-muted">Caricamento...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="moscarossaPriceStatus" class="moscarossa-price-status"
+                            role="status" aria-live="polite"></div>
+                        <button type="button" class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px;"
+                            id="saveMoscarossaPrices" disabled>
+                            <i class="fa fa-save"></i> <b>Salva listino Moscarossa</b>
+                        </button>
+                    </div>
+                </div>
+
 
             </div>
             <footer>
@@ -488,5 +548,6 @@
     <script src="/js/gestPagamenti.bakeca.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.incontriamoci.js?v=20260703-platform-prices"></script>
     <script src="/js/gestPagamenti.amasens.js?v=20260720-amasens-prices"></script>
+    <script src="/js/gestPagamenti.moscarossa.js?v=20260901-moscarossa-prices"></script>
 </body>
 </html>
