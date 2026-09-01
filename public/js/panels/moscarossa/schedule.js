@@ -32,8 +32,6 @@
     const deletePublishedButton = document.querySelector("#moscarossaDeletePublished");
     const suspendExpiredButton = document.querySelector("#moscarossaSuspendExpired");
     const whatsappHistoryButton = document.querySelector("#moscarossaWhatsappHistory");
-    const packageTotal = document.querySelector("#moscarossaPackageTotal");
-    const addonTotal = document.querySelector("#moscarossaAddonTotal");
     const grandTotal = document.querySelector("#moscarossaGrandTotal");
     const togglePriceListButton = document.querySelector("#moscarossaTogglePriceList");
     const priceList = document.querySelector("#moscarossaPriceList");
@@ -146,8 +144,6 @@
             sum.totalCredits += price.totalCredits;
             return sum;
         }, { packageCredits: 0, addonCredits: 0, totalCredits: 0 });
-        if (packageTotal) packageTotal.textContent = formatCredits(totals.packageCredits);
-        if (addonTotal) addonTotal.textContent = formatCredits(totals.addonCredits);
         if (grandTotal) grandTotal.textContent = formatCredits(totals.totalCredits);
     };
     const renderPriceList = () => {
@@ -1244,9 +1240,15 @@
     togglePriceListButton?.addEventListener("click", () => {
         const willShow = priceList.hidden;
         priceList.hidden = !willShow;
-        togglePriceListButton.innerHTML = willShow
-            ? '<i class="fa fa-eye-slash"></i> NASCONDI LISTINO PREZZI'
-            : '<i class="fa fa-eye"></i> MOSTRA LISTINO PREZZI';
+        togglePriceListButton.setAttribute("aria-expanded", willShow ? "true" : "false");
+        const label = togglePriceListButton.querySelector("span");
+        if (label) {
+            label.textContent = willShow ? "Nascondi listino prezzi" : "Mostra listino prezzi";
+        }
+        const icon = togglePriceListButton.querySelector("i");
+        if (icon) {
+            icon.className = willShow ? "fa fa-chevron-up" : "fa fa-chevron-down";
+        }
     });
     document.querySelectorAll(".moscarossa-copy-all").forEach((element) => {
         element.addEventListener("click", () => {
