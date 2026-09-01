@@ -221,6 +221,10 @@
             white-space: nowrap;
         }
 
+        .moscarossa-price-section {
+            padding: 8px 15px 15px;
+        }
+
         .moscarossa-price-total {
             font-weight: 700;
         }
@@ -614,21 +618,23 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div id="moscarossaPriceSummary" class="moscarossa-price-summary"
-                                            aria-live="polite">
-                                            <span>Totale:</span>
-                                            <strong id="moscarossaGrandTotal"
-                                                class="moscarossa-price-total">0 €/crediti</strong>
+                                        <div class="moscarossa-price-section">
+                                            <div id="moscarossaPriceSummary" class="moscarossa-price-summary"
+                                                aria-live="polite">
+                                                <span>Totale:</span>
+                                                <strong id="moscarossaGrandTotal"
+                                                    class="moscarossa-price-total">0 €/crediti</strong>
+                                            </div>
+                                            <div>
+                                                <button id="moscarossaTogglePriceList" type="button"
+                                                    class="btn btn-default"
+                                                    aria-controls="moscarossaPriceList" aria-expanded="false">
+                                                    <i class="fa fa-chevron-down"></i>
+                                                    <span>Mostra listino prezzi</span>
+                                                </button>
+                                            </div>
+                                            <div id="moscarossaPriceList" class="moscarossa-price-list" hidden></div>
                                         </div>
-                                        <div>
-                                            <button id="moscarossaTogglePriceList" type="button"
-                                                class="btn btn-default"
-                                                aria-controls="moscarossaPriceList" aria-expanded="false">
-                                                <i class="fa fa-chevron-down"></i>
-                                                <span>Mostra listino prezzi</span>
-                                            </button>
-                                        </div>
-                                        <div id="moscarossaPriceList" class="moscarossa-price-list" hidden></div>
                                     </div>
                                     <div class="separator"></div>
                                     <button id="moscarossaSaveSchedule" type="button" class="btn btn-success"
@@ -779,7 +785,7 @@
     </div>
     <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
     <script src="/js/panels/moscarossa/main.js?v=20260829-previous-ad-select"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260901-price-style"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260901-price-padding"></script>
 </body>
 
 </html>
