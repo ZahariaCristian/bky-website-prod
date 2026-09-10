@@ -145,14 +145,27 @@ router.post("/get", authenticateKey, async (req, res) => {
     for (s of schedulazioni){
         var dead = new Date(s.data);
         var period = new Date(s.data);
-        
-        if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3" && s.typeAnnuncio != "10x7"){
+
+        const isMoscarossa = `${s.platform || ""}`.toLowerCase() === "moscarossa";
+        if (isMoscarossa) {
+            let details = {};
+            try { details = JSON.parse(s.period || "{}").moscarossa || {}; } catch { details = {}; }
+            const paidPlans = new Set(["premium", "top", "red", "gold"]);
+            const storedPlan = `${s.typeAnnuncio || "Free"}`.trim().toLowerCase();
+            const legacyPlan = `${details.plan || "Free"}`.trim().toLowerCase();
+            const plan = storedPlan !== "free" ? storedPlan : legacyPlan;
+            const requestedDays = Number.parseInt(details.days, 10);
+            const days = paidPlans.has(plan) && Number.isInteger(requestedDays) && requestedDays > 0
+                ? requestedDays
+                : 1;
+            dead.setDate(dead.getDate() + days);
+        } else if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3" && s.typeAnnuncio != "10x7"){
             var hPeriod = parseInt(s.period.substr(0,2));
             period.setHours(hPeriod);
             period.setMinutes(period.getMinutes() + (period.getTimezoneOffset() * -1));
         }
-        
-        switch(s.typeAnnuncio){
+
+        if (!isMoscarossa) switch(s.typeAnnuncio){
             case "Free":
                 dead.setDate(dead.getDate() + 1);
             break;

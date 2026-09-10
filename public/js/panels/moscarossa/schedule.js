@@ -184,7 +184,10 @@
         let parsed = {};
         try { parsed = typeof value === "string" ? JSON.parse(value || "{}") : (value || {}); } catch { parsed = {}; }
         const details = parsed.moscarossa || parsed;
-        const plan = normalizePlan(details.plan || fallbackPlan);
+        const storedPlan = normalizePlan(fallbackPlan);
+        // New schedules persist the Moscarossa plan in typeAnnuncio. For legacy
+        // rows, typeAnnuncio is Free and the real paid plan is still in period.
+        const plan = storedPlan !== "Free" ? storedPlan : normalizePlan(details.plan || storedPlan);
         const requestedDays = Number.parseInt(details.days || details.duration || 1, 10);
         const compactAddons = details.a && typeof details.a === "object" ? details.a : {};
         const rawAddons = details.addons && typeof details.addons === "object"
@@ -676,9 +679,9 @@
                 relativeID: slot.relativeID || "",
                 state: slot.id && slot.dirty ? "EDIT" : slot.state,
                 GCRecord: slot.deleted ? true : null,
-                // tblSchedulazioni.typeAnnuncio is a legacy ENUM. Moscarossa's
-                // real plan is stored in period to avoid a database migration.
-                typeAnnuncio: "Free",
+                // Keep the selected plan as first-class schedule data. The copy
+                // in period remains temporarily for legacy publisher instances.
+                typeAnnuncio: slot.plan,
                 typePeriodic: "Top",
                 // Compact add-on keys keep the payload inside tblSchedulazioni.period VARCHAR(255),
                 // including a full 30-day Diamond selection.
@@ -795,13 +798,107 @@
         return icon;
     };
 
-    const queueHistoryAction = async (record, operation, buttons) => {
+    const chooseRepublishPromotion = (record, paidOnly = false) => new Promise((resolve) => {
+        const stored = parsePeriod(record.period, record.typeAnnuncio);
+        const allowedPlans = Object.keys(PROMOTION_PLANS)
+            .filter((plan) => !paidOnly || PROMOTION_PLANS[plan].paid);
+        const defaultPlan = allowedPlans.includes(stored.plan)
+            ? stored.plan
+            : (allowedPlans.includes(state.currentPlan) ? state.currentPlan : allowedPlans[0]);
+        const modal = document.createElement("div");
+        modal.className = "modal fade";
+        modal.tabIndex = -1;
+        modal.setAttribute("role", "dialog");
+        modal.innerHTML = `
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Chiudi"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Pubblica annuncio Moscarossa</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p class="moscarossa-republish-message"></p>
+                        <div class="form-group">
+                            <label>Piano</label>
+                            <select class="form-control moscarossa-republish-plan"></select>
+                        </div>
+                        <div class="form-group moscarossa-republish-days-group">
+                            <label>Durata</label>
+                            <select class="form-control moscarossa-republish-days"></select>
+                        </div>
+                        <div class="alert alert-info moscarossa-republish-price"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">ANNULLA</button>
+                        <button type="button" class="btn btn-success moscarossa-republish-confirm">CONFERMA</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const message = modal.querySelector(".moscarossa-republish-message");
+        const planSelect = modal.querySelector(".moscarossa-republish-plan");
+        const daysSelect = modal.querySelector(".moscarossa-republish-days");
+        const daysGroup = modal.querySelector(".moscarossa-republish-days-group");
+        const price = modal.querySelector(".moscarossa-republish-price");
+        const confirm = modal.querySelector(".moscarossa-republish-confirm");
+        message.textContent = paidOnly
+            ? "Il piano Free non è disponibile per il limite Moscarossa di 10 giorni. Seleziona una promozione a pagamento."
+            : "Scegli se riattivare l'annuncio come Free oppure con una promozione a pagamento.";
+        allowedPlans.forEach((plan) => planSelect.add(new Option(plan, plan)));
+        PROMOTION_DURATIONS.forEach((days) => daysSelect.add(new Option(
+            `${days} ${days === 1 ? "giorno" : "giorni"}`,
+            `${days}`
+        )));
+        planSelect.value = defaultPlan;
+        daysSelect.value = `${PROMOTION_DURATIONS.includes(stored.days) ? stored.days : 1}`;
+
+        const refresh = () => {
+            const plan = normalizePlan(planSelect.value);
+            const isPaid = PROMOTION_PLANS[plan].paid;
+            const days = Number.parseInt(daysSelect.value, 10) || 1;
+            const credits = isPaid ? Number(PROMOTION_PRICES[plan]?.[days] || 0) : 0;
+            daysGroup.style.display = isPaid ? "block" : "none";
+            price.textContent = isPaid
+                ? `${plan}, ${days} ${days === 1 ? "giorno" : "giorni"}: ${formatCredits(credits)}`
+                : "Pubblicazione Free: 0 €/crediti";
+            confirm.textContent = isPaid ? `ATTIVA ${plan.toUpperCase()}` : "PUBBLICA FREE";
+        };
+        planSelect.addEventListener("change", refresh);
+        daysSelect.addEventListener("change", refresh);
+        refresh();
+
+        let selection = null;
+        confirm.addEventListener("click", () => {
+            const plan = normalizePlan(planSelect.value);
+            selection = {
+                plan,
+                days: PROMOTION_PLANS[plan].paid ? (Number.parseInt(daysSelect.value, 10) || 1) : 1
+            };
+            window.jQuery(modal).modal("hide");
+        });
+        window.jQuery(modal).one("hidden.bs.modal", () => {
+            modal.remove();
+            resolve(selection);
+        });
+        window.jQuery(modal).modal("show");
+    });
+
+    const queueHistoryAction = async (record, operation, buttons, promotionOverride = null) => {
         const isDelete = operation === "delete";
         const isRepublish = operation === "republish";
+        const overridePlan = normalizePlan(promotionOverride?.plan || "Free");
+        const overrideDays = Number.parseInt(promotionOverride?.days, 10) || 1;
+        const overrideCredits = PROMOTION_PLANS[overridePlan].paid
+            ? Number(PROMOTION_PRICES[overridePlan]?.[overrideDays] || 0)
+            : 0;
         const prompt = isDelete
             ? "Eliminare definitivamente questo annuncio da Moscarossa? L'operazione non può essere annullata."
             : (isRepublish
-                ? "Ripubblicare questo annuncio su Moscarossa?"
+                ? (promotionOverride
+                    ? `Pubblicare come ${overridePlan} per ${overrideDays} ${overrideDays === 1 ? "giorno" : "giorni"}` +
+                        `${overrideCredits ? ` al costo di ${formatCredits(overrideCredits)}` : ""}?`
+                    : "Ripubblicare questo annuncio su Moscarossa?")
                 : "Sospendere questo annuncio su Moscarossa?");
         if (!window.confirm(prompt)) return;
 
@@ -818,7 +915,9 @@
                     id: record.id,
                     annuncio: annuncioId,
                     panel: PANEL,
-                    remotePostID: record.remotePostID
+                    remotePostID: record.remotePostID,
+                    promotionPlan: promotionOverride?.plan || "",
+                    promotionDays: promotionOverride?.days || ""
                 })
             });
             const payload = await response.json().catch(() => ({}));
@@ -1023,6 +1122,10 @@
             }
             const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
                 /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
+            const recordPlan = parsePeriod(record.period, record.typeAnnuncio).plan;
+            const freeLimitPending = recordState === "ALERT" && recordPlan === "Free" &&
+                /free_limit|limite (?:moscarossa )?(?:di )?10 giorni|un solo annuncio (?:free|gratuito)/i
+                    .test(`${record.errorReason || ""}`);
             const status = document.createElement("span");
             status.className = `${statusClass(record.state)} btnPublishState`;
             const statusLabels = {
@@ -1040,7 +1143,7 @@
                     DELETE: "ELIMINAZIONE IN ATTESA"
                 }[recordState] || "SOSPESO")
                 : (statusLabels[recordState] || "IN ATTESA");
-            if (!waitingForSms) statusActions.appendChild(status);
+            if (!waitingForSms && !freeLimitPending) statusActions.appendChild(status);
             if (waitingForSms) {
                 const verifyButton = createButton(
                     "btn btn-warning btn-xs",
@@ -1070,7 +1173,6 @@
                 statusActions.appendChild(errorButton);
             }
             const managementButtons = [];
-            const recordPlan = parsePeriod(record.period, record.typeAnnuncio).plan;
             const storyEligible = !suspended && recordState === "OK" && Boolean(record.remotePostID) &&
                 (isTrue(record.payed) || PROMOTION_PLANS[recordPlan].paid);
             if (storyEligible) {
@@ -1091,14 +1193,23 @@
                 managementButtons.push(suspendButton);
                 suspendButton.addEventListener("click", () => queueHistoryAction(record, "suspend", managementButtons));
                 statusActions.appendChild(suspendButton);
-            } else if (suspended && recordState === "CLOSED") {
+            } else if ((suspended && recordState === "CLOSED") || freeLimitPending) {
                 const publishButton = document.createElement("button");
                 publishButton.type = "button";
                 publishButton.className = "btn btn-danger btn-xs btnPublishState";
-                publishButton.textContent = "PUBBLICA";
-                publishButton.title = "Ripubblica annuncio Moscarossa";
+                publishButton.textContent = freeLimitPending ? "PROMUOVI" : "PUBBLICA";
+                publishButton.title = freeLimitPending
+                    ? "Scegli una promozione Moscarossa a pagamento"
+                    : "Ripubblica annuncio Moscarossa";
                 managementButtons.push(publishButton);
-                publishButton.addEventListener("click", () => queueHistoryAction(record, "republish", managementButtons));
+                publishButton.addEventListener("click", async () => {
+                    let promotionOverride = null;
+                    if (recordPlan === "Free") {
+                        promotionOverride = await chooseRepublishPromotion(record, freeLimitPending);
+                        if (!promotionOverride) return;
+                    }
+                    await queueHistoryAction(record, "republish", managementButtons, promotionOverride);
+                });
                 statusActions.appendChild(publishButton);
             }
             if (record.remotePostID && ((!suspended && recordState === "OK") || (suspended && recordState === "CLOSED"))) {

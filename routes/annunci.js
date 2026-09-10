@@ -675,7 +675,12 @@ const MOSCAROSSA_PROMOTION_NAMES = Object.freeze({
 const getMoscarossaPromotionPlan = (period, fallback = "Free") => {
     let details = {};
     try { details = JSON.parse(period || "{}").moscarossa || {}; } catch { details = {}; }
-    const requested = `${details.plan || fallback || "Free"}`.trim().toLowerCase();
+    const stored = MOSCAROSSA_PROMOTION_NAMES[`${fallback || "Free"}`.trim().toLowerCase()] || "";
+    // typeAnnuncio is authoritative for new paid rows. Legacy rows used Free in
+    // that column and kept their actual Moscarossa plan inside period.
+    const requested = `${stored && stored !== "Free" ? stored : (details.plan || stored || "Free")}`
+        .trim()
+        .toLowerCase();
     return MOSCAROSSA_PROMOTION_NAMES[requested] || "";
 };
 
@@ -2977,7 +2982,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 } else {
                     slot.period = "";
                 }
-                slot.typeAnnuncio = "Free";
+                slot.typeAnnuncio = normalizedPlan;
                 slot.hasPremium = normalizedPlan !== "Free";
                 const imageLimit = getScheduleImageLimit(schedulePlatform, normalizedPlan);
                 if (Array.isArray(slot.images) && slot.images.length > imageLimit) {
@@ -3552,16 +3557,49 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     });
     if (!advertisement) return res.sendStatus(403);
     const currentState = `${schedule.state || ""}`.toUpperCase();
+    const republishUpgrade = nextState === "REPUBLISH" &&
+        Boolean(`${req.body.promotionPlan || ""}`.trim());
     const allowedStates = nextState === "DELETE"
         ? ["OK", "CLOSED"]
-        : (nextState === "REPUBLISH" ? ["CLOSED"] : ["OK"]);
+        : (nextState === "REPUBLISH" ? (republishUpgrade ? ["CLOSED", "ALERT"] : ["CLOSED"]) : ["OK"]);
     if (!allowedStates.includes(currentState) || !schedule.remotePostID) {
         return res.status(409).json({
             error: "L'annuncio Moscarossa deve essere pubblicato e avere un identificativo remoto."
         });
     }
+    if (currentState === "ALERT" && !/free_limit|limite (?:moscarossa )?(?:di )?10 giorni|un solo annuncio (?:free|gratuito)/i
+        .test(`${schedule.errorReason || ""}`)) {
+        return res.status(409).json({
+            error: "Questa pubblicazione Moscarossa richiede prima la risoluzione dell'avviso corrente."
+        });
+    }
 
-    await schedule.update({ state: nextState, editedBy: req.session.userid, errorReason: null });
+    const update = { state: nextState, editedBy: req.session.userid, errorReason: null };
+    if (nextState === "REPUBLISH" && `${req.body.promotionPlan || ""}`.trim()) {
+        const promotionPlan = MOSCAROSSA_PROMOTION_NAMES[
+            `${req.body.promotionPlan}`.trim().toLowerCase()
+        ];
+        const promotionDays = Number.parseInt(req.body.promotionDays, 10);
+        const allowedDurations = new Set([1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30]);
+        if (!promotionPlan || (promotionPlan !== "Free" && !allowedDurations.has(promotionDays))) {
+            return res.status(422).json({ error: "Piano o durata Moscarossa non validi." });
+        }
+
+        update.period = promotionPlan === "Free"
+            ? ""
+            : JSON.stringify({
+                moscarossa: {
+                    plan: promotionPlan,
+                    days: promotionDays,
+                    a: { v: [0, promotionDays], d: [0, []] }
+                }
+            });
+        update.typeAnnuncio = promotionPlan;
+        update.hasPremium = promotionPlan !== "Free";
+        update.payed = promotionPlan === "Free" ? true : null;
+    }
+
+    await schedule.update(update);
     return res.sendStatus(200);
 };
 
