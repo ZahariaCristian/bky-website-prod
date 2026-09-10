@@ -241,6 +241,9 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
         : (/^\d{4,9}$/.test(importedRemoteId) ? importedRemoteId : "");
     const waitingForSms = Boolean(schedule) && `${schedule.state || ""}`.toUpperCase() === "ALERT" &&
         /verifica sms|waiting_sms|verifica.*telefon/i.test(`${schedule.errorReason || ""}`);
+    const resumeRequested = action === "verify" && req.body.resume === true;
+    const resumePublication = action === "verify" && Boolean(schedule) &&
+        (resumeRequested || waitingForSms);
 
     const publisherUrl = getMoscarossaPhoneVerificationApiUrl();
     try {
@@ -251,7 +254,7 @@ router.post("/moscarossaPhoneVerification", authenticateKey, async (req, res) =>
             scheduleId: schedule?.id || undefined,
             remoteId: remoteId || undefined,
             groupId: groupMembership.group,
-            resume: action === "verify" && waitingForSms
+            resume: resumePublication
         }, {
             headers: { accept: "application/json", "content-type": "application/json" },
             timeout: 180000
