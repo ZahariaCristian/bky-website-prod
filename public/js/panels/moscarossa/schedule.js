@@ -1026,7 +1026,7 @@
             const statusLabels = {
                 OK: "PUBBLICATO",
                 KO: "ERRORE",
-                ALERT: "VERIFICA SMS",
+                ALERT: "ALERT",
                 EDIT: "IN ATTESA",
                 DELETE: "DELETE",
                 DELETED: "DELETED"
@@ -1039,31 +1039,6 @@
                 }[recordState] || "SOSPESO")
                 : (statusLabels[recordState] || "IN ATTESA");
             statusActions.appendChild(status);
-            const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
-                /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
-            if (waitingForSms) {
-                const verifyButton = createButton(
-                    "btn btn-warning btn-xs",
-                    "fa-mobile",
-                    "Verifica telefono e completa la pubblicazione"
-                );
-                verifyButton.addEventListener("click", async () => {
-                    if (!window.MoscarossaPhoneVerification?.start) {
-                        return showError("Il servizio di verifica Moscarossa non è disponibile.");
-                    }
-                    verifyButton.disabled = true;
-                    try {
-                        await window.MoscarossaPhoneVerification.start({
-                            scheduleId: record.id,
-                            remoteId: record.remotePostID,
-                            resume: true
-                        });
-                    } catch {
-                        verifyButton.disabled = false;
-                    }
-                });
-                statusActions.appendChild(verifyButton);
-            }
             if (record.errorReason) {
                 const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
                 errorButton.addEventListener("click", () => showError(`Pubblicazione non riuscita: ${clean(record.errorReason)}`));
