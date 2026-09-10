@@ -1021,6 +1021,8 @@
             } else {
                 statusActions.appendChild(statusIcon(record));
             }
+            const waitingForSms = `${record.state || ""}`.toUpperCase() === "ALERT" &&
+                /verifica sms|waiting_sms|verifica.*telefon/i.test(`${record.errorReason || ""}`);
             const status = document.createElement("span");
             status.className = `${statusClass(record.state)} btnPublishState`;
             const statusLabels = {
@@ -1038,7 +1040,30 @@
                     DELETE: "ELIMINAZIONE IN ATTESA"
                 }[recordState] || "SOSPESO")
                 : (statusLabels[recordState] || "IN ATTESA");
-            statusActions.appendChild(status);
+            if (!waitingForSms) statusActions.appendChild(status);
+            if (waitingForSms) {
+                const verifyButton = createButton(
+                    "btn btn-warning btn-xs",
+                    "fa-mobile",
+                    "Verifica telefono e completa la pubblicazione"
+                );
+                verifyButton.addEventListener("click", async () => {
+                    if (!window.MoscarossaPhoneVerification?.start) {
+                        return showError("Il servizio di verifica Moscarossa non è disponibile.");
+                    }
+                    verifyButton.disabled = true;
+                    try {
+                        await window.MoscarossaPhoneVerification.start({
+                            scheduleId: record.id,
+                            remoteId: record.remotePostID,
+                            resume: true
+                        });
+                    } catch {
+                        verifyButton.disabled = false;
+                    }
+                });
+                statusActions.appendChild(verifyButton);
+            }
             if (record.errorReason) {
                 const errorButton = createButton("btn btn-danger btn-xs", "fa-exclamation-triangle", "Mostra motivo errore");
                 errorButton.addEventListener("click", () => showError(`Pubblicazione non riuscita: ${clean(record.errorReason)}`));
