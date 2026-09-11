@@ -321,4 +321,31 @@ app.all("*", (req, res) => {
 
 const PORT = 3001;
 
-app.listen(PORT, () => console.log(`BKY in esecuzione su porta ${PORT}.`));
+async function ensureWebsiteSchema() {
+    const queryInterface = ctx.model.getQueryInterface();
+    const scheduleColumns = await queryInterface.describeTable("tblSchedulazioni");
+
+    if (!scheduleColumns.remoteExpiresAt) {
+        console.log("[website:schema] Adding tblSchedulazioni.remoteExpiresAt...");
+        try {
+            await queryInterface.addColumn("tblSchedulazioni", "remoteExpiresAt", {
+                type: ctx.model.Sequelize.BIGINT,
+                allowNull: true
+            });
+        } catch (error) {
+            if (error?.original?.code !== "ER_DUP_FIELDNAME" && error?.parent?.code !== "ER_DUP_FIELDNAME") {
+                throw error;
+            }
+        }
+        console.log("[website:schema] tblSchedulazioni.remoteExpiresAt added.");
+    }
+}
+
+ensureWebsiteSchema()
+    .then(() => {
+        app.listen(PORT, () => console.log(`BKY in esecuzione su porta ${PORT}.`));
+    })
+    .catch((error) => {
+        console.error("[website:schema] Website startup stopped:", error);
+        logger.Write(`Website ERROR SCHEMA: ${error}`);
+    });
