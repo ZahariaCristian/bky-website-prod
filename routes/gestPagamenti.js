@@ -20,12 +20,17 @@ const {
     MOSCAROSSA_PLATFORM,
     getDefaultMoscarossaPrices
 } = require("../config/moscarossaPrices");
+const {
+    TROVAGNOCCA_PLATFORM,
+    getTrovagnoccaPriceDefinitions
+} = require("../config/trovagnoccaPrices");
 const { getPlatformPriceKey } = require("../config/platformPrices");
 
 const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
 const defaultBakecaPrices = getDefaultBakecaPrices();
 const defaultAmasensPrices = getDefaultAmasensPrices();
 const defaultMoscarossaPrices = getDefaultMoscarossaPrices();
+const trovagnoccaPriceDefinitions = getTrovagnoccaPriceDefinitions();
 const validIncontriamociPriceKeys = new Set(
     defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
@@ -37,6 +42,9 @@ const validAmasensPriceKeys = new Set(
 );
 const validMoscarossaPriceKeys = new Set(
     defaultMoscarossaPrices.map(getPlatformPriceKey)
+);
+const validTrovagnoccaPriceKeys = new Set(
+    trovagnoccaPriceDefinitions.map(getPlatformPriceKey)
 );
 let platformPriceTablePromise;
 
@@ -172,6 +180,51 @@ const normalizeMoscarossaPrice = (row = {}) => {
     }
     if (!Number.isFinite(normalized.price) || normalized.price < 0) {
         throw new Error("Moscarossa price must be a valid non-negative value.");
+    }
+
+    return normalized;
+};
+
+const normalizeTrovagnoccaPrice = (row = {}) => {
+    const product = `${row.product || ""}`.toLowerCase();
+    let options = row.optionsJson || {};
+    if (typeof options === "string") {
+        try {
+            options = JSON.parse(options);
+        } catch {
+            options = {};
+        }
+    }
+
+    const timeSlotId = Number(options.timeSlotId);
+    const days = Number(row.days);
+    const variantPrefix = product === "top" ? "slot" : "duration";
+    const definition = trovagnoccaPriceDefinitions.find((item) =>
+        item.product === product &&
+        Number(item.days) === days &&
+        Number(item.optionsJson.timeSlotId) === timeSlotId
+    );
+    const normalized = {
+        platform: TROVAGNOCCA_PLATFORM,
+        product,
+        days,
+        variantKey: `${variantPrefix}-${timeSlotId}`,
+        optionsJson: definition ? { ...definition.optionsJson } : {},
+        price: Number(row.price),
+        standardPrice: Number(row.standardPrice),
+        active: true
+    };
+
+    if (!definition || !validTrovagnoccaPriceKeys.has(getPlatformPriceKey(normalized))) {
+        throw new Error("Invalid Trovagnocca price combination.");
+    }
+    if (
+        !Number.isFinite(normalized.price) ||
+        !Number.isFinite(normalized.standardPrice) ||
+        normalized.price < 0 ||
+        normalized.standardPrice < normalized.price
+    ) {
+        throw new Error("Trovagnocca prices must be valid and standard price cannot be lower than price.");
     }
 
     return normalized;
@@ -670,6 +723,73 @@ router.post("/updateMoscarossaPrices", authenticateKey, async (req, res) => {
         }
         console.error("Unable to save Moscarossa prices:", error);
         res.status(500).json({ error: "Unable to save Moscarossa prices." });
+    }
+});
+
+router.get("/getTrovagnoccaPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const prices = await findPlatformPrices(group, TROVAGNOCCA_PLATFORM);
+        res.json({ prices, definitions: trovagnoccaPriceDefinitions });
+    } catch (error) {
+        console.error("Unable to load Trovagnocca prices:", error);
+        res.status(500).json({ error: "Unable to load Trovagnocca prices." });
+    }
+});
+
+router.post("/updateTrovagnoccaPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > trovagnoccaPriceDefinitions.length
+    ) {
+        return res.status(400).json({ error: "A valid Trovagnocca price list is required." });
+    }
+
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const normalizedRows = req.body.rows.map(normalizeTrovagnoccaPrice);
+        const rows = Array.from(new Map(
+            normalizedRows.map((row) => [getPlatformPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    platform: row.platform,
+                    product: row.product,
+                    days: row.days,
+                    variantKey: row.variantKey
+                };
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    optionsJson: row.optionsJson,
+                    price: row.price,
+                    standardPrice: row.standardPrice,
+                    active: true
+                }, { transaction });
+            }
+        });
+
+        const prices = await findPlatformPrices(group, TROVAGNOCCA_PLATFORM);
+        res.json({ prices, definitions: trovagnoccaPriceDefinitions });
+    } catch (error) {
+        const validationMessage = error?.message?.startsWith("Invalid") ||
+            error?.message?.startsWith("Trovagnocca price");
+        if (validationMessage) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Trovagnocca prices:", error);
+        res.status(500).json({ error: "Unable to save Trovagnocca prices." });
     }
 });
 

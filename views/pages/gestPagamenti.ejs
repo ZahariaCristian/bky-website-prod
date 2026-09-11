@@ -60,6 +60,7 @@
         .incontriamoci-price-toolbar,
         .bakeca-price-toolbar,
         .amasens-price-toolbar,
+        .trovagnocca-price-toolbar,
         .moscarossa-price-toolbar {
             align-items: flex-end;
             display: flex;
@@ -71,12 +72,14 @@
         .incontriamoci-price-toolbar .form-group,
         .bakeca-price-toolbar .form-group,
         .amasens-price-toolbar .form-group,
+        .trovagnocca-price-toolbar .form-group,
         .moscarossa-price-toolbar .form-group {
             margin-bottom: 0;
         }
         .incontriamoci-price-editor input[type="number"],
         .bakeca-price-editor input[type="number"],
         .amasens-price-editor input[type="number"],
+        .trovagnocca-price-editor input[type="number"],
         .moscarossa-price-editor input[type="number"] {
             min-width: 100px;
             width: 100%;
@@ -84,18 +87,21 @@
         .incontriamoci-price-editor table,
         .bakeca-price-editor table,
         .amasens-price-editor table,
+        .trovagnocca-price-editor table,
         .moscarossa-price-editor table {
             margin-bottom: 0;
         }
         .incontriamoci-price-editor [hidden],
         .bakeca-price-editor [hidden],
         .amasens-price-editor [hidden],
+        .trovagnocca-price-editor [hidden],
         .moscarossa-price-editor [hidden] {
             display: none;
         }
         .incontriamoci-price-status,
         .bakeca-price-status,
         .amasens-price-status,
+        .trovagnocca-price-status,
         .moscarossa-price-status {
             margin: 12px 0 0;
         }
@@ -481,6 +487,61 @@
                     </div>
                 </div>
 
+                <div class="widget widget-body-gray trovagnocca-price-editor" id="trovagnoccaPriceEditor">
+                    <div class="widget-head" style="background: #eaeaea;">
+                        <h3 class="heading glyphicons euro"><i></i>Listino Trovagnocca</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="trovagnocca-price-toolbar">
+                            <div class="btn-group" role="group" aria-label="Prodotto Trovagnocca">
+                                <button type="button" class="btn btn-primary"
+                                    data-trovagnocca-editor-product="top"
+                                    aria-pressed="true">Top</button>
+                                <button type="button" class="btn btn-default"
+                                    data-trovagnocca-editor-product="turbo"
+                                    aria-pressed="false">Turbo</button>
+                            </div>
+                            <div class="form-group" id="trovagnoccaTopDaysControl">
+                                <label for="trovagnoccaTopDays">Durata Top</label>
+                                <select id="trovagnoccaTopDays" class="form-control">
+                                    <option value="1">1 giorno</option>
+                                    <option value="3">3 giorni</option>
+                                    <option value="7">7 giorni</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Fascia / durata</th>
+                                        <th>Prezzo</th>
+                                        <th>Prezzo standard</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trovagnoccaPriceEditorRows">
+                                    <tr>
+                                        <td colspan="3" class="text-muted">Caricamento...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p class="help-block" style="margin-top: 10px;">
+                            I prezzi salvati alimentano il calcolo in euro nel pannello Trovagnocca;
+                            i crediti vengono sempre verificati tramite Trovagnocca.
+                        </p>
+                        <div id="trovagnoccaPriceStatus" class="trovagnocca-price-status"
+                            role="status" aria-live="polite"></div>
+                        <button type="button" class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px;"
+                            id="saveTrovagnoccaPrices" disabled>
+                            <i class="fa fa-save"></i> <b>Salva listino Trovagnocca</b>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="widget widget-body-gray moscarossa-price-editor" id="moscarossaPriceEditor">
                     <div class="widget-head" style="background: #eaeaea;">
                         <h3 class="heading glyphicons euro"><i></i>Listino Moscarossa</h3>
@@ -548,6 +609,7 @@
     <script src="/js/gestPagamenti.bakeca.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.incontriamoci.js?v=20260703-platform-prices"></script>
     <script src="/js/gestPagamenti.amasens.js?v=20260720-amasens-prices"></script>
+    <script src="/js/gestPagamenti.trovagnocca.js?v=20260911-trovagnocca-prices"></script>
     <script src="/js/gestPagamenti.moscarossa.js?v=20260901-moscarossa-prices"></script>
 </body>
 </html>

@@ -26,6 +26,7 @@ const setText = (selector, value) => {
 
 let trovagnoccaPriceCalculateTimer = null;
 let trovagnoccaPriceIsCalculating = false;
+let trovagnoccaStoredPrices = new Map();
 
 const isTrovagnoccaPriceDetailsVisible = () => {
     const details = document.querySelector("#trovagnoccaPriceDetails");
@@ -226,6 +227,51 @@ const fetchTrovagnoccaAdPrice = async (ad) => {
     return { ad, data };
 };
 
+const getStoredTrovagnoccaPriceKey = (product, days, timeSlotId) => [
+    "trovagnocca",
+    product,
+    Number(days),
+    `${product === "top" ? "slot" : "duration"}-${Number(timeSlotId)}`
+].join("|");
+
+const getStoredTrovagnoccaPrice = (ad) => {
+    const product = Number(ad.productId) === 301 ? "turbo" : "top";
+    const rows = ad.timeSlots.map((timeSlotId) =>
+        trovagnoccaStoredPrices.get(getStoredTrovagnoccaPriceKey(product, ad.days, timeSlotId))
+    );
+    if (!rows.length || rows.some((row) => !row)) return null;
+
+    const finalCents = rows.reduce((sum, row) => sum + Math.round(Number(row.price) * 100), 0);
+    const baseCents = rows.reduce((sum, row) => sum + Math.round(Number(row.standardPrice) * 100), 0);
+    if (!Number.isFinite(finalCents) || !Number.isFinite(baseCents)) return null;
+
+    const percentage = baseCents > 0
+        ? `${Math.max(0, Math.round((1 - (finalCents / baseCents)) * 100))}%`
+        : "0%";
+    return { baseCents, finalCents, percentage };
+};
+
+const loadStoredTrovagnoccaPrices = async () => {
+    try {
+        const response = await fetch("/gestPagamenti/getTrovagnoccaPrices", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "Listino Trovagnocca non disponibile.");
+        trovagnoccaStoredPrices = new Map(
+            (Array.isArray(result.prices) ? result.prices : []).map((row) => [
+                [row.platform, row.product, Number(row.days), row.variantKey].join("|"),
+                row
+            ])
+        );
+    } catch (error) {
+        trovagnoccaStoredPrices = new Map();
+        console.warn("Unable to load stored Trovagnocca prices:", error);
+    }
+};
+
 const getFinalPrice = (price) => price.discount || price.base || {};
 
 const renderTrovagnoccaPriceRows = (pricedAds) => {
@@ -233,9 +279,18 @@ const renderTrovagnoccaPriceRows = (pricedAds) => {
     if (!rows) return;
 
     rows.innerHTML = "";
-    pricedAds.forEach(({ ad, data }, displayIndex) => {
+    pricedAds.forEach(({ ad, data, storedPrice }, displayIndex) => {
         const price = data?.data?.price || {};
         const finalPrice = getFinalPrice(price);
+        const basePriceText = storedPrice
+            ? formatEuroCents(storedPrice.baseCents)
+            : (price.base?.coin || "-");
+        const finalPriceText = storedPrice
+            ? formatEuroCents(storedPrice.finalCents)
+            : (finalPrice.coin || "-");
+        const discountText = storedPrice
+            ? storedPrice.percentage
+            : (price.discount?.percentage || "0%");
         const row = document.createElement("tr");
         const timeText = ad.time ? ` - ${ad.time}` : "";
         const promoText = ad.promoType ? ` ${ad.promoType}` : "";
@@ -245,24 +300,28 @@ const renderTrovagnoccaPriceRows = (pricedAds) => {
                 <span class="text-muted">${ad.slotLabels.join(", ")}</span>
             </td>
             <td>${ad.days}</td>
-            <td>${price.base?.coin || "-"}</td>
+            <td>${basePriceText}</td>
             <td>${price.base?.credits ?? "-"}</td>
             <td>${price.discount?.credits ?? "-"}</td>
-            <td>${price.discount?.coin || "-"}</td>
-            <td>${price.discount?.percentage || "0%"}</td>
+            <td>${finalPriceText}</td>
+            <td>${discountText}</td>
         `;
         rows.appendChild(row);
     });
 };
 
 const renderTrovagnoccaPriceTotals = (pricedAds) => {
-    const totals = pricedAds.reduce((sum, { data }) => {
+    const totals = pricedAds.reduce((sum, { data, storedPrice }) => {
         const price = data?.data?.price || {};
         const finalPrice = getFinalPrice(price);
 
-        sum.baseCents += Number(price.base?.cents || 0);
+        sum.baseCents += storedPrice
+            ? storedPrice.baseCents
+            : Number(price.base?.cents || 0);
         sum.discountCents += Number(price.discount?.cents || 0);
-        sum.finalCents += Number(finalPrice.cents || 0);
+        sum.finalCents += storedPrice
+            ? storedPrice.finalCents
+            : Number(finalPrice.cents || 0);
         sum.baseCredits += Number(price.base?.credits || 0);
         sum.discountCredits += Number(price.discount?.credits || 0);
         sum.credits += Number(finalPrice.credits || 0);
@@ -318,18 +377,29 @@ const calculateTrovagnoccaPrice = async () => {
         const pricedAds = await Promise.all(
             selectedAds.map((ad) => fetchTrovagnoccaAdPrice(ad))
         );
+        pricedAds.forEach((pricedAd) => {
+            pricedAd.storedPrice = getStoredTrovagnoccaPrice(pricedAd.ad);
+        });
 
         renderTrovagnoccaPriceRows(pricedAds);
         renderTrovagnoccaPriceTotals(pricedAds);
 
-        const dailyFinalCents = pricedAds.reduce((sum, { data }) => {
+        const dailyFinalCents = pricedAds.reduce((sum, { data, storedPrice }) => {
             const price = data?.data?.price || {};
-            return sum + Number(getFinalPrice(price).cents || 0);
+            return sum + (storedPrice
+                ? storedPrice.finalCents
+                : Number(getFinalPrice(price).cents || 0));
         }, 0);
         updateTrovagnoccaCostTable(dailyFinalCents);
 
         const selectedSlotCount = selectedAds.reduce((sum, ad) => sum + ad.timeSlots.length, 0);
-        setTrovagnoccaPriceMessage(`Calcolo completato per ${selectedAds.length} annunci e ${selectedSlotCount} fasce.`);
+        const usesStoredPrices = pricedAds.some(({ storedPrice }) => Boolean(storedPrice));
+        const sourceMessage = usesStoredPrices
+            ? " Prezzi in euro dal listino BKY; crediti verificati live."
+            : " Prezzi e crediti verificati live.";
+        setTrovagnoccaPriceMessage(
+            `Calcolo completato per ${selectedAds.length} annunci e ${selectedSlotCount} fasce.${sourceMessage}`
+        );
     } catch (error) {
         resetTrovagnoccaPriceResult();
         setTrovagnoccaPriceMessage(error.message || "Errore durante il calcolo del prezzo.", true);
@@ -408,3 +478,6 @@ resetTrovagnoccaPriceResult();
 updateTrovagnoccaSelectedSlotCount();
 setTrovagnoccaPriceDetailsVisible(false);
 observeTrovagnoccaScheduleChanges();
+loadStoredTrovagnoccaPrices().then(() => {
+    if (isTrovagnoccaPriceDetailsVisible()) scheduleTrovagnoccaPriceCalculation();
+});
