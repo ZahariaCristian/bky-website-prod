@@ -163,6 +163,30 @@
             margin: 0;
         }
 
+        .moscarossa-history-expiration {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+            margin-top: 3px;
+            color: #555;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .moscarossa-history-expiration.is-expired {
+            color: #c9302c;
+        }
+
+        .moscarossa-history-estimated {
+            padding: 1px 4px;
+            border-radius: 2px;
+            background: #eee;
+            color: #777;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
         .moscarossa-addons {
             display: flex;
             flex-wrap: wrap;
@@ -785,7 +809,7 @@
     </div>
     <script src="/js/panels/moscarossa/details-config.js?v=20260811-tariff-groups"></script>
     <script src="/js/panels/moscarossa/main.js?v=20260829-previous-ad-select"></script>
-    <script src="/js/panels/moscarossa/schedule.js?v=20260901-price-padding"></script>
+    <script src="/js/panels/moscarossa/schedule.js?v=20260911-remote-expiration"></script>
 </body>
 
 </html>

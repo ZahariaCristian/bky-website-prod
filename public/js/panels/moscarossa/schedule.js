@@ -45,7 +45,8 @@
         showSuspended: false,
         dirty: false,
         relativeId: 0,
-        historyText: []
+        historyText: [],
+        historyCountdownTimer: null
     };
 
     const clean = (value) => `${value || ""}`.replace(/\s+/g, " ").trim();
@@ -771,6 +772,69 @@
         return `[TOP ${plan}] del ${day}${time ? ` alle ${time}` : ""}`;
     };
 
+    const resolveHistoryExpiration = (record) => {
+        const remoteTimestamp = Number(record.remoteExpiresAt);
+        if (Number.isFinite(remoteTimestamp) && remoteTimestamp > 0 &&
+            Number.isFinite(new Date(remoteTimestamp).getTime())) {
+            return { timestamp: remoteTimestamp, estimated: false };
+        }
+
+        const publishedAt = new Date(record.data).getTime();
+        if (!Number.isFinite(publishedAt)) return null;
+        const promotion = parsePeriod(record.period, record.typeAnnuncio);
+        const durationDays = PROMOTION_PLANS[promotion.plan]?.paid ? promotion.days : 1;
+        return {
+            timestamp: publishedAt + (durationDays * 86400000),
+            estimated: true
+        };
+    };
+
+    const formatHistoryExpiration = (timestamp) => new Intl.DateTimeFormat("it-IT", {
+        timeZone: "Europe/Rome",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(new Date(timestamp));
+
+    const formatRemainingTime = (milliseconds) => {
+        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${days ? `${days}g ` : ""}${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    };
+
+    const refreshHistoryCountdowns = () => {
+        const countdowns = Array.from(document.querySelectorAll("[data-moscarossa-expires-at]"));
+        countdowns.forEach((container) => {
+            const timestamp = Number(container.dataset.moscarossaExpiresAt);
+            const remaining = container.querySelector(".moscarossa-history-remaining");
+            const expires = container.querySelector(".moscarossa-history-expires");
+            if (!Number.isFinite(timestamp) || !remaining || !expires) return;
+            const difference = timestamp - Date.now();
+            expires.textContent = `${difference <= 0 ? "Scaduto" : "Scade"}: ${formatHistoryExpiration(timestamp)}`;
+            remaining.textContent = difference <= 0
+                ? "Rimanente: SCADUTO"
+                : `Rimanente: ${formatRemainingTime(difference)}`;
+            container.classList.toggle("is-expired", difference <= 0);
+        });
+
+        if (!countdowns.length && state.historyCountdownTimer) {
+            window.clearInterval(state.historyCountdownTimer);
+            state.historyCountdownTimer = null;
+        }
+    };
+
+    const ensureHistoryCountdownTimer = () => {
+        refreshHistoryCountdowns();
+        if (!state.historyCountdownTimer && document.querySelector("[data-moscarossa-expires-at]")) {
+            state.historyCountdownTimer = window.setInterval(refreshHistoryCountdowns, 1000);
+        }
+    };
+
     const copyText = async (value) => {
         if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(value);
@@ -1224,6 +1288,29 @@
             }
             statusColumn.appendChild(statusActions);
 
+            const expiration = resolveHistoryExpiration(record);
+            if (expiration && ["OK", "CLOSED"].includes(recordState)) {
+                const expirationContainer = document.createElement("div");
+                expirationContainer.className = "moscarossa-history-expiration";
+                expirationContainer.dataset.moscarossaExpiresAt = `${expiration.timestamp}`;
+                expirationContainer.title = expiration.estimated
+                    ? "Scadenza stimata dai dati della schedulazione; sarà sincronizzata alla prossima pubblicazione."
+                    : "Scadenza sincronizzata dalla pagina Moscarossa.";
+                const expires = document.createElement("span");
+                expires.className = "moscarossa-history-expires";
+                const remaining = document.createElement("span");
+                remaining.className = "moscarossa-history-remaining";
+                expirationContainer.appendChild(expires);
+                expirationContainer.appendChild(remaining);
+                if (expiration.estimated) {
+                    const estimated = document.createElement("span");
+                    estimated.className = "moscarossa-history-estimated";
+                    estimated.textContent = "STIMATA";
+                    expirationContainer.appendChild(estimated);
+                }
+                statusColumn.appendChild(expirationContainer);
+            }
+
             const paid = document.createElement("div");
             paid.className = "col-md-1 col-sm-1";
             const paidIcon = document.createElement("h3");
@@ -1257,6 +1344,7 @@
             state.historyText = renderHistoryTable([], historyList);
             renderHistoryTable([], suspendedHistoryList, true);
             syncSuspendedHistoryVisibility();
+            ensureHistoryCountdownTimer();
             return;
         }
         try {
@@ -1265,6 +1353,7 @@
             state.historyText = renderHistoryTable(sortNewest(active), historyList);
             renderHistoryTable(sortNewest(suspended), suspendedHistoryList, true);
             syncSuspendedHistoryVisibility();
+            ensureHistoryCountdownTimer();
             whatsappHistoryButton.href = `whatsapp://send?text=${encodeURIComponent(state.historyText.join("\n"))}`;
         } catch (error) {
             showError(error.message);
