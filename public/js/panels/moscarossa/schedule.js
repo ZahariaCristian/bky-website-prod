@@ -53,6 +53,12 @@
     const isTrue = (value) => value === true || value === 1 || value === "1" || `${value}`.toLowerCase() === "true";
     const pad = (value) => `${value}`.padStart(2, "0");
     const localDateKey = (date = new Date()) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const isDateKey = (value) => {
+        const match = `${value || ""}`.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return false;
+        const parsed = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+        return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
     const romeDateParts = (date = new Date()) => Object.fromEntries(
         new Intl.DateTimeFormat("en-CA", {
             timeZone: "Europe/Rome",
@@ -637,12 +643,43 @@
         updatePriceSummary();
     }
 
-    const selectDay = (day) => {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    const highlightCalendarDay = () => {
+        document.querySelectorAll("#moscarossaCalendarContainer .day").forEach((element) => {
+            const elementDate = new Date(element.dataset.date || "");
+            const selected = !Number.isNaN(elementDate.getTime()) &&
+                localDateKey(elementDate) === state.currentDay;
+            element.classList.toggle("today", selected);
+        });
+    };
+
+    const showSelectedCalendarMonth = () => {
+        const match = state.currentDay.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const calendar = window.jQuery
+            ? $("#moscarossaCalendarContainer").data("plugin_simpleCalendar")
+            : null;
+        if (!match || !calendar?.currentDate || typeof calendar.changeMonth !== "function") return;
+
+        const selectedYear = Number(match[1]);
+        const selectedMonth = Number(match[2]) - 1;
+        const currentYear = calendar.currentDate.getFullYear();
+        const currentMonth = calendar.currentDate.getMonth();
+        const monthDifference = ((selectedYear - currentYear) * 12) + selectedMonth - currentMonth;
+        if (monthDifference) calendar.changeMonth(monthDifference);
+    };
+
+    const selectDay = (day, { updateUrl = false, showMonth = false } = {}) => {
+        if (!isDateKey(day)) return;
         state.currentDay = day;
         dateInput.value = day;
         if (!state.schedule[day]) state.schedule[day] = [];
         renderDay();
+        if (showMonth) showSelectedCalendarMonth();
+        highlightCalendarDay();
+        if (updateUrl) {
+            const selectedUrl = new URL(window.location.href);
+            selectedUrl.searchParams.set("day", day);
+            window.history.replaceState({}, "", selectedUrl.toString());
+        }
     };
 
     const addSchedule = () => {
@@ -739,7 +776,7 @@
             saveButton.disabled = true;
             if (reload) {
                 const reloadUrl = new URL(window.location.href);
-                reloadUrl.searchParams.delete("day");
+                reloadUrl.searchParams.set("day", state.currentDay);
                 reloadUrl.searchParams.set("promo", state.currentPlan);
                 window.location.href = reloadUrl.toString();
             }
@@ -1370,8 +1407,15 @@
             displayEvent: false,
             disableEventDetails: true,
             events: [],
-            onDateSelect: (date) => selectDay(localDateKey(date))
+            onInit: () => highlightCalendarDay(),
+            onMonthChange: () => highlightCalendarDay(),
+            onDateSelect: (date) => selectDay(localDateKey(date), {
+                updateUrl: true,
+                showMonth: true
+            })
         });
+        showSelectedCalendarMonth();
+        highlightCalendarDay();
     };
 
     const loadAdvertisement = async () => {
@@ -1404,12 +1448,9 @@
                 tab.closest("li")?.classList.toggle("active", normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan);
             });
             applyPromotionTheme(promotionTabs.find((tab) => normalizePlan(tab.dataset.moscarossaPlan) === state.currentPlan));
-            selectDay(todayKey());
-            if (params.has("day")) {
-                const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete("day");
-                window.history.replaceState({}, "", cleanUrl.toString());
-            }
+            // Keep a date selected while this asynchronous request is running;
+            // otherwise a click made during loading would be reset to today.
+            selectDay(state.currentDay || todayKey(), { showMonth: true });
             await loadHistory();
         } catch (error) {
             showError(error.message);
@@ -1461,6 +1502,8 @@
         savePending: () => saveSchedule({ reload: false })
     };
 
+    const requestedDay = params.get("day");
+    selectDay(isDateKey(requestedDay) ? requestedDay : todayKey());
     initializeCalendar();
     renderPriceList();
     updatePriceSummary();
