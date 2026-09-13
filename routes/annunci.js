@@ -3063,7 +3063,10 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
 
                 if (s.state == "EDIT") {
                     if (task.remotePostID != null) state = "EDIT"; //remotePostId 
-                    if (platform === "moscarossa" && task.remotePostID == null && task.state === "KO") {
+                    if (
+                        task.remotePostID == null &&
+                        [null, "KO", "ALERT", "BLOCKED"].includes(task.state)
+                    ) {
                         state = null;
                     }
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
@@ -3104,6 +3107,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         hasEtichetta: s.hasEtichetta,
                         payed: payed,
                         state: state,
+                        ...(state === null ? { errorReason: null } : {}),
                         city: s.city
                     });
                 }
