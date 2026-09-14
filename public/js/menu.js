@@ -253,3 +253,37 @@ function SetNavigator(){
     });
 });
 }
+(function preserveAdvertisementOnPanelSwitch() {
+    const panelLinks = Array.from(document.querySelectorAll("[data-annuncio-panel]"));
+    if (!panelLinks.length || !/\/annuncio\.html\/?$/i.test(window.location.pathname)) {
+        return;
+    }
+
+    const currentParams = new URLSearchParams(window.location.search);
+    const advertisementId = `${currentParams.get("edit") || ""}`.trim();
+
+    // Only reuse a saved advertisement. The sidebar keeps its original
+    // edit=new links while creating a new ad or while visiting another page.
+    if (!/^\d+$/.test(advertisementId) || Number(advertisementId) <= 0) {
+        return;
+    }
+
+    const selectedDay = `${currentParams.get("day") || ""}`.trim();
+
+    panelLinks.forEach((link) => {
+        const panel = `${link.dataset.annuncioPanel || ""}`.trim();
+        if (!panel) {
+            return;
+        }
+
+        const targetUrl = new URL("/annuncio.html", window.location.origin);
+        targetUrl.searchParams.set("edit", advertisementId);
+        targetUrl.searchParams.set("panel", panel);
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(selectedDay)) {
+            targetUrl.searchParams.set("day", selectedDay);
+        }
+
+        link.href = `${targetUrl.pathname}${targetUrl.search}`;
+    });
+})();
