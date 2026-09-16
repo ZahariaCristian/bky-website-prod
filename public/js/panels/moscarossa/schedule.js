@@ -379,7 +379,7 @@
         });
     };
 
-    const renderAddons = (slot, locked = false) => {
+    const renderAddons = (slot) => {
         const addons = document.createElement("div");
         addons.className = "moscarossa-addons";
         if (!PROMOTION_PLANS[slot.plan].paid) {
@@ -399,7 +399,6 @@
         const vetrinaCheck = document.createElement("input");
         vetrinaCheck.type = "checkbox";
         vetrinaCheck.checked = Boolean(slot.addons.vetrina.enabled);
-        vetrinaCheck.disabled = locked;
         vetrinaLabel.appendChild(vetrinaCheck);
         vetrinaLabel.appendChild(document.createTextNode(" Vetrina prima pagina del sito! (costo 8 al giorno)"));
         vetrina.appendChild(vetrinaLabel);
@@ -414,7 +413,7 @@
             vetrinaDays.appendChild(option);
         });
         vetrinaDays.value = `${slot.addons.vetrina.days || slot.days || 1}`;
-        vetrinaDays.disabled = locked || !vetrinaCheck.checked;
+        vetrinaDays.disabled = !vetrinaCheck.checked;
         const vetrinaPrice = document.createElement("strong");
         const updateVetrinaPrice = () => {
             vetrinaPrice.textContent = vetrinaCheck.checked
@@ -444,7 +443,6 @@
         const diamondCheck = document.createElement("input");
         diamondCheck.type = "checkbox";
         diamondCheck.checked = Boolean(slot.addons.diamond.enabled);
-        diamondCheck.disabled = locked;
         diamondLabel.appendChild(diamondCheck);
         diamondLabel.appendChild(document.createTextNode(" Aggiungi il DIAMOND (costo 50 al giorno) · 20 foto + 3 video"));
         diamond.appendChild(diamondLabel);
@@ -454,12 +452,12 @@
         diamondDate.type = "date";
         diamondDate.className = "form-control";
         diamondDate.min = todayKey();
-        diamondDate.disabled = locked || !diamondCheck.checked;
+        diamondDate.disabled = !diamondCheck.checked;
         const addDiamondDate = document.createElement("button");
         addDiamondDate.type = "button";
         addDiamondDate.className = "btn btn-primary btn-sm";
         addDiamondDate.textContent = "Aggiungi giorno";
-        addDiamondDate.disabled = locked || !diamondCheck.checked;
+        addDiamondDate.disabled = !diamondCheck.checked;
         const diamondPrice = document.createElement("strong");
         const dateList = document.createElement("div");
         dateList.className = "moscarossa-diamond-dates";
@@ -469,7 +467,6 @@
                 const chip = document.createElement("button");
                 chip.type = "button";
                 chip.className = "moscarossa-diamond-date";
-                chip.disabled = locked;
                 chip.textContent = `${date} ×`;
                 chip.addEventListener("click", () => {
                     slot.addons.diamond.dates = slot.addons.diamond.dates.filter((item) => item !== date);
@@ -511,6 +508,12 @@
 
         addons.appendChild(vetrina);
         addons.appendChild(diamond);
+        if (slot.remotePostID) {
+            const remoteAddonNote = document.createElement("p");
+            remoteAddonNote.className = "text-warning";
+            remoteAddonNote.textContent = "Le opzioni extra vengono salvate nel timeslot, ma per un annuncio già online devono essere acquistate su Moscarossa con un'azione separata.";
+            addons.appendChild(remoteAddonNote);
+        }
         return addons;
     };
 
@@ -621,7 +624,7 @@
             main.appendChild(verifyButton);
         }
         panel.appendChild(main);
-        panel.appendChild(renderAddons(slot, hasRemoteAd));
+        panel.appendChild(renderAddons(slot));
 
         const images = document.createElement("div");
         images.className = "post-pics";
