@@ -278,12 +278,6 @@
             const selected = normalized.multiSelects?.[checkbox.dataset.moscarossaMultiGroup];
             checkbox.checked = Array.isArray(selected) && selected.map(String).includes(checkbox.dataset.moscarossaMultiId);
         });
-        const hasMappedDetails = Object.keys(normalized.tariffs || {}).length > 0 ||
-            Object.keys(normalized.services || {}).length > 0 ||
-            Object.keys(normalized.selects || {}).length > 0 ||
-            Object.values(normalized.multiSelects || {}).some((values) => Array.isArray(values) && values.length > 0);
-        const detailsSection = document.querySelector("#moscarossaDetails");
-        if (detailsSection && hasMappedDetails) detailsSection.open = true;
     };
 
     const setFormEditing = (editing) => {
@@ -1131,6 +1125,7 @@
         addSelectedImages(event.dataTransfer.files);
     });
 
+    document.querySelector("#moscarossaDetails").open = false;
     renderDetailsControls();
     initializeCityLookup();
     loadPreviousAdvertisements();

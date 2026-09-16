@@ -515,7 +515,10 @@
     };
 
     const renderSlot = (slot, index) => {
-        const locked = Boolean(slot.remotePostID) || slot.state === "OK";
+        // A published remote ID should not permanently lock the time and
+        // selected images in the schedule editor. Remote management and paid
+        // promotion changes still use their dedicated workflows below.
+        const hasRemoteAd = Boolean(slot.remotePostID);
         const panel = document.createElement("div");
         panel.className = "newpost-panel";
         panel.dataset.promoType = slot.plan;
@@ -531,7 +534,6 @@
         time.className = "form-control";
         time.required = true;
         time.value = slot.time;
-        time.disabled = locked;
         time.addEventListener("change", () => {
             slot.time = time.value;
             markDirty(slot);
@@ -542,7 +544,8 @@
         remove.title = "Rimuovi pubblicazione";
         remove.setAttribute("aria-label", "Rimuovi pubblicazione");
         remove.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="white" width="25" height="20" viewBox="0 0 503.021 503.021" style="transform:scale(.7) translate(-6px,2px)"><path d="M491.613 75.643 427.378 11.408c-15.202-15.202-39.854-15.202-55.056 0L251.507 132.222 130.686 11.407c-15.202-15.202-39.853-15.202-55.055 0L11.401 75.643c-15.202 15.202-15.202 39.854 0 55.056l120.821 120.815L11.401 372.328c-15.202 15.202-15.202 39.854 0 55.056l64.235 64.229c15.202 15.202 39.854 15.202 55.056 0l120.815-120.814 120.822 120.814c15.202 15.202 39.854 15.202 55.056 0l64.235-64.229c15.202-15.202 15.202-39.854 0-55.056L370.793 251.514l120.82-120.815c15.202-15.209 15.202-39.854 0-55.056Z"/></svg>';
-        remove.disabled = locked;
+        remove.disabled = hasRemoteAd;
+        if (hasRemoteAd) remove.title = "Gestisci la rimozione dell'annuncio pubblicato nello Storico Pubblicazioni";
         remove.addEventListener("click", () => {
             if (slot.id) {
                 slot.deleted = true;
@@ -573,7 +576,7 @@
                 duration.appendChild(option);
             });
             duration.value = `${slot.days}`;
-            duration.disabled = locked;
+            duration.disabled = hasRemoteAd;
             duration.addEventListener("change", () => {
                 slot.days = Number.parseInt(duration.value, 10) || 1;
                 renderPrice();
@@ -618,16 +621,24 @@
             main.appendChild(verifyButton);
         }
         panel.appendChild(main);
-        panel.appendChild(renderAddons(slot, locked));
+        panel.appendChild(renderAddons(slot, hasRemoteAd));
 
         const images = document.createElement("div");
         images.className = "post-pics";
         images.style.display = slot.imagesExpanded ? "flex" : "none";
-        renderImagePicker(slot, images, locked);
+        renderImagePicker(slot, images);
         panel.appendChild(images);
+        const remoteGalleryNote = hasRemoteAd ? document.createElement("p") : null;
+        if (remoteGalleryNote) {
+            remoteGalleryNote.className = "text-warning";
+            remoteGalleryNote.textContent = "Le immagini selezionate qui vengono salvate nel timeslot, ma non sostituiscono automaticamente le foto già online su Moscarossa.";
+            remoteGalleryNote.style.display = slot.imagesExpanded ? "block" : "none";
+            panel.appendChild(remoteGalleryNote);
+        }
         photoButton.addEventListener("click", () => {
             const hidden = images.style.display === "none";
             images.style.display = hidden ? "flex" : "none";
+            if (remoteGalleryNote) remoteGalleryNote.style.display = hidden ? "block" : "none";
             slot.imagesExpanded = hidden;
             photoButton.className = `btn btn-${hidden ? "success" : "dark"} btnPhoto`;
         });
