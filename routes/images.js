@@ -3,6 +3,7 @@ const multer = require("multer");
 const upload = multer();
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
+const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const ctx = require("../ctx/model");
 const { dirname } = require('path');
 const appDir = dirname(require.main.filename);
@@ -35,6 +36,7 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     const origins = bodyArray(req.body.origin);
     const hiddenFlags = bodyArray(req.body.hidden);
     const isNewFlags = bodyArray(req.body.isNew);
+    let expiredSchedulesSkipped = 0;
 
     // Creating the folder if it does not exist
     if (!fs.existsSync(`${rootPath}/girls/${req.query.phone}`))
@@ -115,6 +117,10 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
             const activeSet = new Set(activeIds);
             const requestedPreviewId = `${req.body.previewGalleryId || ""}`.trim();
             for (const schedule of scheduled) {
+                if (schedule.remotePostID && isMoscarossaExpired(schedule)) {
+                    expiredSchedulesSkipped += 1;
+                    continue;
+                }
                 const selected = await schedule.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
                 const retained = selected.filter((image) => activeSet.has(`${image.galleria}`));
                 for (const image of selected) {
@@ -142,6 +148,7 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
         }
     }
         
+    if (isMoscarossa) return res.status(201).json({ expiredSchedulesSkipped });
     return res.sendStatus(201);
 
 });

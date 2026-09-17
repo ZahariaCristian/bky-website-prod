@@ -532,8 +532,14 @@
             if (!response.ok) {
                 throw new Error(payload.error || "Impossibile modificare tutti gli annunci Moscarossa.");
             }
-            ShowAlert("lblSaved");
-            window.setTimeout(() => window.location.reload(), 300);
+            if (payload.skippedExpired) {
+                ShowAlert("custom",
+                    `${payload.updated || 0} pubblicazioni aggiornate; ${payload.skippedExpired} scadute non modificate.`,
+                    6000);
+            } else {
+                ShowAlert("lblSaved");
+            }
+            window.setTimeout(() => window.location.reload(), payload.skippedExpired ? 2500 : 300);
         } catch (error) {
             updateAllButton.disabled = false;
             showError(error.message);
@@ -929,12 +935,19 @@
                 throw new Error("Moscarossa accetta massimo 20 immagini da 5 MB ciascuna.");
             }
             if (response.status !== 201) throw new Error("Impossibile salvare le immagini Moscarossa.");
+            const imageResult = await response.json().catch(() => ({}));
 
             const savedInfo = await saveInfo({ redirect: false, showSuccess: false, manageLoader: false });
             if (!savedInfo) throw new Error("Le foto sono salvate, ma non è stato possibile salvare l'anteprima.");
 
-            ShowAlert("lblSaved");
-            window.setTimeout(() => window.location.reload(), 350);
+            if (imageResult.expiredSchedulesSkipped) {
+                ShowAlert("custom",
+                    `Foto salvate localmente; ${imageResult.expiredSchedulesSkipped} pubblicazioni scadute non modificate.`,
+                    6000);
+            } else {
+                ShowAlert("lblSaved");
+            }
+            window.setTimeout(() => window.location.reload(), imageResult.expiredSchedulesSkipped ? 2500 : 350);
         } catch (error) {
             showError(error.message);
         } finally {

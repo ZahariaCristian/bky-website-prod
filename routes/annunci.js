@@ -7,6 +7,7 @@ const scrapeIncontriamoci = require("../lib/scraper/incontriamoci");
 const scrapeAmasens = require("../lib/scraper/amasens");
 const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
+const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -2992,6 +2993,19 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 }
             }
         }
+        const editedIds = [...new Set(Object.values(allSchedulazioni)
+            .flatMap((slots) => Array.isArray(slots) ? slots : [])
+            .filter((slot) => slot.id && slot.state === "EDIT" && !slot.GCRecord)
+            .map((slot) => Number(slot.id))
+            .filter(Number.isInteger))];
+        if (editedIds.length) {
+            const existing = await ctx.tblSchedulazioni.findAll({
+                where: { id: { [Op.in]: editedIds }, annuncio: req.body.id, platform: "moscarossa", GCRecord: null }
+            });
+            if (existing.some((schedule) => schedule.remotePostID && isMoscarossaExpired(schedule))) {
+                return res.status(409).json({ error: "La pubblicazione Moscarossa è scaduta e non può essere modificata." });
+            }
+        }
     }
     var onlySchedulazioni = [];
     for (let date of Object.keys(allSchedulazioni)) {
@@ -3053,6 +3067,10 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     if (getMoscarossaPromotionPlan(s.period, s.typeAnnuncio) === "Free") payed = true;
                 } else if (s.typeAnnuncio == "Free") payed = true;
                 var task = await ctx.tblSchedulazioni.findOne({ where: { id: s.id } });
+                if (platform === "moscarossa" && task.remotePostID && s.state === "EDIT" &&
+                    isMoscarossaExpired(task)) {
+                    return res.status(409).json({ error: "La pubblicazione Moscarossa è scaduta e non può essere modificata." });
+                }
                 if (task.payed) payed = task.payed;
                 var deleteThis = null;
                 if (s.GCRecord == true) deleteThis = ctx.newGCRecord();
@@ -3470,7 +3488,13 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
 
         var recentPublishLimit = new Date();
         recentPublishLimit.setDate(recentPublishLimit.getDate() - 8);
+        let moscarossaExpiredSkipped = 0;
+        let moscarossaEditsQueued = 0;
         for (ad of schedulazioni) {
+            if (panel === "moscarossa" && isMoscarossaExpired(ad)) {
+                moscarossaExpiredSkipped += 1;
+                continue;
+            }
             if (ad.data > recentPublishLimit) {
                 const scheduleGalleryLimit = getScheduleImageLimit(
                     panel,
@@ -3527,7 +3551,12 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                     state: "EDIT",
                     city: req.body.info.city || ad.city
                 });
+                if (panel === "moscarossa") moscarossaEditsQueued += 1;
             }
+        }
+
+        if (panel === "moscarossa") {
+            return res.status(201).json({ updated: moscarossaEditsQueued, skippedExpired: moscarossaExpiredSkipped });
         }
 
     }

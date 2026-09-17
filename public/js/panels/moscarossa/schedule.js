@@ -273,6 +273,8 @@
             state: slot.state || "",
             errorReason: slot.errorReason || "",
             urlBK: slot.urlBK || "",
+            data: slot.data || "",
+            remoteExpiresAt: slot.remoteExpiresAt || null,
             time: extractTime(slot.data),
             plan: period.plan,
             days: period.days,
@@ -524,10 +526,14 @@
         // selected images in the schedule editor. Remote management and paid
         // promotion changes still use their dedicated workflows below.
         const hasRemoteAd = Boolean(slot.remotePostID);
+        const expiration = hasRemoteAd ? resolveHistoryExpiration(slot) : null;
+        const expired = Boolean(expiration && expiration.timestamp <= Date.now() &&
+            ["OK", "EDIT"].includes(`${slot.state || ""}`.toUpperCase()));
         const panel = document.createElement("div");
         panel.className = "newpost-panel";
         panel.dataset.promoType = slot.plan;
         panel.dataset.relativeId = slot.relativeID || "";
+        panel.dataset.expired = expired ? "1" : "0";
 
         const main = document.createElement("div");
         main.className = "newpost-wrapper";
@@ -539,6 +545,8 @@
         time.className = "form-control";
         time.required = true;
         time.value = slot.time;
+        time.disabled = expired;
+        if (expired) time.title = "Pubblicazione Moscarossa scaduta: modifica non disponibile";
         time.addEventListener("change", () => {
             slot.time = time.value;
             markDirty(slot);
@@ -626,13 +634,21 @@
             main.appendChild(verifyButton);
         }
         panel.appendChild(main);
-        panel.appendChild(renderAddons(slot));
+        const addons = renderAddons(slot);
+        if (expired) addons.querySelectorAll("input, select, button").forEach((control) => { control.disabled = true; });
+        panel.appendChild(addons);
 
         const images = document.createElement("div");
         images.className = "post-pics";
         images.style.display = slot.imagesExpanded ? "flex" : "none";
-        renderImagePicker(slot, images);
+        renderImagePicker(slot, images, expired);
         panel.appendChild(images);
+        if (expired) {
+            const expiredNote = document.createElement("p");
+            expiredNote.className = "text-warning";
+            expiredNote.textContent = "Pubblicazione scaduta: questo timeslot non può essere modificato.";
+            panel.appendChild(expiredNote);
+        }
         const remoteGalleryNote = hasRemoteAd ? document.createElement("p") : null;
         if (remoteGalleryNote) {
             remoteGalleryNote.className = "text-warning";
@@ -769,6 +785,10 @@
         if (activeSlots.some((slot) => !slot.time)) throw new Error("Inserisci un orario per ogni pubblicazione Moscarossa.");
         if (activeSlots.some((slot) => !slot.images.length)) throw new Error("Seleziona almeno un'immagine per ogni pubblicazione Moscarossa.");
         if (!clean(state.advertisement?.city)) throw new Error("Seleziona prima il Comune Moscarossa.");
+        if (activeSlots.some((slot) => slot.dirty && slot.remotePostID &&
+            resolveHistoryExpiration(slot)?.timestamp <= Date.now())) {
+            throw new Error("Una pubblicazione Moscarossa è scaduta e non può essere modificata.");
+        }
 
         saveButton.disabled = true;
         try {
@@ -877,7 +897,31 @@
                 ? "Rimanente: SCADUTO"
                 : `Rimanente: ${formatRemainingTime(difference)}`;
             container.classList.toggle("is-expired", difference <= 0);
+            if (container.dataset.moscarossaStatus === "OK") {
+                const row = container.closest(".moscarossa-history-row");
+                const status = row?.querySelector(".btnPublishState");
+                if (status) {
+                    status.textContent = difference <= 0 ? "SCADUTO" : "PUBBLICATO";
+                    status.className = difference <= 0
+                        ? "btn btn-xs btn-default btnPublishState"
+                        : "btn btn-xs btn-success btnPublishState";
+                }
+                row?.querySelectorAll(".btnStory, .btnSuspend").forEach((control) => {
+                    control.hidden = difference <= 0;
+                    control.style.display = difference <= 0 ? "none" : "";
+                });
+            }
         });
+
+        const visibleSlots = (state.schedule[state.currentDay] || [])
+            .filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
+        const visiblePanels = Array.from(scheduleList.querySelectorAll(".newpost-panel"));
+        if (visibleSlots.length === visiblePanels.length && visibleSlots.some((slot, index) => {
+            const expiration = slot.remotePostID ? resolveHistoryExpiration(slot) : null;
+            const expired = Boolean(expiration && expiration.timestamp <= Date.now() &&
+                ["OK", "EDIT"].includes(`${slot.state || ""}`.toUpperCase()));
+            return visiblePanels[index].dataset.expired !== (expired ? "1" : "0");
+        })) renderDay();
 
         if (!countdowns.length && state.historyCountdownTimer) {
             window.clearInterval(state.historyCountdownTimer);
@@ -1213,6 +1257,8 @@
             actions.appendChild(copyButton);
             actions.appendChild(share);
             const recordState = `${record.state || ""}`.toUpperCase();
+            const expiration = resolveHistoryExpiration(record);
+            const expired = recordState === "OK" && Boolean(expiration && expiration.timestamp <= Date.now());
 
             const description = document.createElement("div");
             description.className = "rptDescription col-md-4 col-sm-4";
@@ -1248,7 +1294,9 @@
                 /free_limit|limite (?:moscarossa )?(?:di )?10 giorni|un solo annuncio (?:free|gratuito)/i
                     .test(`${record.errorReason || ""}`);
             const status = document.createElement("span");
-            status.className = `${statusClass(record.state)} btnPublishState`;
+            status.className = expired
+                ? "btn btn-xs btn-default btnPublishState"
+                : `${statusClass(record.state)} btnPublishState`;
             const statusLabels = {
                 OK: "PUBBLICATO",
                 KO: "ERRORE",
@@ -1257,7 +1305,7 @@
                 DELETE: "DELETE",
                 DELETED: "DELETED"
             };
-            status.textContent = suspended
+            status.textContent = expired ? "SCADUTO" : suspended
                 ? ({
                     CLOSE: "SOSPENSIONE IN ATTESA",
                     CLOSED: "SOSPESO",
@@ -1294,7 +1342,7 @@
                 statusActions.appendChild(errorButton);
             }
             const managementButtons = [];
-            const storyEligible = !suspended && recordState === "OK" && Boolean(record.remotePostID) &&
+            const storyEligible = !expired && !suspended && recordState === "OK" && Boolean(record.remotePostID) &&
                 (isTrue(record.payed) || PROMOTION_PLANS[recordPlan].paid);
             if (storyEligible) {
                 const storyButton = document.createElement("button");
@@ -1305,7 +1353,7 @@
                 storyButton.addEventListener("click", () => uploadStory(record, storyButton));
                 statusActions.appendChild(storyButton);
             }
-            if (!suspended && recordState === "OK" && record.remotePostID) {
+            if (!expired && !suspended && recordState === "OK" && record.remotePostID) {
                 const suspendButton = document.createElement("button");
                 suspendButton.type = "button";
                 suspendButton.className = "btn btn-danger btn-xs btnSuspend";
@@ -1345,11 +1393,11 @@
             }
             statusColumn.appendChild(statusActions);
 
-            const expiration = resolveHistoryExpiration(record);
             if (expiration && ["OK", "CLOSED"].includes(recordState)) {
                 const expirationContainer = document.createElement("div");
                 expirationContainer.className = "moscarossa-history-expiration";
                 expirationContainer.dataset.moscarossaExpiresAt = `${expiration.timestamp}`;
+                expirationContainer.dataset.moscarossaStatus = recordState;
                 expirationContainer.title = expiration.estimated
                     ? "Scadenza stimata dai dati della schedulazione; sarà sincronizzata alla prossima pubblicazione."
                     : "Scadenza sincronizzata dalla pagina Moscarossa.";
