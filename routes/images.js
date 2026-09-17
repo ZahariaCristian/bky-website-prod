@@ -22,7 +22,8 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     if (!req.query.phone) return res.sendStatus(400);
     if (!req.query.ann) return res.sendStatus(400);
 
-    if (`${req.query.panel || ""}`.toLowerCase() === "moscarossa") {
+    const isMoscarossa = `${req.query.panel || ""}`.toLowerCase() === "moscarossa";
+    if (isMoscarossa) {
         const files = Array.isArray(req.files) ? req.files : [];
         const invalidFile = files.find((file) =>
             !`${file.mimetype || ""}`.toLowerCase().startsWith("image/") || file.size > 5 * 1024 * 1024
@@ -38,6 +39,9 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     // Creating the folder if it does not exist
     if (!fs.existsSync(`${rootPath}/girls/${req.query.phone}`))
         fs.mkdirSync(`${rootPath}/girls/${req.query.phone}`);
+    if (isMoscarossa) {
+        fs.mkdirSync(`${rootPath}/girls/${req.query.phone}/pics`, { recursive: true });
+    }
     if(fs.existsSync(`${rootPath}/girls/${req.query.phone}/pics`)){
         // var exludeWrite = [];
         //  lstFiles = fs.readdirSync(`${rootPath}/girls/${req.query.phone}/pics`);
@@ -51,9 +55,20 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
         var sevenDay = new Date();
         sevenDay.setDate(sevenDay.getDate() - 7);
         var annuncio = await ctx.tblAnnunci.findOne({where:{id: req.query.ann}});
-        var scheduled = await annuncio.getTblSchedulazionis({where:{data :{[Op.gt]: sevenDay}}});
+        var scheduled = await annuncio.getTblSchedulazionis({where: isMoscarossa
+            ? {
+                platform: "moscarossa",
+                GCRecord: null,
+                [Op.or]: [
+                    { data: { [Op.gt]: sevenDay } },
+                    { remotePostID: { [Op.ne]: null } }
+                ]
+            }
+            : { data: { [Op.gt]: sevenDay } }});
         for(s of scheduled){
-            await ctx.tblGalleriaAnnuncio.update({GCRecord: ctx.newGCRecord()}, {where:{schedulazione: s.id}});
+            if (!isMoscarossa) {
+                await ctx.tblGalleriaAnnuncio.update({GCRecord: ctx.newGCRecord()}, {where:{schedulazione: s.id}});
+            }
         }
         // Writing the image files
         for (let i = 0; i < req.files.length; i++){
@@ -71,6 +86,7 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
                 });
             }
 
+            if (isMoscarossa) continue;
             for(s of scheduled){
                 var anteprima = true;
                 var gS = await ctx.tblGalleriaAnnuncio.findOne({where:{galleria: galleryId, schedulazione: s.id}});
@@ -90,6 +106,37 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
                         await gS.update({galleria: galleryId, schedulazione: s.id, GCRecord: null, isAnteprima: anteprima});
                         s.anteprimas = true;
                     }                    
+                }
+            }
+        }
+        if (isMoscarossa) {
+            const activeIds = origins.filter((id, index) => id && hiddenFlags[index] !== "true")
+                .map((id) => `${id}`);
+            const activeSet = new Set(activeIds);
+            const requestedPreviewId = `${req.body.previewGalleryId || ""}`.trim();
+            for (const schedule of scheduled) {
+                const selected = await schedule.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
+                const retained = selected.filter((image) => activeSet.has(`${image.galleria}`));
+                for (const image of selected) {
+                    if (!activeSet.has(`${image.galleria}`)) {
+                        await image.update({ GCRecord: ctx.newGCRecord() });
+                    }
+                }
+                // A gallery save must not replace a timeslot's own image selection or
+                // silently turn its first photo into the preview.
+                const oldPreview = retained.find((image) => image.isAnteprima)?.galleria;
+                const requestedIsSelected = retained.some((image) => `${image.galleria}` === requestedPreviewId);
+                const previewId = requestedIsSelected ? requestedPreviewId
+                    : `${oldPreview || retained[0]?.galleria || ""}`;
+                for (const image of retained) {
+                    const shouldPreview = `${image.galleria}` === previewId;
+                    if (Boolean(image.isAnteprima) !== shouldPreview) {
+                        await image.update({ isAnteprima: shouldPreview });
+                    }
+                }
+                if (`${oldPreview || ""}` !== previewId && schedule.remotePostID &&
+                    !["DELETE", "CLOSE", "CLOSED", "DELETED"].includes(`${schedule.state || ""}`)) {
+                    await schedule.update({ state: "EDIT", errorReason: "MOSCAROSSA_PREVIEW_PENDING" });
                 }
             }
         }

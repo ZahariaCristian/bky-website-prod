@@ -280,7 +280,8 @@
             images: selectedImages,
             imagesExpanded: selectedImages.length > 0,
             deleted: Boolean(slot.GCRecord),
-            dirty: false
+            dirty: false,
+            previewDirty: false
         };
     };
 
@@ -368,6 +369,7 @@
                     slot.images.push(target);
                 }
                 slot.images.forEach((entry) => { entry.isAnteprima = entry === target; });
+                slot.previewDirty = true;
                 markDirty(slot);
                 refreshPicker();
             });
@@ -754,7 +756,8 @@
                 hasHighlight: false,
                 hasEtichetta: false,
                 data: `${day}T${slot.time || "08:00"}:00.000Z`,
-                images: ensurePreview(normalizeImages(slot.images, PROMOTION_PLANS[slot.plan].imageLimit))
+                images: ensurePreview(normalizeImages(slot.images, PROMOTION_PLANS[slot.plan].imageLimit)),
+                previewChanged: Boolean(slot.previewDirty)
             }));
         });
         return payload;
@@ -785,7 +788,10 @@
                     slot.state = savedSlot.state || slot.state;
                 });
             });
-            Object.values(state.schedule).flat().forEach((slot) => { slot.dirty = false; });
+            Object.values(state.schedule).flat().forEach((slot) => {
+                slot.dirty = false;
+                slot.previewDirty = false;
+            });
             state.dirty = false;
             saveButton.disabled = true;
             if (reload) {

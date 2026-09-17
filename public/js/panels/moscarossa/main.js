@@ -19,6 +19,7 @@
         removedImages: [],
         showingRemovedImages: false,
         previewKey: "",
+        previewDirty: false,
         cropper: null,
         cropImageKey: "",
         detailsRaw: {}
@@ -739,6 +740,7 @@
                 const selectPreview = () => {
                     if (state.previewKey === key) return;
                     state.previewKey = key;
+                    state.previewDirty = true;
                     renderImages();
                     markImagesDirty();
                 };
@@ -903,6 +905,9 @@
 
             await registerPendingGalleryImages();
             const formData = new FormData();
+            if (state.previewDirty && state.previewKey.startsWith("gallery-")) {
+                formData.append("previewGalleryId", state.previewKey.slice("gallery-".length));
+            }
 
             for (const image of state.images) {
                 const isNewImage = Boolean(image.file);
@@ -991,6 +996,7 @@
             state.previewKey = options.previewGalleryId
                 ? `gallery-${options.previewGalleryId}`
                 : (state.images.length ? imageKey(state.images[0]) : "");
+            state.previewDirty = false;
             if (!state.images.some((image) => imageKey(image) === state.previewKey) && state.images.length) {
                 state.previewKey = imageKey(state.images[0]);
             }

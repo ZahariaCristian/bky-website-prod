@@ -3108,6 +3108,8 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         payed: payed,
                         state: state,
                         ...(state === null ? { errorReason: null } : {}),
+                        ...(platform === "moscarossa" && state === "EDIT" && s.previewChanged && task.remotePostID
+                            ? { errorReason: "MOSCAROSSA_PREVIEW_PENDING" } : {}),
                         city: s.city
                     });
                 }
