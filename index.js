@@ -339,6 +339,20 @@ async function ensureWebsiteSchema() {
         }
         console.log("[website:schema] tblSchedulazioni.remoteExpiresAt added.");
     }
+    if (!scheduleColumns.adExpiresAt) {
+        console.log("[website:schema] Adding tblSchedulazioni.adExpiresAt...");
+        try {
+            await queryInterface.addColumn("tblSchedulazioni", "adExpiresAt", {
+                type: ctx.model.Sequelize.BIGINT,
+                allowNull: true
+            });
+        } catch (error) {
+            if (error?.original?.code !== "ER_DUP_FIELDNAME" && error?.parent?.code !== "ER_DUP_FIELDNAME") {
+                throw error;
+            }
+        }
+        console.log("[website:schema] tblSchedulazioni.adExpiresAt added.");
+    }
 }
 
 ensureWebsiteSchema()

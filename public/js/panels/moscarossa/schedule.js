@@ -275,6 +275,7 @@
             urlBK: slot.urlBK || "",
             data: slot.data || "",
             remoteExpiresAt: slot.remoteExpiresAt || null,
+            adExpiresAt: slot.adExpiresAt || null,
             time: extractTime(slot.data),
             plan: period.plan,
             days: period.days,
@@ -529,7 +530,7 @@
         // selected images in the schedule editor. Remote management and paid
         // promotion changes still use their dedicated workflows below.
         const hasRemoteAd = Boolean(slot.remotePostID);
-        const expiration = hasRemoteAd ? resolveHistoryExpiration(slot) : null;
+        const expiration = hasRemoteAd ? resolveAdExpiration(slot) : null;
         const expired = Boolean(expiration && expiration.timestamp <= Date.now() &&
             ["OK", "EDIT"].includes(`${slot.state || ""}`.toUpperCase()));
         const panel = document.createElement("div");
@@ -790,7 +791,7 @@
         if (activeSlots.some((slot) => !slot.images.length)) throw new Error("Seleziona almeno un'immagine per ogni pubblicazione Moscarossa.");
         if (!clean(state.advertisement?.city)) throw new Error("Seleziona prima il Comune Moscarossa.");
         if (activeSlots.some((slot) => slot.dirty && slot.remotePostID &&
-            resolveHistoryExpiration(slot)?.timestamp <= Date.now())) {
+            resolveAdExpiration(slot)?.timestamp <= Date.now())) {
             throw new Error("Una pubblicazione Moscarossa è scaduta e non può essere modificata.");
         }
 
@@ -871,6 +872,14 @@
         };
     };
 
+    const resolveAdExpiration = (record) => {
+        const timestamp = Number(record.adExpiresAt);
+        return Number.isFinite(timestamp) && timestamp > 0 &&
+            Number.isFinite(new Date(timestamp).getTime())
+            ? { timestamp, estimated: false }
+            : null;
+    };
+
     const formatHistoryExpiration = (timestamp) => new Intl.DateTimeFormat("it-IT", {
         timeZone: "Europe/Rome",
         day: "2-digit",
@@ -893,27 +902,29 @@
         const countdowns = Array.from(document.querySelectorAll("[data-moscarossa-expires-at]"));
         countdowns.forEach((container) => {
             const timestamp = Number(container.dataset.moscarossaExpiresAt);
+            const adTimestamp = Number(container.dataset.moscarossaAdExpiresAt);
             const remaining = container.querySelector(".moscarossa-history-remaining");
             const expires = container.querySelector(".moscarossa-history-expires");
             if (!Number.isFinite(timestamp) || !remaining || !expires) return;
             const difference = timestamp - Date.now();
-            expires.textContent = `${difference <= 0 ? "Scaduto" : "Scade"}: ${formatHistoryExpiration(timestamp)}`;
+            expires.textContent = `${difference <= 0 ? "Promozione scaduta" : "Promozione scade"}: ${formatHistoryExpiration(timestamp)}`;
             remaining.textContent = difference <= 0
-                ? "Rimanente: SCADUTO"
+                ? "Promozione terminata"
                 : `Rimanente: ${formatRemainingTime(difference)}`;
-            container.classList.toggle("is-expired", difference <= 0);
+            const adExpired = Number.isFinite(adTimestamp) && adTimestamp > 0 && adTimestamp <= Date.now();
+            container.classList.toggle("is-expired", adExpired);
             if (container.dataset.moscarossaStatus === "OK") {
                 const row = container.closest(".moscarossa-history-row");
                 const status = row?.querySelector(".btnPublishState");
                 if (status) {
-                    status.textContent = difference <= 0 ? "SCADUTO" : "PUBBLICATO";
-                    status.className = difference <= 0
+                    status.textContent = adExpired ? "SCADUTO" : "PUBBLICATO";
+                    status.className = adExpired
                         ? "btn btn-xs btn-default btnPublishState"
                         : "btn btn-xs btn-success btnPublishState";
                 }
                 row?.querySelectorAll(".btnStory, .btnSuspend").forEach((control) => {
-                    control.hidden = difference <= 0;
-                    control.style.display = difference <= 0 ? "none" : "";
+                    control.hidden = adExpired;
+                    control.style.display = adExpired ? "none" : "";
                 });
             }
         });
@@ -922,7 +933,7 @@
             .filter((slot) => !slot.deleted && slot.plan === state.currentPlan);
         const visiblePanels = Array.from(scheduleList.querySelectorAll(".newpost-panel"));
         if (visibleSlots.length === visiblePanels.length && visibleSlots.some((slot, index) => {
-            const expiration = slot.remotePostID ? resolveHistoryExpiration(slot) : null;
+            const expiration = slot.remotePostID ? resolveAdExpiration(slot) : null;
             const expired = Boolean(expiration && expiration.timestamp <= Date.now() &&
                 ["OK", "EDIT"].includes(`${slot.state || ""}`.toUpperCase()));
             return visiblePanels[index].dataset.expired !== (expired ? "1" : "0");
@@ -1262,8 +1273,9 @@
             actions.appendChild(copyButton);
             actions.appendChild(share);
             const recordState = `${record.state || ""}`.toUpperCase();
-            const expiration = resolveHistoryExpiration(record);
-            const expired = recordState === "OK" && Boolean(expiration && expiration.timestamp <= Date.now());
+            const promotionExpiration = resolveHistoryExpiration(record);
+            const adExpiration = resolveAdExpiration(record);
+            const expired = recordState === "OK" && Boolean(adExpiration && adExpiration.timestamp <= Date.now());
 
             const description = document.createElement("div");
             description.className = "rptDescription col-md-4 col-sm-4";
@@ -1398,21 +1410,22 @@
             }
             statusColumn.appendChild(statusActions);
 
-            if (expiration && ["OK", "CLOSED"].includes(recordState)) {
+            if (promotionExpiration && ["OK", "CLOSED"].includes(recordState)) {
                 const expirationContainer = document.createElement("div");
                 expirationContainer.className = "moscarossa-history-expiration";
-                expirationContainer.dataset.moscarossaExpiresAt = `${expiration.timestamp}`;
+                expirationContainer.dataset.moscarossaExpiresAt = `${promotionExpiration.timestamp}`;
+                expirationContainer.dataset.moscarossaAdExpiresAt = adExpiration ? `${adExpiration.timestamp}` : "";
                 expirationContainer.dataset.moscarossaStatus = recordState;
-                expirationContainer.title = expiration.estimated
+                expirationContainer.title = promotionExpiration.estimated
                     ? "Scadenza stimata dai dati della schedulazione; sarà sincronizzata alla prossima pubblicazione."
-                    : "Scadenza sincronizzata dalla pagina Moscarossa.";
+                    : "Scadenza della promozione sincronizzata dalla pagina Moscarossa.";
                 const expires = document.createElement("span");
                 expires.className = "moscarossa-history-expires";
                 const remaining = document.createElement("span");
                 remaining.className = "moscarossa-history-remaining";
                 expirationContainer.appendChild(expires);
                 expirationContainer.appendChild(remaining);
-                if (expiration.estimated) {
+                if (promotionExpiration.estimated) {
                     const estimated = document.createElement("span");
                     estimated.className = "moscarossa-history-estimated";
                     estimated.textContent = "STIMATA";
