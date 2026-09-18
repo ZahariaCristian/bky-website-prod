@@ -3079,6 +3079,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 var state = task.state;
                 console.log(state, "state Schedule");
 
+                let moscarossaGalleryChanged = false;
                 if (s.state == "EDIT") {
                     if (task.remotePostID != null) state = "EDIT"; //remotePostId 
                     if (
@@ -3088,6 +3089,9 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         state = null;
                     }
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
+                    const previousMoscarossaImageIds = platform === "moscarossa" && task.remotePostID
+                        ? rImgs.filter((image) => !image.GCRecord).map((image) => `${image.galleria}`).sort()
+                        : [];
                     for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
                     const imageLimit = getScheduleImageLimit(
                         platform,
@@ -3100,7 +3104,13 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         scheduleImages = photos.map((photo) => ({ galleria: photo.id }));
                     }
 
-                    for (const image of normalizeScheduleImages(scheduleImages, imageLimit)) {
+                    const normalizedImages = normalizeScheduleImages(scheduleImages, imageLimit);
+                    if (platform === "moscarossa" && task.remotePostID) {
+                        const requestedIds = normalizedImages.map((image) => `${image.galleria}`).sort();
+                        moscarossaGalleryChanged = previousMoscarossaImageIds.length !== requestedIds.length ||
+                            previousMoscarossaImageIds.some((id, index) => id !== requestedIds[index]);
+                    }
+                    for (const image of normalizedImages) {
                         await ctx.tblGalleriaAnnuncio.create({
                             schedulazione: task.id,
                             galleria: image.galleria,
@@ -3126,8 +3136,11 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         payed: payed,
                         state: state,
                         ...(state === null ? { errorReason: null } : {}),
-                        ...(platform === "moscarossa" && state === "EDIT" && s.previewChanged && task.remotePostID
-                            ? { errorReason: "MOSCAROSSA_PREVIEW_PENDING" } : {}),
+                        ...(platform === "moscarossa" && state === "EDIT" && task.remotePostID
+                            ? { errorReason: moscarossaGalleryChanged ? "MOSCAROSSA_GALLERY_PENDING"
+                                : s.previewChanged ? "MOSCAROSSA_PREVIEW_PENDING"
+                                    : /^MOSCAROSSA_(?:GALLERY|PREVIEW)_PENDING/.test(`${task.errorReason || ""}`)
+                                        ? task.errorReason : null } : {}),
                         city: s.city
                     });
                 }
@@ -3509,6 +3522,10 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                     }))
                     : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
                 const normalizedImages = normalizeScheduleImages(sourceImages, scheduleGalleryLimit);
+                const moscarossaGalleryChanged = panel === "moscarossa" &&
+                    (existingScheduleGallery.length !== normalizedImages.length ||
+                        existingScheduleGallery.some((image) =>
+                            !normalizedImages.some((selected) => `${selected.galleria}` === `${image.galleria}`)));
 
                 if (shouldRepublishBakeca) {
                     var republishSchedule = await ctx.tblSchedulazioni.create({
@@ -3549,7 +3566,8 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
 
                 await ad.update({
                     state: "EDIT",
-                    city: req.body.info.city || ad.city
+                    city: req.body.info.city || ad.city,
+                    ...(moscarossaGalleryChanged ? { errorReason: "MOSCAROSSA_GALLERY_PENDING" } : {})
                 });
                 if (panel === "moscarossa") moscarossaEditsQueued += 1;
             }

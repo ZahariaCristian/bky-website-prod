@@ -36,6 +36,9 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
     const origins = bodyArray(req.body.origin);
     const hiddenFlags = bodyArray(req.body.hidden);
     const isNewFlags = bodyArray(req.body.isNew);
+    const replacedGalleryIds = new Set(origins.filter((id, index) =>
+        id && index < (req.files?.length || 0) && isNewFlags[index] === "true")
+        .map((id) => `${id}`));
     let expiredSchedulesSkipped = 0;
 
     // Creating the folder if it does not exist
@@ -123,6 +126,8 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
                 }
                 const selected = await schedule.getTblGalleriaAnnuncios({ where: { GCRecord: null } });
                 const retained = selected.filter((image) => activeSet.has(`${image.galleria}`));
+                const galleryChanged = retained.length !== selected.length ||
+                    retained.some((image) => replacedGalleryIds.has(`${image.galleria}`));
                 for (const image of selected) {
                     if (!activeSet.has(`${image.galleria}`)) {
                         await image.update({ GCRecord: ctx.newGCRecord() });
@@ -140,9 +145,12 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
                         await image.update({ isAnteprima: shouldPreview });
                     }
                 }
-                if (`${oldPreview || ""}` !== previewId && schedule.remotePostID &&
+                if ((galleryChanged || `${oldPreview || ""}` !== previewId) && schedule.remotePostID &&
                     !["DELETE", "CLOSE", "CLOSED", "DELETED"].includes(`${schedule.state || ""}`)) {
-                    await schedule.update({ state: "EDIT", errorReason: "MOSCAROSSA_PREVIEW_PENDING" });
+                    await schedule.update({
+                        state: "EDIT",
+                        errorReason: galleryChanged ? "MOSCAROSSA_GALLERY_PENDING" : "MOSCAROSSA_PREVIEW_PENDING"
+                    });
                 }
             }
         }

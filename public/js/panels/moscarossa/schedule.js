@@ -652,7 +652,7 @@
         const remoteGalleryNote = hasRemoteAd ? document.createElement("p") : null;
         if (remoteGalleryNote) {
             remoteGalleryNote.className = "text-warning";
-            remoteGalleryNote.textContent = "Le immagini selezionate qui vengono salvate nel timeslot, ma non sostituiscono automaticamente le foto già online su Moscarossa.";
+            remoteGalleryNote.textContent = "Salvando il timeslot, le foto selezionate qui aggiornano la galleria online. Le nuove foto della galleria generale vanno selezionate anche in questo timeslot.";
             remoteGalleryNote.style.display = slot.imagesExpanded ? "block" : "none";
             panel.appendChild(remoteGalleryNote);
         }
