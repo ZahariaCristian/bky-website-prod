@@ -899,6 +899,11 @@
 
     const saveImages = async () => {
         if (!annuncioId || !state.donnaId) return showError("Salva prima le informazioni dell'annuncio.");
+        const applyCheckbox = document.querySelector("#moscarossaApplyImagesToPublished");
+        const applyToPublished = applyCheckbox.checked;
+        if (applyToPublished && !state.images.length) {
+            return showError("Aggiungi almeno una foto prima di applicarla alle pubblicazioni attive.");
+        }
 
         toggleLoader();
         try {
@@ -940,14 +945,39 @@
             const savedInfo = await saveInfo({ redirect: false, showSuccess: false, manageLoader: false });
             if (!savedInfo) throw new Error("Le foto sono salvate, ma non è stato possibile salvare l'anteprima.");
 
-            if (imageResult.expiredSchedulesSkipped) {
+            let applyResult = null;
+            if (applyToPublished) {
+                const applyResponse = await fetch("/images/applyMoscarossaGallery", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        annuncioId,
+                        imageIds: state.images.map((image) => image.id),
+                        previewGalleryId: state.previewKey.startsWith("gallery-")
+                            ? state.previewKey.slice("gallery-".length) : ""
+                    })
+                });
+                applyResult = await applyResponse.json().catch(() => ({}));
+                if (!applyResponse.ok) {
+                    throw new Error(`Le foto sono state salvate, ma non applicate alle pubblicazioni: ${
+                        applyResult.error || "errore del server"}. Riprova dopo aver ricaricato la pagina.`);
+                }
+                applyCheckbox.checked = false;
+            }
+
+            if (applyResult) {
+                ShowAlert("custom", `${applyResult.queued} pubblicazioni Moscarossa in aggiornamento; ` +
+                    `${applyResult.skippedExpired} scadute e ${applyResult.skippedInactive} non attive non modificate.` +
+                    (applyResult.omittedByLimit ? " Alcune foto superano il limite della promozione." : ""), 6000);
+            } else if (imageResult.expiredSchedulesSkipped) {
                 ShowAlert("custom",
                     `Foto salvate localmente; ${imageResult.expiredSchedulesSkipped} pubblicazioni scadute non modificate.`,
                     6000);
             } else {
                 ShowAlert("lblSaved");
             }
-            window.setTimeout(() => window.location.reload(), imageResult.expiredSchedulesSkipped ? 2500 : 350);
+            window.setTimeout(() => window.location.reload(), applyResult || imageResult.expiredSchedulesSkipped ? 2500 : 350);
         } catch (error) {
             showError(error.message);
         } finally {

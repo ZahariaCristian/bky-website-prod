@@ -4,6 +4,7 @@ const upload = multer();
 const fs = require("fs");
 const { authenticateKey } = require("../lib/authentication");
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
+const { moscarossaImageLimit, selectMoscarossaImages } = require("../lib/moscarossaGalleryApply");
 const ctx = require("../ctx/model");
 const { dirname } = require('path');
 const appDir = dirname(require.main.filename);
@@ -18,6 +19,89 @@ if (process.env.PROD == 0){
 
 const GLOBAL_PATH = process.env.Global_Path.trim();
 var lstFiles = [];
+
+// The general gallery is not automatically copied to already-published ads.
+// This explicit action is called only after /images/update and /annuncio/updateInfo succeed.
+router.post("/applyMoscarossaGallery", authenticateKey, async (req, res) => {
+    const annuncioId = Number(req.body.annuncioId);
+    const imageIds = req.body.imageIds;
+    const validIds = Array.isArray(imageIds) && imageIds.length > 0 && imageIds.length <= 20 &&
+        imageIds.every((id) => Number.isSafeInteger(Number(id)) && Number(id) > 0);
+    if (!Number.isSafeInteger(annuncioId) || annuncioId <= 0 || !validIds ||
+        new Set(imageIds.map(Number)).size !== imageIds.length) {
+        return res.status(400).json({ error: "Seleziona da 1 a 20 foto valide da applicare." });
+    }
+
+    try {
+        const user = await ctx.tblUser.findOne({ where: { OID: req.session.userid } });
+        const membership = user ? await user.getGroup() : null;
+        if (!membership) return res.status(403).json({ error: "Gruppo utente non disponibile." });
+        const annuncio = await ctx.tblAnnunci.findOne({
+            where: { id: annuncioId, groupOwner: membership.group, GCRecord: null }
+        });
+        if (!annuncio) return res.status(404).json({ error: "Annuncio non trovato." });
+
+        const donna = await annuncio.getTblDonne();
+        if (!donna) return res.status(404).json({ error: "Galleria non trovata." });
+        const gallery = await donna.getTblGalleria({
+            where: { id: { [Op.in]: imageIds.map(Number) }, GCRecord: null,
+                [Op.or]: [{ isHidden: false }, { isHidden: null }] }
+        });
+        if (gallery.length !== imageIds.length) {
+            return res.status(409).json({ error: "Alcune foto non sono più disponibili. Ricarica la pagina." });
+        }
+        const previewGalleryId = `${req.body.previewGalleryId || ""}`;
+        if (previewGalleryId && !imageIds.some((id) => `${id}` === previewGalleryId)) {
+            return res.status(400).json({ error: "L'anteprima scelta non è nella galleria salvata." });
+        }
+
+        const result = await ctx.model.transaction(async (transaction) => {
+            const schedules = await ctx.tblSchedulazioni.findAll({
+                where: { annuncio: annuncioId, platform: "moscarossa", GCRecord: null,
+                    remotePostID: { [Op.ne]: null } },
+                order: [["data", "DESC"], ["id", "DESC"]], transaction
+            });
+            const seenRemoteIds = new Set();
+            let queued = 0;
+            let skippedExpired = 0;
+            let skippedInactive = 0;
+            let omittedByLimit = 0;
+            for (const schedule of schedules) {
+                const remoteId = `${schedule.remotePostID}`;
+                if (seenRemoteIds.has(remoteId)) continue;
+                seenRemoteIds.add(remoteId);
+                if (!["OK", "EDIT"].includes(schedule.state)) {
+                    skippedInactive += 1;
+                    continue;
+                }
+                if (isMoscarossaExpired(schedule)) {
+                    skippedExpired += 1;
+                    continue;
+                }
+                const selected = selectMoscarossaImages(
+                    imageIds, previewGalleryId, moscarossaImageLimit(schedule)
+                );
+                omittedByLimit += imageIds.length - selected.length;
+                await ctx.tblGalleriaAnnuncio.update({ GCRecord: ctx.newGCRecord() }, {
+                    where: { schedulazione: schedule.id, GCRecord: null }, transaction
+                });
+                for (const image of selected) {
+                    await ctx.tblGalleriaAnnuncio.create({
+                        ...image, schedulazione: schedule.id
+                    }, { transaction });
+                }
+                await schedule.update({ state: "EDIT", editedBy: req.session.userid,
+                    errorReason: "MOSCAROSSA_GALLERY_PENDING" }, { transaction });
+                queued += 1;
+            }
+            return { queued, skippedExpired, skippedInactive, omittedByLimit };
+        });
+        return res.json(result);
+    } catch (error) {
+        console.error("Moscarossa gallery apply failed:", error);
+        return res.status(500).json({ error: "Impossibile applicare le foto alle pubblicazioni Moscarossa." });
+    }
+});
 
 router.post("/update", upload.array("imgs"), async (req, res) => {
     if (!req.query.phone) return res.sendStatus(400);

@@ -652,7 +652,7 @@
         const remoteGalleryNote = hasRemoteAd ? document.createElement("p") : null;
         if (remoteGalleryNote) {
             remoteGalleryNote.className = "text-warning";
-            remoteGalleryNote.textContent = "Salvando il timeslot, le foto selezionate qui aggiornano la galleria online. Le nuove foto della galleria generale vanno selezionate anche in questo timeslot.";
+            remoteGalleryNote.textContent = "Salvando il timeslot, le foto selezionate qui aggiornano la galleria online. Per applicare le nuove foto a tutte le pubblicazioni attive, usa l'opzione nel riquadro Immagini.";
             remoteGalleryNote.style.display = slot.imagesExpanded ? "block" : "none";
             panel.appendChild(remoteGalleryNote);
         }
