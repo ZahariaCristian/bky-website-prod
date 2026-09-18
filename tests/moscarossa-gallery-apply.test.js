@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { moscarossaImageLimit, selectMoscarossaImages, needsMoscarossaGallerySync } =
+const { moscarossaImageLimit, selectMoscarossaImages, needsMoscarossaGallerySync,
+    needsMoscarossaBulkGallerySync } =
     require("../lib/moscarossaGalleryApply");
 
 test("uses the published plan's image limit, including legacy paid schedules", () => {
@@ -29,4 +30,12 @@ test("a timeslot photo edit remains a gallery sync even when IDs were saved by a
     assert.equal(needsMoscarossaGallerySync([2, 3], [3, 2]), false);
     assert.equal(needsMoscarossaGallerySync([2, 3], [3, 2], true), true);
     assert.equal(needsMoscarossaGallerySync([2, 3], [2, 4]), true);
+});
+
+test("bulk Moscarossa edits reconcile selected photos even when local IDs are unchanged", () => {
+    const selected = [{ galleria: 2 }, { galleria: 3 }];
+    assert.equal(needsMoscarossaGallerySync([2, 3], [2, 3]), false);
+    assert.equal(needsMoscarossaBulkGallerySync("moscarossa", selected), true);
+    assert.equal(needsMoscarossaBulkGallerySync("bakeca", selected), false);
+    assert.equal(needsMoscarossaBulkGallerySync("moscarossa", []), false);
 });

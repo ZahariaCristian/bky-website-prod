@@ -8,7 +8,7 @@ const scrapeAmasens = require("../lib/scraper/amasens");
 const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
-const { needsMoscarossaGallerySync } = require("../lib/moscarossaGalleryApply");
+const { needsMoscarossaGallerySync, needsMoscarossaBulkGallerySync } = require("../lib/moscarossaGalleryApply");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -3525,10 +3525,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                     }))
                     : newGallery.map((image) => ({ galleria: image.id, isAnteprima: false }));
                 const normalizedImages = normalizeScheduleImages(sourceImages, scheduleGalleryLimit);
-                const moscarossaGalleryChanged = panel === "moscarossa" &&
-                    (existingScheduleGallery.length !== normalizedImages.length ||
-                        existingScheduleGallery.some((image) =>
-                            !normalizedImages.some((selected) => `${selected.galleria}` === `${image.galleria}`)));
+                const reconcileMoscarossaGallery = needsMoscarossaBulkGallerySync(panel, normalizedImages);
 
                 if (shouldRepublishBakeca) {
                     var republishSchedule = await ctx.tblSchedulazioni.create({
@@ -3570,7 +3567,7 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
                 await ad.update({
                     state: "EDIT",
                     city: req.body.info.city || ad.city,
-                    ...(moscarossaGalleryChanged ? { errorReason: "MOSCAROSSA_GALLERY_PENDING" } : {})
+                    ...(reconcileMoscarossaGallery ? { errorReason: "MOSCAROSSA_GALLERY_PENDING" } : {})
                 });
                 if (panel === "moscarossa") moscarossaEditsQueued += 1;
             }
