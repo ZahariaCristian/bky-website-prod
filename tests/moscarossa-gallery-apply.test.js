@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { moscarossaImageLimit, selectMoscarossaImages } = require("../lib/moscarossaGalleryApply");
+const { moscarossaImageLimit, selectMoscarossaImages, needsMoscarossaGallerySync } =
+    require("../lib/moscarossaGalleryApply");
 
 test("uses the published plan's image limit, including legacy paid schedules", () => {
     assert.equal(moscarossaImageLimit({ typeAnnuncio: "Free" }), 5);
@@ -22,4 +23,10 @@ test("deduplicates and falls back to the first image when no preview was chosen"
     assert.deepEqual(selectMoscarossaImages([2, 2, 3], "", 5), [
         { galleria: 2, isAnteprima: true }, { galleria: 3, isAnteprima: false }
     ]);
+});
+
+test("a timeslot photo edit remains a gallery sync even when IDs were saved by a failed attempt", () => {
+    assert.equal(needsMoscarossaGallerySync([2, 3], [3, 2]), false);
+    assert.equal(needsMoscarossaGallerySync([2, 3], [3, 2], true), true);
+    assert.equal(needsMoscarossaGallerySync([2, 3], [2, 4]), true);
 });

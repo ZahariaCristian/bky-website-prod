@@ -283,6 +283,7 @@
             imagesExpanded: selectedImages.length > 0,
             deleted: Boolean(slot.GCRecord),
             dirty: false,
+            galleryDirty: false,
             previewDirty: false
         };
     };
@@ -349,6 +350,7 @@
                     slot.images = slot.images.filter((entry) => Number(entry.galleria) !== galleryId);
                     ensurePreview(slot.images);
                 }
+                slot.galleryDirty = true;
                 markDirty(slot);
                 refreshPicker();
             });
@@ -369,6 +371,7 @@
                     }
                     target = { galleria: galleryId, isAnteprima: false };
                     slot.images.push(target);
+                    slot.galleryDirty = true;
                 }
                 slot.images.forEach((entry) => { entry.isAnteprima = entry === target; });
                 slot.previewDirty = true;
@@ -773,6 +776,7 @@
                 hasEtichetta: false,
                 data: `${day}T${slot.time || "08:00"}:00.000Z`,
                 images: ensurePreview(normalizeImages(slot.images, PROMOTION_PLANS[slot.plan].imageLimit)),
+                galleryChanged: Boolean(slot.galleryDirty),
                 previewChanged: Boolean(slot.previewDirty)
             }));
         });
@@ -810,6 +814,7 @@
             });
             Object.values(state.schedule).flat().forEach((slot) => {
                 slot.dirty = false;
+                slot.galleryDirty = false;
                 slot.previewDirty = false;
             });
             state.dirty = false;

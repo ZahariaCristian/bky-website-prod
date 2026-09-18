@@ -8,6 +8,7 @@ const scrapeAmasens = require("../lib/scraper/amasens");
 const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
+const { needsMoscarossaGallerySync } = require("../lib/moscarossaGalleryApply");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -3090,7 +3091,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     }
                     var rImgs = await task.getTblGalleriaAnnuncios({ where: { schedulazione: s.id } });
                     const previousMoscarossaImageIds = platform === "moscarossa" && task.remotePostID
-                        ? rImgs.filter((image) => !image.GCRecord).map((image) => `${image.galleria}`).sort()
+                        ? rImgs.filter((image) => !image.GCRecord).map((image) => image.galleria)
                         : [];
                     for (r of Object.keys(rImgs)) await rImgs[r].update({ GCRecord: ctx.newGCRecord() });
                     const imageLimit = getScheduleImageLimit(
@@ -3106,9 +3107,11 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
 
                     const normalizedImages = normalizeScheduleImages(scheduleImages, imageLimit);
                     if (platform === "moscarossa" && task.remotePostID) {
-                        const requestedIds = normalizedImages.map((image) => `${image.galleria}`).sort();
-                        moscarossaGalleryChanged = previousMoscarossaImageIds.length !== requestedIds.length ||
-                            previousMoscarossaImageIds.some((id, index) => id !== requestedIds[index]);
+                        moscarossaGalleryChanged = needsMoscarossaGallerySync(
+                            previousMoscarossaImageIds,
+                            normalizedImages.map((image) => image.galleria),
+                            s.galleryChanged === true
+                        );
                     }
                     for (const image of normalizedImages) {
                         await ctx.tblGalleriaAnnuncio.create({
