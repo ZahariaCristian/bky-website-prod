@@ -424,6 +424,7 @@
         city: clean(field("city")?.value),
         location: clean(field("location")?.value),
         phone: clean(field("phone")?.value),
+        nickname: clean(field("nickname")?.value),
         name: clean(field("name")?.value),
         categorie: field("categorie")?.value || "",
         sono: field("categorie")?.value || "",
@@ -1006,6 +1007,7 @@
 
             setValue("categorie", ad.categorie || "DONNAUOMO");
             setValue("name", ad.name);
+            setValue("nickname", ad.nickname);
             setValue("title", ad.title);
             setValue("description", ad.description);
             setValue("phone", ad.phone);

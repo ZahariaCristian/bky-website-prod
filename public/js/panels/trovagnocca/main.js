@@ -334,8 +334,8 @@ const setPhoneVerified = () => {
 };
 
 const loadAdvertisement = async (res) => {
-    ["title", "description", "phone", "name", "donnaID"].forEach((info) => {
-        document.querySelector(`${(info == "description" || info == "title" || info == "note") ? "textarea" : "input"}[name='${info}']`).value = (res[info] === null || res[info] === undefined) ? "" : res[info];
+    ["title", "nickname", "description", "phone", "name", "donnaID"].forEach((info) => {
+        document.querySelector(`${(info == "description" || info == "nickname" || info == "title" || info == "note") ? "textarea" : "input"}[name='${info}']`).value = (res[info] === null || res[info] === undefined) ? "" : res[info];
     });
     if (typeof window.setTrovagnoccaCityValue === "function") {
         window.setTrovagnoccaCityValue(res.city || "");

@@ -11,6 +11,7 @@ const getInfoData = () => {
         description: document.querySelector("textarea[name='description']").value,
         city: document.querySelector("input[name='city']").value,
         phone: document.querySelector("input[name='phone']").value,
+        nickname: document.querySelector("textarea[name='nickname']").value,
         name: document.querySelector("input[name='name']").value,
         categorie: window.normalizePanelCategoryValue
             ? window.normalizePanelCategoryValue(document.querySelector("select[name='categorie']").value)

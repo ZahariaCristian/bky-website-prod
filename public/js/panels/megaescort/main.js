@@ -290,8 +290,8 @@ const loadAnnuncio = (id) => {
 };
 
 const loadAdvertisement = async (res) => {
-    ["title", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
-        document.querySelector(`${(info == "description" || info == "title" || info == "note") ? "textarea" : "input"}[name='${info}']`).value = (res[info] === null || res[info] === undefined) ? "" : res[info];
+    ["title", "nickname", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
+        document.querySelector(`${(info == "description" || info == "nickname" || info == "title" || info == "note") ? "textarea" : "input"}[name='${info}']`).value = (res[info] === null || res[info] === undefined) ? "" : res[info];
     });
     const apiNote = parseMegaescortApiNote(res.note);
     const apiTags = apiNote.tags || {};

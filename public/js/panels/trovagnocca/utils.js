@@ -63,6 +63,7 @@ const getInfoData = () => {
         description: document.querySelector("textarea[name='description']").value,
         city: selectInputValue("city"),
         phone: document.querySelector("input[name='phone']").value,
+        nickname: document.querySelector("textarea[name='nickname']").value,
         name: document.querySelector("input[name='name']").value,
         categorie: normalizeTrovagnoccaInfoCategoryValue(selectedCategory),
         sono: normalizeTrovagnoccaInfoCategoryValue(selectedCategory),

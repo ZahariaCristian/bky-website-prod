@@ -350,8 +350,8 @@ const getIncontriamociContactNote = (note) => {
 };
 
 const loadAdvertisement = async (res) => {
-    ["title", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
-        const selector = (info == "description" || info == "title" || info == "note")
+    ["title", "nickname", "description", "city", "phone", "name", "donnaID"].forEach((info) => {
+        const selector = (info == "description" || info == "nickname" || info == "title" || info == "note")
             ? `textarea[name='${info}']`
             : `[name='${info}']`;
         const field = document.querySelector(selector);

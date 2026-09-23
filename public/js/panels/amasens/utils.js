@@ -49,6 +49,7 @@ const getInfoData = () => {
         city: apiInputValue("city"),
         region: selectInputValue("region"),
         phone: document.querySelector("input[name='phone']").value,
+        nickname: document.querySelector("textarea[name='nickname']").value,
         name: document.querySelector("input[name='name']").value,
         categorie: normalizeincontriamociInfoCategoryValue(selectedCategory),
         sono: normalizeincontriamociInfoCategoryValue(selectedCategory),
