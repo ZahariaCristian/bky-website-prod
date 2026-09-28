@@ -2,9 +2,14 @@ const URL_PARAMS = new URLSearchParams(window.location.search);
 const QUERY_DAY = URL_PARAMS.get("day");
 const QUERY_NEW = URL_PARAMS.get("edit");
 const EDIT = URL_PARAMS.get("enableEdit");
+const CURRENT_PANEL = `${URL_PARAMS.get("panel") || "bakecaincontrii"}`.toLowerCase();
 var blacklist = [];
 var tmpID = 0;
 var sCalendar = null;
+
+if (CURRENT_PANEL === "bakecaincontrii") {
+    document.body.classList.add("bakecaincontrii-panel");
+}
 
 
 // Global variable to store reports
@@ -1369,6 +1374,30 @@ const getCheckedPics = (checkbox) => {
     return result;
 };
 
+const getBakecaincontriiCategoryLabel = () => {
+    const category = document.querySelector("select[name='categorie']");
+    if (!category) return "";
+    return category.options[category.selectedIndex]?.text?.trim() || category.value || "";
+};
+
+const createTimeslotCategoryBadge = () => {
+    const badge = document.createElement("span");
+    badge.classList.add("timeslot-category-badge");
+    badge.textContent = getBakecaincontriiCategoryLabel();
+    badge.title = badge.textContent;
+    return badge;
+};
+
+const refreshTimeslotCategoryBadges = () => {
+    const label = getBakecaincontriiCategoryLabel();
+    document.querySelectorAll(".timeslot-category-badge").forEach((badge) => {
+        badge.textContent = label;
+        badge.title = label;
+    });
+};
+
+document.querySelector("select[name='categorie']")?.addEventListener("change", refreshTimeslotCategoryBadges);
+
 const postsPanelOperations = (panel) => {
     panel.querySelector(".btn-primary").addEventListener("click", () => {
         enableScheduleUpdate();
@@ -1574,6 +1603,7 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(btnEtichetta);
         newPost.appendChild(btnCam);
         newPost.appendChild(cityPost);
+        newPost.appendChild(createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
@@ -1827,6 +1857,7 @@ const timeSlotPanelOperations = (panel) => {
         newPost.appendChild(btnEtichetta);
         newPost.appendChild(btnCam);
         newPost.appendChild(cityPost);
+        newPost.appendChild(createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
@@ -2045,6 +2076,7 @@ document.querySelectorAll(".time-slot").forEach((timeslot) => {
             newPostWrapper.appendChild(btnEtichetta);
             newPostWrapper.appendChild(btnCam);
             newPostWrapper.appendChild(cityPost);
+            newPostWrapper.appendChild(createTimeslotCategoryBadge());
     
             timeSlotPanelOperations(postsDiv);
             timeslot.appendChild(postsDiv);
@@ -2865,11 +2897,14 @@ function addImageOld(imgUrl) {
 function getSelectedDayPubs(currentDate) {
     let result = [];
     let i = 0;
-    ["Free", "10x1", "10x3", "10x7"].forEach(promoType => {
+    ["Free", "Flash", "10x1", "10x3", "10x7"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             let typeData = {};
             typeData.typeAnnuncio = promoType;
-            typeData.typePeriodic = "Top";
+            typeData.typePeriodic = promoType === "Flash" ? "Flash" : "Top";
+            if (promoType === "Flash") {
+                typeData.period = JSON.stringify({ product: "flash" });
+            }
             typeData.hasPremium = $(panel).data("premium");
             typeData.hasVideo = $(panel).data("cam");
             typeData.hasHighlight = $(panel).data("highlight");
@@ -3013,7 +3048,7 @@ function clearPubsViews() {
 
 function loadDayData(pubs) {
     // Process Free, 10x1, 10x3, 10x7 promo types (unchanged)
-    ["Free", "10x1", "10x3", "10x7"].forEach(promoType => {
+    ["Free", "Flash", "10x1", "10x3", "10x7"].forEach(promoType => {
         pubs
             .filter(x => !x.GCRecord)
             .filter(x => x.typeAnnuncio === promoType)
@@ -3495,6 +3530,7 @@ function btnCloneProgram() {
     var newPubs = getSelectedDayPubs();
 
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "Free"), 1);
+    clonePubsData(newPubs.filter( x => x.typeAnnuncio == "Flash"), 1);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x1"), 2);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x3"), 4);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x7"), 8);

@@ -21,6 +21,10 @@ const appDir = dirname((require.main && require.main.filename) || __filename);
 var rootPath;
 const Op = ctx.model.Sequelize.Op;
 const amasensLocations = require("../data/amasens-locations.json");
+const {
+    BAKECAINCONTRII_PLATFORM,
+    getDefaultBakecaincontriiPrices
+} = require("../config/bakecaincontriiPrices");
 
 const normalizeLocationName = (value) => `${value || ""}`.normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, " ")
@@ -3027,7 +3031,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         data: s.data,
                         period,
                         typeAnnuncio: s.typeAnnuncio,
-                        typePeriodic: "Top",
+                        typePeriodic: s.typePeriodic || (s.typeAnnuncio === "Flash" ? "Flash" : "Top"),
                         editedBy: userid,
                         hasPremium: s.hasPremium,
                         hasVideo: (platform === "amasens" || platform === "incontriamoci")
@@ -3172,6 +3176,7 @@ async function updateCreditAnnuncio(annuncio) {
     tipiAnnuncio.oneXseven = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "1x7") return x; });
     tipiAnnuncio.tenXone = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x1") return x; });
     tipiAnnuncio.tenXthree = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x3") return x; });
+    const flashSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Flash");
 
     var listino = await ctx.tblListinoPrezzi.findAll({ where: { group: annuncio.groupOwner } });
     //console.log({listino, groupOwner: annuncio.groupOwner})
@@ -3194,6 +3199,22 @@ async function updateCreditAnnuncio(annuncio) {
             credit += getCreditPremium(listinoPremium, tipiAnnuncio[key].filter(x => { if (x.hasPremium == true) return x; }).length, tipiAnnuncio[key][0].typeAnnuncio)
         }
 
+    }
+
+    if (flashSchedules.length > 0) {
+        await ctx.tblPlatformPrices.sync();
+        const flashDefaults = getDefaultBakecaincontriiPrices()[0];
+        const [flashPrice] = await ctx.tblPlatformPrices.findOrCreate({
+            where: {
+                group: annuncio.groupOwner,
+                platform: BAKECAINCONTRII_PLATFORM,
+                product: "flash",
+                days: 1,
+                variantKey: "default"
+            },
+            defaults: { ...flashDefaults, group: annuncio.groupOwner }
+        });
+        credit += Number(flashPrice.price || 0) * flashSchedules.length;
     }
     return credit;
 }
@@ -3724,7 +3745,7 @@ router.post("/suspendAll", authenticateKey, async (req, res) => {
             var dead = new Date(s.data);
             var period = new Date(s.data);
 
-            if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3") {
+            if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "Flash" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3") {
                 var hPeriod = parseInt(s.period.substr(0, 2));
                 period.setHours(hPeriod);
                 period.setMinutes(period.getMinutes() + (period.getTimezoneOffset() * -1));
@@ -3732,6 +3753,7 @@ router.post("/suspendAll", authenticateKey, async (req, res) => {
 
             switch (s.typeAnnuncio) {
                 case "Free":
+                case "Flash":
                     dead.setDate(dead.getDate() + 1);
                     break;
                 case "1x1":

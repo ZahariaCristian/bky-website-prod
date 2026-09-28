@@ -24,6 +24,10 @@ const {
     TROVAGNOCCA_PLATFORM,
     getTrovagnoccaPriceDefinitions
 } = require("../config/trovagnoccaPrices");
+const {
+    BAKECAINCONTRII_PLATFORM,
+    getDefaultBakecaincontriiPrices
+} = require("../config/bakecaincontriiPrices");
 const { getPlatformPriceKey } = require("../config/platformPrices");
 
 const defaultIncontriamociPrices = getDefaultIncontriamociPrices();
@@ -31,6 +35,7 @@ const defaultBakecaPrices = getDefaultBakecaPrices();
 const defaultAmasensPrices = getDefaultAmasensPrices();
 const defaultMoscarossaPrices = getDefaultMoscarossaPrices();
 const trovagnoccaPriceDefinitions = getTrovagnoccaPriceDefinitions();
+const defaultBakecaincontriiPrices = getDefaultBakecaincontriiPrices();
 const validIncontriamociPriceKeys = new Set(
     defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
@@ -450,8 +455,23 @@ router.get("/getListino", authenticateKey, async (req, res) => {
     var user = await ctx.tblUser.findOne({where:{OID: userid}});
     var groupM = await user.getGroup();
     var listino = await ctx.tblListinoPrezzi.findAll({where:{group: groupM.group}});
+    await ensurePlatformPriceTable();
+    await seedPlatformPrices(groupM.group, BAKECAINCONTRII_PLATFORM, defaultBakecaincontriiPrices);
+    const flashPrice = await ctx.tblPlatformPrices.findOne({
+        where: {
+            group: groupM.group,
+            platform: BAKECAINCONTRII_PLATFORM,
+            product: "flash",
+            days: 1,
+            variantKey: "default",
+            active: true
+        }
+    });
 
-    res.json({listino: listino});
+    res.json({
+        listino: listino,
+        flashPrice: flashPrice ? Number(flashPrice.price) : 45
+    });
 });
 
 router.get("/getIncontriamociPrices", authenticateKey, async (req, res) => {

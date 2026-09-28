@@ -70,6 +70,30 @@
             line-height: 34px;
             padding-right: 8px;
         }
+        .bakecaincontrii-only {
+            display: none;
+        }
+        .timeslot-category-badge {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #333;
+            border-radius: 3px;
+            color: #333;
+            display: none;
+            font-size: 12px;
+            font-weight: 600;
+            height: 34px;
+            margin-left: 12px;
+            max-width: 160px;
+            overflow: hidden;
+            padding: 0 10px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        body.bakecaincontrii-panel .bakecaincontrii-only,
+        body.bakecaincontrii-panel .timeslot-category-badge {
+            display: inline-flex;
+        }
         .time-slot .lblDateTime{
             margin-left: -36px;
         }
@@ -707,6 +731,7 @@
                                             <div class="promoType widget-head" style="margin-bottom: 0;">
                                                     <ul>
                                                         <li class="active"><a href="#tabFree" data-toggle="tab">Top: Free</a></li>
+                                                        <li class="bakecaincontrii-only"><a href="#tabFlash" data-toggle="tab" style="background-color: #d9ecff;">Flash</a></li>
                                                         <li><a href="#tab1x1" data-toggle="tab" style="background-color: #b1f390;">Top: 1x1</a></li>
                                                         <li><a href="#tab1x3" data-toggle="tab" style="background-color: #d0d174;">Top: 1x3</a></li>
                                                         <li><a href="#tab1x7" data-toggle="tab" style="background-color: #d47ed4;">Top: 1x7</a></li>
@@ -750,6 +775,18 @@
                                                     </div>-->
                                                 </div>
                                                 <button class="btn btn-primary">
+                                                    <span><b><i class="fa fa-plus"></i></b></span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="promoPanel promoFlash tab-pane animated fadeInUp" id="tabFlash">
+                                            <div class="posts">
+                                                <div class="alert alert-info" style="margin-bottom: 15px;">
+                                                    Flash è una promozione a pagamento: 5 risalite in 60 minuti con etichetta “Disponibile ora”.
+                                                </div>
+                                                <div class="post-list"></div>
+                                                <button class="btn btn-primary" type="button">
                                                     <span><b><i class="fa fa-plus"></i></b></span>
                                                 </button>
                                             </div>
@@ -1326,6 +1363,7 @@
     const costTableContainer = document.getElementById('costTableContainer');
     const costTableBody = document.getElementById('costTableBody');
     let listinoData = []; // Global variable for listino data
+    let flashPrice = 45;
 
     // Function to fetch listino data from the server
     async function fetchListinoData() {
@@ -1343,6 +1381,7 @@
             }
 
             const data = await response.json();
+            flashPrice = Number(data.flashPrice || 45);
             return data.listino || [];
         } catch (error) {
             console.error('Error fetching listino data:', error);
@@ -1364,6 +1403,7 @@
             '10x1': '10x1 (10 uscite singole)',
             '10x3': '10x3 (10 uscite da 3)',
             '10x7': '10x7 (10 uscite da 7)',
+            'Flash': 'Flash (5 risalite in 60 minuti)',
             'supertop': 'SuperTop',
             'highlight': 'Highlight',
             'etichetta': 'Etichetta',
@@ -1382,6 +1422,7 @@
             '10x1': 0,
             '10x3': 0,
             '10x7': 0,
+            'Flash': 0,
             'supertop': 0,
             'highlight': 0,
             'etichetta': 0,
@@ -1415,6 +1456,7 @@
         selectedPromos['10x1'] = countDynamicFields('10x1');
         selectedPromos['10x3'] = countDynamicFields('10x3');
         selectedPromos['10x7'] = countDynamicFields('10x7');
+        selectedPromos.Flash = countDynamicFields('Flash');
 
         return selectedPromos;
     }
@@ -1435,7 +1477,7 @@
                 costTableBody.appendChild(headerRow);
 
                 // Special handling for promo types that don't have multiple uscite
-                if (['supertop', 'highlight', 'etichetta', 'supertopnotte', 'highlightnotte', 'etichettanotte'].includes(promoType)) {
+                if (['Flash', 'supertop', 'highlight', 'etichetta', 'supertopnotte', 'highlightnotte', 'etichettanotte'].includes(promoType)) {
                     const row = document.createElement('tr');
                     const typeCell = document.createElement('td');
                     const priceCell = document.createElement('td');
@@ -1443,8 +1485,8 @@
                     typeCell.textContent = 'Singola uscita';
                     
                     const listinoItem = listinoData.find(item => item.uscita === 1);
-                    if (listinoItem) {
-                        let price = 0;
+                    let price = promoType === 'Flash' ? flashPrice * count : 0;
+                    if (listinoItem && promoType !== 'Flash') {
                         switch (promoType) {
                             case 'supertop': price = listinoItem.supertop; break;
                             case 'highlight': price = listinoItem.highlight; break;
@@ -1453,8 +1495,8 @@
                             case 'highlightnotte': price = listinoItem.highlightnotte; break;
                             case 'etichettanotte': price = listinoItem.etichettanotte; break;
                         }
-                        priceCell.textContent = price > 0 ? `${price} €` : '-';
                     }
+                    priceCell.textContent = price > 0 ? `${price} €` : '-';
 
                     row.appendChild(typeCell);
                     row.appendChild(priceCell);
@@ -1520,6 +1562,10 @@
         // Calculate the total cost
         for (const [promoType, count] of Object.entries(selectedPromos)) {
             if (count > 0) {
+                if (promoType === 'Flash') {
+                    totalCost += flashPrice * count;
+                    continue;
+                }
                 const listinoItem = listinoData.find(item => item.uscita === count);
                 if (listinoItem) {
                     switch (promoType) {
