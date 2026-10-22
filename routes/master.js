@@ -30,7 +30,7 @@ router.get("/getCreditBK", authenticateKey, async (req, res) => {
             return credits;
         }, {});
 
-        console.log(`User ${userid} has BK credit: ${group.bkCredit}, Coupon available: ${couponAvailable}`);
+        console.log(`User ${userid} has BK credit: ${group.bkCredit}, available ads: ${group.bkAvailableAds}, Coupon available: ${couponAvailable}`);
 
         return res.json({
             bk: group.bkCredit,
