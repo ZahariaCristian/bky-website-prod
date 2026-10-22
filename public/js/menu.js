@@ -172,6 +172,11 @@ function GetBKCredit() {
         .text(res.bk)
         .toggleClass("credit-flashing-label label-danger", bkCredit < 500)
         .toggleClass("label-success", !(bkCredit < 500));
+      const availableAds = Number.parseInt(res.availableAds, 10);
+      $("#bkAvailableAds")
+        .text(`(${Number.isFinite(availableAds) ? availableAds : "--"})`)
+        .toggleClass("label-danger", Number.isFinite(availableAds) && availableAds <= 0)
+        .toggleClass("label-info", !Number.isFinite(availableAds) || availableAds > 0);
       updatePlatformCredit("#bakecaCredit", res.bakeca);
       updatePlatformCredit("#megaescortCredit", res.megaescort);
       updatePlatformCredit("#trovagnoccaCredit", res.trovagnocca);

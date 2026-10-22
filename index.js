@@ -324,6 +324,22 @@ const PORT = 3001;
 async function ensureWebsiteSchema() {
     const queryInterface = ctx.model.getQueryInterface();
     const scheduleColumns = await queryInterface.describeTable("tblSchedulazioni");
+    const groupColumns = await queryInterface.describeTable("tblGruppi");
+
+    if (!groupColumns.bkAvailableAds) {
+        console.log("[website:schema] Adding tblGruppi.bkAvailableAds...");
+        try {
+            await queryInterface.addColumn("tblGruppi", "bkAvailableAds", {
+                type: ctx.model.Sequelize.INTEGER,
+                allowNull: true
+            });
+        } catch (error) {
+            if (error?.original?.code !== "ER_DUP_FIELDNAME" && error?.parent?.code !== "ER_DUP_FIELDNAME") {
+                throw error;
+            }
+        }
+        console.log("[website:schema] tblGruppi.bkAvailableAds added.");
+    }
 
     if (!scheduleColumns.remoteExpiresAt) {
         console.log("[website:schema] Adding tblSchedulazioni.remoteExpiresAt...");

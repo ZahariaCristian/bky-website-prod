@@ -34,6 +34,7 @@ router.get("/getCreditBK", authenticateKey, async (req, res) => {
 
         return res.json({
             bk: group.bkCredit,
+            availableAds: group.bkAvailableAds,
             coupon: couponAvailable,
             bakeca: platformCredits.bakeca,
             megaescort: platformCredits.megaescort,
