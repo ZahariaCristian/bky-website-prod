@@ -325,6 +325,21 @@ async function ensureWebsiteSchema() {
     const queryInterface = ctx.model.getQueryInterface();
     const scheduleColumns = await queryInterface.describeTable("tblSchedulazioni");
     const groupColumns = await queryInterface.describeTable("tblGruppi");
+    const [typeAnnuncioColumns] = await ctx.model.query("SHOW COLUMNS FROM `tblSchedulazioni` LIKE 'typeAnnuncio'");
+    const typeAnnuncioDefinition = `${typeAnnuncioColumns?.[0]?.Type || typeAnnuncioColumns?.[0]?.type || ""}`.toLowerCase();
+    const [periodColumns] = await ctx.model.query("SHOW COLUMNS FROM `tblSchedulazioni` LIKE 'period'");
+    const periodDefinition = `${periodColumns?.[0]?.Type || periodColumns?.[0]?.type || ""}`.toLowerCase();
+
+    if (!typeAnnuncioDefinition.includes("'star'")) {
+        console.log("[website:schema] Adding Star to tblSchedulazioni.typeAnnuncio...");
+        await ctx.model.query("ALTER TABLE `tblSchedulazioni` MODIFY COLUMN `typeAnnuncio` ENUM('Free','Flash','Star','1x1','1x3','1x7','1x14','1x28','3x1','3x3','3x7','3x14','3x28','10x1','10x3','10x7','Turbo','TopList','Vetrina','Premium','Top','Red','Gold') NULL");
+        console.log("[website:schema] Star enum value added.");
+    }
+    if (!periodDefinition.includes("text")) {
+        console.log("[website:schema] Expanding tblSchedulazioni.period for multi-slot promotions...");
+        await ctx.model.query("ALTER TABLE `tblSchedulazioni` MODIFY COLUMN `period` TEXT NULL");
+        console.log("[website:schema] tblSchedulazioni.period expanded.");
+    }
 
     if (!groupColumns.bkAvailableAds) {
         console.log("[website:schema] Adding tblGruppi.bkAvailableAds...");

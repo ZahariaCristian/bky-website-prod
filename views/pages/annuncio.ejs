@@ -94,6 +94,12 @@
         body.bakecaincontrii-panel .timeslot-category-badge {
             display: inline-flex;
         }
+        body.bakecaincontrii-panel #starPromotionTab {
+            display: none;
+        }
+        body.bakecaincontrii-panel.star-category-eligible #starPromotionTab {
+            display: inline-flex;
+        }
         .time-slot .lblDateTime{
             margin-left: -36px;
         }
@@ -738,6 +744,7 @@
                                                         <li><a href="#tab10x3" data-toggle="tab" style="background-color: #8597d8;">Top: 10x3</a></li>
                                                         <li><a href="#tab10x7" data-toggle="tab" style="background-color: #ffaa00;">Top: 10x7</a></li>
                                                         <li class="bakecaincontrii-only"><a href="#tabFlash" data-toggle="tab" style="background-color: #d9ecff;">Flash</a></li>
+                                                        <li id="starPromotionTab" class="bakecaincontrii-only"><a href="#tabStar" data-toggle="tab" style="background-color: #e8dcff;">Star</a></li>
 
                                                     </ul>                                                  
                                             </div>
@@ -1162,6 +1169,17 @@
                                                 </button>
                                             </div>
                                         </div>
+                                        <div class="promoPanel promoStar tab-pane animated fadeInUp" id="tabStar">
+                                            <div class="posts">
+                                                <div class="alert alert-info" style="margin-bottom: 15px;">
+                                                    Star è una promozione Bakecaincontrii a pagamento. Seleziona uno o più slot: il prezzo effettivo e la disponibilità saranno verificati prima del pagamento.
+                                                </div>
+                                                <div class="post-list"></div>
+                                                <button class="btn btn-primary" type="button">
+                                                    <span><b><i class="fa fa-plus"></i></b></span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     </div>
                                     </div>
@@ -1404,6 +1422,7 @@
             '10x3': '10x3 (10 uscite da 3)',
             '10x7': '10x7 (10 uscite da 7)',
             'Flash': 'Flash (5 risalite in 60 minuti)',
+            'Star': 'Star (slot premium Bakecaincontrii)',
             'supertop': 'SuperTop',
             'highlight': 'Highlight',
             'etichetta': 'Etichetta',
@@ -1423,6 +1442,7 @@
             '10x3': 0,
             '10x7': 0,
             'Flash': 0,
+            'Star': 0,
             'supertop': 0,
             'highlight': 0,
             'etichetta': 0,
@@ -1457,6 +1477,7 @@
         selectedPromos['10x3'] = countDynamicFields('10x3');
         selectedPromos['10x7'] = countDynamicFields('10x7');
         selectedPromos.Flash = countDynamicFields('Flash');
+        selectedPromos.Star = document.querySelectorAll('.promoStar .star-slot-checkbox:checked').length;
 
         return selectedPromos;
     }
@@ -1477,16 +1498,20 @@
                 costTableBody.appendChild(headerRow);
 
                 // Special handling for promo types that don't have multiple uscite
-                if (['Flash', 'supertop', 'highlight', 'etichetta', 'supertopnotte', 'highlightnotte', 'etichettanotte'].includes(promoType)) {
+                if (['Flash', 'Star', 'supertop', 'highlight', 'etichetta', 'supertopnotte', 'highlightnotte', 'etichettanotte'].includes(promoType)) {
                     const row = document.createElement('tr');
                     const typeCell = document.createElement('td');
                     const priceCell = document.createElement('td');
 
-                    typeCell.textContent = 'Singola uscita';
+                    typeCell.textContent = promoType === 'Star' ? `${count} slot richiesti` : 'Singola uscita';
                     
                     const listinoItem = listinoData.find(item => item.uscita === 1);
                     let price = promoType === 'Flash' ? flashPrice * count : 0;
-                    if (listinoItem && promoType !== 'Flash') {
+                    if (promoType === 'Star') {
+                        price = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
+                            .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
+                    }
+                    if (listinoItem && promoType !== 'Flash' && promoType !== 'Star') {
                         switch (promoType) {
                             case 'supertop': price = listinoItem.supertop; break;
                             case 'highlight': price = listinoItem.highlight; break;
@@ -1496,7 +1521,7 @@
                             case 'etichettanotte': price = listinoItem.etichettanotte; break;
                         }
                     }
-                    priceCell.textContent = price > 0 ? `${price} €` : '-';
+                    priceCell.textContent = price > 0 ? `${price} ${promoType === 'Star' ? 'crediti (stima)' : '€'}` : '-';
 
                     row.appendChild(typeCell);
                     row.appendChild(priceCell);
@@ -1558,6 +1583,8 @@
 
         const selectedPromos = getSelectedPromos();
         let totalCost = 0;
+        const estimatedStarCredits = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
+            .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
 
         // Calculate the total cost
         for (const [promoType, count] of Object.entries(selectedPromos)) {
@@ -1566,6 +1593,7 @@
                     totalCost += flashPrice * count;
                     continue;
                 }
+                if (promoType === 'Star') continue;
                 const listinoItem = listinoData.find(item => item.uscita === count);
                 if (listinoItem) {
                     switch (promoType) {
@@ -1586,7 +1614,7 @@
             }
         }
 
-        totalCostElement.textContent = `${totalCost.toFixed(2)} €`;
+        totalCostElement.textContent = `${totalCost.toFixed(2)} €${estimatedStarCredits > 0 ? ` + circa ${estimatedStarCredits} crediti Star` : ''}`;
         updateCostTable();
     }
 
@@ -1628,6 +1656,9 @@
     // Add event listeners to checkboxes
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', calculateTotalCost);
+    });
+    document.addEventListener('change', function(event) {
+        if (event.target.matches('.star-slot-checkbox, .star-slot-date, .star-max-total-credits')) calculateTotalCost();
     });
 
     

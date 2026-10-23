@@ -656,6 +656,27 @@ const normalizePanelPlatform = (panel) => {
     return normalized || "bakecaincontrii";
 };
 
+const STAR_ELIGIBLE_CATEGORIES = new Set(["DONNAUOMO", "TRANS"]);
+const isBakecaincontriiStarCategoryEligible = (category) => {
+    const compact = `${category || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z]/gi, "").toUpperCase();
+    if (compact === "DONNACERCAUOMO") return true;
+    return STAR_ELIGIBLE_CATEGORIES.has(compact);
+};
+
+const hasProtectedStarSchedules = async (annuncioId) => Boolean(await ctx.tblSchedulazioni.count({
+    where: {
+        annuncio: annuncioId,
+        platform: "bakecaincontrii",
+        typeAnnuncio: "Star",
+        GCRecord: null,
+        [Op.or]: [
+            { state: null },
+            { state: { [Op.notIn]: ["CLOSE", "CLOSED", "DELETE", "DELETED"] } }
+        ]
+    }
+}));
+
 const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     amasens: 9,
     incontriamoci: 9,
@@ -2862,6 +2883,15 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
     }
     if (annuncio) {
         donna = await annuncio.getTblDonne();
+        const previousCategory = normalizeMegaescortCategory(annuncio.categorie);
+        const nextCategory = normalizeMegaescortCategory(info.categorie || annuncio.categorie);
+        if (panel === "bakecaincontrii" && previousCategory !== nextCategory &&
+            !isBakecaincontriiStarCategoryEligible(nextCategory) && await hasProtectedStarSchedules(annuncio.id)) {
+            return res.status(409).json({
+                code: "STAR_CATEGORY_CHANGE_BLOCKED",
+                error: "Rimuovi prima le schedulazioni Star: Star è disponibile solo per Donna Cerca Uomo e Trans."
+            });
+        }
     } else {
         donna = await ctx.tblDonne.findOne({ where: { phone: req.body.info.phone } });
     }
@@ -2970,6 +3000,36 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
     }
     var allSchedulazioni = req.body.schedule;
     const schedulePlatform = normalizePanelPlatform(req.body.panel);
+    for (const slots of Object.values(allSchedulazioni)) {
+        for (const slot of (Array.isArray(slots) ? slots : [])) {
+            if (slot.typeAnnuncio !== "Star") continue;
+            if (slot.GCRecord) continue;
+            if (schedulePlatform !== "bakecaincontrii") {
+                return res.status(422).json({ error: "La promozione Star è disponibile solo per Bakecaincontrii." });
+            }
+            if (!isBakecaincontriiStarCategoryEligible(girl.categorie)) {
+                return res.status(422).json({
+                    code: "STAR_CATEGORY_NOT_ELIGIBLE",
+                    error: "La promozione Star è disponibile solo per Donna Cerca Uomo e Trans."
+                });
+            }
+            let details;
+            try { details = JSON.parse(slot.period || "{}"); } catch { details = null; }
+            const starSlots = Array.isArray(details?.slots) ? details.slots : [];
+            const maxTotalCredits = Number(details?.maxTotalCredits);
+            const validSlots = starSlots.length > 0 && starSlots.every((starSlot) => {
+                const start = new Date(starSlot?.start);
+                const end = new Date(starSlot?.end);
+                return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start;
+            });
+            if (details?.product !== "star" || !validSlots || !Number.isFinite(maxTotalCredits) || maxTotalCredits <= 0) {
+                return res.status(422).json({
+                    error: "Configurazione Star non valida: seleziona almeno uno slot e imposta un limite crediti positivo."
+                });
+            }
+            slot.typePeriodic = "Star";
+        }
+    }
     if (schedulePlatform === "moscarossa") {
         const allowedDurations = new Set([1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30]);
         for (const slots of Object.values(allSchedulazioni)) {
@@ -3031,7 +3091,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         data: s.data,
                         period,
                         typeAnnuncio: s.typeAnnuncio,
-                        typePeriodic: s.typePeriodic || (s.typeAnnuncio === "Flash" ? "Flash" : "Top"),
+                        typePeriodic: s.typePeriodic || (s.typeAnnuncio === "Flash" ? "Flash" : (s.typeAnnuncio === "Star" ? "Star" : "Top")),
                         editedBy: userid,
                         hasPremium: s.hasPremium,
                         hasVideo: (platform === "amasens" || platform === "incontriamoci")
@@ -3132,6 +3192,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         data: s.data,
                         period,
                         typeAnnuncio: s.typeAnnuncio,
+                        typePeriodic: s.typePeriodic || (s.typeAnnuncio === "Flash" ? "Flash" : (s.typeAnnuncio === "Star" ? "Star" : "Top")),
                         GCRecord: deleteThis,
                         editedBy: userid,
                         hasPremium: s.hasPremium,
@@ -3431,6 +3492,13 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         var previousCategory = panel == "incontriamoci"
             ? normalizeIncontriamociCategory(annuncio.categorie)
             : normalizeMegaescortCategory(annuncio.categorie);
+        if (panel === "bakecaincontrii" && previousCategory !== nextCategory &&
+            !isBakecaincontriiStarCategoryEligible(nextCategory) && await hasProtectedStarSchedules(annuncio.id)) {
+            return res.status(409).json({
+                code: "STAR_CATEGORY_CHANGE_BLOCKED",
+                error: "Rimuovi prima le schedulazioni Star: Star è disponibile solo per Donna Cerca Uomo e Trans."
+            });
+        }
         var shouldRepublishBakeca = panel == "bakeca" && nextCategory != previousCategory;
         const panelTags = req.body.info.trovagnoccaTags || req.body.info.incontriamociTags || {};
         const nextNote = panel == "trovagnocca"
@@ -3745,7 +3813,7 @@ router.post("/suspendAll", authenticateKey, async (req, res) => {
             var dead = new Date(s.data);
             var period = new Date(s.data);
 
-            if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "Flash" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3") {
+            if (s.typeAnnuncio != "Free" && s.typeAnnuncio != "Flash" && s.typeAnnuncio != "Star" && s.typeAnnuncio != "10x1" && s.typeAnnuncio != "10x3") {
                 var hPeriod = parseInt(s.period.substr(0, 2));
                 period.setHours(hPeriod);
                 period.setMinutes(period.getMinutes() + (period.getTimezoneOffset() * -1));
@@ -3756,6 +3824,17 @@ router.post("/suspendAll", authenticateKey, async (req, res) => {
                 case "Flash":
                     dead.setDate(dead.getDate() + 1);
                     break;
+                case "Star": {
+                    try {
+                        const details = JSON.parse(s.period || "{}");
+                        const endTimes = (Array.isArray(details.slots) ? details.slots : [])
+                            .map((slot) => new Date(slot.end).getTime())
+                            .filter(Number.isFinite);
+                        if (endTimes.length) dead = new Date(Math.max(...endTimes));
+                        else dead.setDate(dead.getDate() + 1);
+                    } catch { dead.setDate(dead.getDate() + 1); }
+                    break;
+                }
                 case "1x1":
                     if (s.data < period) {
                         dead.setDate(dead.getDate() + 1);

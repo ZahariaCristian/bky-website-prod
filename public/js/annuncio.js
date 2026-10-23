@@ -838,6 +838,47 @@ let images = [];
 
 let pubs = {};
 
+const STAR_ELIGIBLE_CATEGORIES = new Set(["DONNAUOMO", "TRANS"]);
+
+const isStarCategoryEligible = (category = document.querySelector("select[name='categorie']")?.value) =>
+    CURRENT_PANEL === "bakecaincontrii" && STAR_ELIGIBLE_CATEGORIES.has(`${category || ""}`.trim().toUpperCase());
+
+const hasActiveStarSchedules = () => {
+    const savedStar = Object.values(pubs || {}).some((daySchedules) =>
+        (Array.isArray(daySchedules) ? daySchedules : []).some((schedule) =>
+            schedule.typeAnnuncio === "Star" && !schedule.GCRecord
+        )
+    );
+    const visibleStar = [...document.querySelectorAll(".promoStar .newpost-panel")].some((panel) =>
+        !$(panel).data("GCRecord")
+    );
+    return savedStar || visibleStar;
+};
+
+const refreshStarCategoryAvailability = () => {
+    const category = document.querySelector("select[name='categorie']");
+    const eligible = isStarCategoryEligible(category?.value);
+    document.body.classList.toggle("star-category-eligible", eligible);
+    if (!eligible && document.querySelector("#starPromotionTab")?.classList.contains("active")) {
+        document.querySelector('a[href="#tabFree"]')?.click();
+    }
+    if (category) category.dataset.starAcceptedCategory = category.value;
+};
+
+const categorySelect = document.querySelector("select[name='categorie']");
+categorySelect?.addEventListener("focus", () => {
+    categorySelect.dataset.starAcceptedCategory = categorySelect.value;
+});
+categorySelect?.addEventListener("change", () => {
+    const previousCategory = categorySelect.dataset.starAcceptedCategory || "DONNAUOMO";
+    if (!isStarCategoryEligible(categorySelect.value) && hasActiveStarSchedules()) {
+        categorySelect.value = previousCategory;
+        alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans. Rimuovi prima le schedulazioni Star.");
+    }
+    refreshStarCategoryAvailability();
+});
+refreshStarCategoryAvailability();
+
 $("#select2_3").on("change", (x)=>{
     window.location = "/annuncio.html?edit=" + x.target.value;
 });
@@ -1051,6 +1092,7 @@ async function loadAdvertisement (res) {
     if(res.categorie){
         document.querySelector("select[name='categorie']").value = res.categorie;
     }
+    refreshStarCategoryAvailability();
 
     if (res.isPhoneChecked) phoneApprove();
 
@@ -1215,7 +1257,7 @@ function updateInfo (save) {
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ info: getInfoData() , id: anID }),
+        body: JSON.stringify({ info: getInfoData(), id: anID, panel: CURRENT_PANEL }),
     }).then((r) => {
         toggleLoader();
         if (r.status === 405) return alert(
@@ -1398,6 +1440,54 @@ const refreshTimeslotCategoryBadges = () => {
 
 document.querySelector("select[name='categorie']")?.addEventListener("change", refreshTimeslotCategoryBadges);
 
+const STAR_SLOT_DEFINITIONS = [
+    { start: "02:00", end: "10:00", quotedCredits: 69 },
+    { start: "10:00", end: "18:00", quotedCredits: 119 },
+    { start: "18:00", end: "02:00", quotedCredits: 119 }
+];
+
+const createStarScheduleEditor = () => {
+    const editor = document.createElement("div");
+    editor.className = "star-schedule-editor alert alert-warning";
+    editor.style.margin = "10px 0 0";
+
+    const slots = STAR_SLOT_DEFINITIONS.map((slot, index) => `
+        <label style="display:block; margin:6px 0; font-weight:normal;">
+            <input class="star-slot-checkbox" type="checkbox" data-index="${index}" data-start="${slot.start}" data-end="${slot.end}" data-credits="${slot.quotedCredits}">
+            ${slot.start} - ${slot.end} <span class="label label-default">circa ${slot.quotedCredits} crediti</span>
+        </label>`).join("");
+
+    editor.innerHTML = `
+        <div style="font-weight:600; margin-bottom:8px;">Slot Star richiesti</div>
+        <div class="form-inline" style="margin-bottom:8px;">
+            <label>Data slot&nbsp;</label>
+            <input class="form-control star-slot-date" type="date" value="${document.querySelector("#txtDate")?.value || ""}">
+        </div>
+        <div class="star-slot-options">${slots}</div>
+        <div class="form-inline" style="margin-top:8px;">
+            <label>Limite massimo&nbsp;</label>
+            <input class="form-control star-max-total-credits" type="number" min="1" step="1" value="0" style="width:100px;">
+            <span>&nbsp;crediti</span>
+            <span class="star-slot-summary" style="margin-left:12px;">0 slot selezionati</span>
+        </div>
+        <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo reali. Nessun pagamento sarà eseguito se il totale supera questo limite.</small>`;
+
+    const maxCreditsInput = editor.querySelector(".star-max-total-credits");
+    const refresh = () => {
+        const selected = [...editor.querySelectorAll(".star-slot-checkbox:checked")];
+        const estimatedCredits = selected.reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
+        if (maxCreditsInput.dataset.userEdited !== "true") maxCreditsInput.value = estimatedCredits;
+        editor.querySelector(".star-slot-summary").textContent = `${selected.length} slot selezionat${selected.length === 1 ? "o" : "i"} · stima ${estimatedCredits} crediti`;
+        enableScheduleUpdate();
+    };
+    editor.querySelectorAll("input").forEach((input) => input.addEventListener("change", refresh));
+    maxCreditsInput.addEventListener("input", () => {
+        maxCreditsInput.dataset.userEdited = "true";
+        enableScheduleUpdate();
+    });
+    return editor;
+};
+
 const postsPanelOperations = (panel) => {
     panel.querySelector(".btn-primary").addEventListener("click", () => {
         enableScheduleUpdate();
@@ -1430,6 +1520,7 @@ const postsPanelOperations = (panel) => {
         dateTime.classList.add("lblDateTime");
         const timeInput = document.createElement("input");
         timeInput.classList.add("form-control");
+        timeInput.classList.add("schedule-time-input");
         timeInput.setAttribute("type", "time");
         setDefaultDatetime(timeInput);
         const delButton = document.createElement("button");
@@ -1598,13 +1689,17 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(timeInput);
         newPost.appendChild(delButton);
         newPost.appendChild(picsButton);
-        newPost.appendChild(btnPremium);
-        newPost.appendChild(btnHighlight);
-        newPost.appendChild(btnEtichetta);
-        newPost.appendChild(btnCam);
+        const isStar = Boolean(panel.closest(".promoStar"));
+        if (!isStar) {
+            newPost.appendChild(btnPremium);
+            newPost.appendChild(btnHighlight);
+            newPost.appendChild(btnEtichetta);
+            newPost.appendChild(btnCam);
+        }
         newPost.appendChild(cityPost);
         newPost.appendChild(createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
+        if (isStar) newPostPanel.appendChild(createStarScheduleEditor());
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
     });
@@ -1682,6 +1777,7 @@ const timeSlotPanelOperations = (panel) => {
         dateTime.classList.add("lblDateTime");
         const timeInput = document.createElement("input");
         timeInput.classList.add("form-control");
+        timeInput.classList.add("schedule-time-input");
         timeInput.setAttribute("type", "time");
         timeInput.value = panel.querySelector(".btn-primary").parentElement.parentElement.querySelector("label").innerText.split("-")[0].trim();
         // setDefaultDatetime(timeInput);
@@ -2894,16 +2990,66 @@ function addImageOld(imgUrl) {
     document.querySelector(".pics").appendChild(picPanel);
 };
 
+function addDaysToDateString(dateString, days) {
+    const parts = `${dateString || ""}`.split("-").map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return dateString;
+    const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days));
+    return date.toISOString().slice(0, 10);
+}
+
+function getStarPeriodFromPanel(panel) {
+    const date = panel.querySelector(".star-slot-date")?.value || document.querySelector("#txtDate")?.value;
+    const slots = [...panel.querySelectorAll(".star-slot-checkbox:checked")].map((checkbox) => {
+        const startTime = checkbox.dataset.start;
+        const endTime = checkbox.dataset.end;
+        const overnight = endTime <= startTime;
+        return {
+            start: `${date}T${startTime}:00`,
+            end: `${addDaysToDateString(date, overnight ? 1 : 0)}T${endTime}:00`,
+            quotedCredits: Number(checkbox.dataset.credits || 0)
+        };
+    });
+    return {
+        product: "star",
+        slots,
+        maxTotalCredits: Number(panel.querySelector(".star-max-total-credits")?.value || 0)
+    };
+}
+
+function restoreStarPeriod(panel, rawPeriod) {
+    let period = {};
+    try { period = typeof rawPeriod === "string" ? JSON.parse(rawPeriod || "{}") : (rawPeriod || {}); } catch { period = {}; }
+    const slots = Array.isArray(period.slots) ? period.slots : [];
+    const firstStart = `${slots[0]?.start || ""}`;
+    const slotDate = firstStart.slice(0, 10);
+    if (slotDate) panel.querySelector(".star-slot-date").value = slotDate;
+    slots.forEach((slot) => {
+        const startTime = `${slot.start || ""}`.slice(11, 16);
+        const endTime = `${slot.end || ""}`.slice(11, 16);
+        const checkbox = [...panel.querySelectorAll(".star-slot-checkbox")]
+            .find((candidate) => candidate.dataset.start === startTime && candidate.dataset.end === endTime);
+        if (checkbox) checkbox.checked = true;
+    });
+    const maxCreditsInput = panel.querySelector(".star-max-total-credits");
+    if (maxCreditsInput && Number(period.maxTotalCredits) > 0) {
+        maxCreditsInput.value = Number(period.maxTotalCredits);
+        maxCreditsInput.dataset.userEdited = "true";
+    }
+    panel.querySelector(".star-slot-checkbox")?.dispatchEvent(new Event("change"));
+}
+
 function getSelectedDayPubs(currentDate) {
     let result = [];
     let i = 0;
-    ["Free", "Flash", "10x1", "10x3", "10x7"].forEach(promoType => {
+    ["Free", "Flash", "Star", "10x1", "10x3", "10x7"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             let typeData = {};
             typeData.typeAnnuncio = promoType;
-            typeData.typePeriodic = promoType === "Flash" ? "Flash" : "Top";
+            typeData.typePeriodic = promoType === "Flash" ? "Flash" : (promoType === "Star" ? "Star" : "Top");
             if (promoType === "Flash") {
                 typeData.period = JSON.stringify({ product: "flash" });
+            } else if (promoType === "Star") {
+                typeData.period = JSON.stringify(getStarPeriodFromPanel(panel));
             }
             typeData.hasPremium = $(panel).data("premium");
             typeData.hasVideo = $(panel).data("cam");
@@ -2932,9 +3078,9 @@ function getSelectedDayPubs(currentDate) {
             };
             // typeData.push({
                 if(currentDate){
-                    typeData.data = `${currentDate}T${panel.querySelector("input").value}:00.000Z`;
+                    typeData.data = `${currentDate}T${panel.querySelector(".schedule-time-input").value}:00.000Z`;
                 }else{
-                    typeData.data = `${$("#txtDate").val()}T${panel.querySelector("input").value}:00.000Z`;
+                    typeData.data = `${$("#txtDate").val()}T${panel.querySelector(".schedule-time-input").value}:00.000Z`;
                 }
             //     images,
             // });
@@ -3048,7 +3194,7 @@ function clearPubsViews() {
 
 function loadDayData(pubs) {
     // Process Free, 10x1, 10x3, 10x7 promo types (unchanged)
-    ["Free", "Flash", "10x1", "10x3", "10x7"].forEach(promoType => {
+    ["Free", "Flash", "Star", "10x1", "10x3", "10x7"].forEach(promoType => {
         pubs
             .filter(x => !x.GCRecord)
             .filter(x => x.typeAnnuncio === promoType)
@@ -3060,18 +3206,14 @@ function loadDayData(pubs) {
                 panel.attr("data-id", announcement.id);
 
                 announcement.time = announcement.data.split("T")[1].split(":00.")[0];
-                panel.find("input").val(announcement.time);
-
-                if (!announcement.images.length) return;
-
-                if (panel.find(".btn-dark").length) {
-                    panel.find(".btn-dark").click();
-                }
+                panel.find(".schedule-time-input").val(announcement.time);
+                if (promoType === "Star") restoreStarPeriod(panel[0], announcement.period);
 
                 panel.attr("data-city", announcement.city);
                 panel.find("select").val(announcement.city);
+                panel.attr("data-state", announcement.state);
 
-                if (promoType !== "Free") {
+                if (promoType !== "Free" && promoType !== "Star") {
                     if (announcement.hasPremium) togglePremiumCam(panel.find(".btnPremium"), true);
                     if (announcement.hasVideo) togglePremiumCam(panel.find(".btnCam"), false);
                     if (announcement.hasHighlight) togglePremiumCam(panel.find(".btnHighlight"), false, true);
@@ -3085,8 +3227,10 @@ function loadDayData(pubs) {
                     });
                 }
 
-                processImages(panel, announcement.images);
-                panel.attr("data-state", announcement.state);
+                if (Array.isArray(announcement.images) && announcement.images.length) {
+                    if (panel.find(".btn-dark").length) panel.find(".btn-dark").click();
+                    processImages(panel, announcement.images);
+                }
             });
     });
 
@@ -3231,6 +3375,9 @@ function deletefuture() {
 }
 
 function updateSchedule() {
+    if (CURRENT_PANEL === "bakecaincontrii" && !isStarCategoryEligible() && hasActiveStarSchedules()) {
+        return alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans.");
+    }
     pubs[currentDay] = getSelectedDayPubs();
     const phone = document.querySelector("input[name='phone']").value;
     requestUpdate(true);
@@ -3251,7 +3398,8 @@ function requestUpdate(reload){
         referrerPolicy: "no-referrer",
         body: JSON.stringify({
             id: anID,
-            schedule: pubs
+            schedule: pubs,
+            panel: CURRENT_PANEL
         }),
     }).then((r) => {
         toggleLoader();
@@ -3454,7 +3602,7 @@ var UpdateSchedulazioni = () =>{
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ info: getInfoData() , id: anID })
+        body: JSON.stringify({ info: getInfoData(), id: anID, panel: CURRENT_PANEL })
     }).then((r) => {
         toggleLoader();
         loadStorico(parseInt(QUERY_NEW));
@@ -3512,6 +3660,7 @@ function btnCloneDay() {
         tmpID++;
         x.id = "";
         x.data = x.data.replace(currentDay, targetDay);
+        if (x.typeAnnuncio === "Star") x.period = shiftStarPeriod(x.period, currentDay, targetDay);
         if(new Date(x.data) < new Date()){
             if (!confirm("Attenzione, una schedulazione clonata, risulta già scaduta, vuoi procedere con la clonazione?")){
                 x.GCRecord = true;
@@ -3531,6 +3680,7 @@ function btnCloneProgram() {
 
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "Free"), 1);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "Flash"), 1);
+    clonePubsData(newPubs.filter( x => x.typeAnnuncio == "Star"), 1);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x1"), 2);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x3"), 4);
     clonePubsData(newPubs.filter( x => x.typeAnnuncio == "1x7"), 8);
@@ -3542,6 +3692,22 @@ function btnCloneProgram() {
     requestUpdate(true);
     ShowAlert("lblSaved");
 
+}
+
+function shiftStarPeriod(rawPeriod, fromDay, targetDay) {
+    let period;
+    try { period = JSON.parse(rawPeriod || "{}"); } catch { return rawPeriod; }
+    if (!Array.isArray(period.slots)) return rawPeriod;
+    const offset = Date.parse(`${targetDay}T00:00:00Z`) - Date.parse(`${fromDay}T00:00:00Z`);
+    if (!Number.isFinite(offset)) return rawPeriod;
+    period.slots = period.slots.map((slot) => {
+        const shift = (value) => {
+            const time = Date.parse(`${`${value || ""}`.replace(/Z$/, "")}Z`);
+            return Number.isFinite(time) ? new Date(time + offset).toISOString().slice(0, 19) : value;
+        };
+        return { ...slot, start: shift(slot.start), end: shift(slot.end) };
+    });
+    return JSON.stringify(period);
 }
 
 function clonePubsData(typeAnn, skipDay){
@@ -3561,6 +3727,7 @@ function clonePubsData(typeAnn, skipDay){
             tmpID++;
             var u = copyPub(y);
             u.data = y.data.replace(currentDay, targetDay);
+            if (u.typeAnnuncio === "Star") u.period = shiftStarPeriod(u.period, currentDay, targetDay);
             u.id = "";
             u.relativeID = tmpID;
 
@@ -3578,19 +3745,19 @@ function clonePubsData(typeAnn, skipDay){
 
 function copyPub(source){
     var u = {};
-    u.typeAnnuncio = y.typeAnnuncio;
-    u.GCRecord = y.GCRecord;
-    u.data = y.data;
-    u.hasPremium = y.hasPremium;
-    u.hasVideo = y.hasVideo;
-    u.hasHighlight = y.hasHighlight;
-    u.hasEtichetta = y.hasEtichetta;
-    u.id = y.id;
-    u.relativeID = y.relativeID;
-    u.typePeriodic = y.typePeriodic;
-    u.images = y.images;
-    u.period = y.period;
-    u.city = y.city;
+    u.typeAnnuncio = source.typeAnnuncio;
+    u.GCRecord = source.GCRecord;
+    u.data = source.data;
+    u.hasPremium = source.hasPremium;
+    u.hasVideo = source.hasVideo;
+    u.hasHighlight = source.hasHighlight;
+    u.hasEtichetta = source.hasEtichetta;
+    u.id = source.id;
+    u.relativeID = source.relativeID;
+    u.typePeriodic = source.typePeriodic;
+    u.images = source.images;
+    u.period = source.period;
+    u.city = source.city;
     return u;
 }
 
