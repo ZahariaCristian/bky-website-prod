@@ -3013,6 +3013,16 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     error: "La promozione Star è disponibile solo per Donna Cerca Uomo e Trans."
                 });
             }
+            const selectedStarImages = normalizeScheduleImages(
+                slot.images,
+                getScheduleImageLimit(schedulePlatform, slot.typeAnnuncio)
+            );
+            if (!selectedStarImages.length) {
+                return res.status(422).json({
+                    code: "STAR_IMAGE_REQUIRED",
+                    error: "La promozione Star richiede almeno una foto selezionata."
+                });
+            }
             let details;
             try { details = JSON.parse(slot.period || "{}"); } catch { details = null; }
             const starSlots = Array.isArray(details?.slots) ? details.slots : [];

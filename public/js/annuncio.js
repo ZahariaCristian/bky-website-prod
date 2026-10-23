@@ -1448,7 +1448,7 @@ const STAR_SLOT_DEFINITIONS = [
 
 const createStarScheduleEditor = () => {
     const editor = document.createElement("div");
-    editor.className = "star-schedule-editor alert alert-warning";
+    editor.className = "star-schedule-editor alert";
     editor.style.margin = "10px 0 0";
 
     const slots = STAR_SLOT_DEFINITIONS.map((slot, index) => `
@@ -3063,7 +3063,7 @@ function getSelectedDayPubs(currentDate) {
             if($(panel).data("state")) typeData.state = $(panel).data("state");
             typeData.GCRecord = null;
             if($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
-            if ($(".btnPhoto").hasClass("btn-success")) {
+            if (panel.querySelector(".btnPhoto")?.classList.contains("btn-success")) {
             //     let i = -1;
                 panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
                     if (p.querySelector("button").classList.contains("btn-warning")){
@@ -3111,7 +3111,7 @@ function getSelectedDayPubs(currentDate) {
                 if($(panel).data("state")) typeData.state = $(panel).data("state");
                 typeData.GCRecord = null;
                 if($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
-                if ($(".btnPhoto").hasClass("btn-success")) {
+                if (panel.querySelector(".btnPhoto")?.classList.contains("btn-success")) {
                 //     let i = -1;
                     panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
                         if (p.querySelector("button").classList.contains("btn-warning")){
@@ -3378,6 +3378,16 @@ function updateSchedule() {
     if (CURRENT_PANEL === "bakecaincontrii" && !isStarCategoryEligible() && hasActiveStarSchedules()) {
         return alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans.");
     }
+    const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
+        !$(panel).data("GCRecord") &&
+        panel.querySelectorAll(".post-pic-wrapper input[type='checkbox']:checked").length === 0
+    );
+    if (starWithoutImages) {
+        document.querySelector('a[href="#tabStar"]')?.click();
+        starWithoutImages.scrollIntoView({ behavior: "smooth", block: "center" });
+        starWithoutImages.querySelector(".btnPhoto")?.focus();
+        return alert("La promozione Star richiede almeno una foto. Apri la selezione foto e scegli almeno un'immagine.");
+    }
     pubs[currentDay] = getSelectedDayPubs();
     const phone = document.querySelector("input[name='phone']").value;
     requestUpdate(true);
@@ -3401,15 +3411,16 @@ function requestUpdate(reload){
             schedule: pubs,
             panel: CURRENT_PANEL
         }),
-    }).then((r) => {
+    }).then(async (r) => {
         toggleLoader();
         loadStorico(parseInt(QUERY_NEW));
         if (r.status === 405) return alert(
             "⚠ Assicurati prima di salvare le informazioni dell'annuncio."
         );
-        if (r.status !== 200) return alert(
-            "⚠ Si è verificato un errore durante l'aggiornamento delle pubblicazioni.",
-        );
+        if (r.status !== 200) {
+            const failure = await r.json().catch(() => null);
+            return alert(`⚠ ${failure?.error || "Si è verificato un errore durante l'aggiornamento delle pubblicazioni."}`);
+        }
         document.querySelector("#updateScheduleBtn").setAttribute("disabled", true);
         if (reload) window.location.reload();
         r.json().then(async (res) => {
