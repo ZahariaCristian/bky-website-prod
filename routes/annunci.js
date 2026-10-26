@@ -3013,6 +3013,9 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     error: "La promozione Star è disponibile solo per Donna Cerca Uomo e Trans."
                 });
             }
+            const starScheduleIsNew = !`${slot.id ?? ""}`.trim();
+            const starScheduleIsEdited = `${slot.state || ""}`.trim().toUpperCase() === "EDIT";
+            if (!starScheduleIsNew && !starScheduleIsEdited) continue;
             const selectedStarImages = normalizeScheduleImages(
                 slot.images,
                 getScheduleImageLimit(schedulePlatform, slot.typeAnnuncio)
@@ -3141,7 +3144,19 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 if (platform === "moscarossa") {
                     if (getMoscarossaPromotionPlan(s.period, s.typeAnnuncio) === "Free") payed = true;
                 } else if (s.typeAnnuncio == "Free") payed = true;
-                var task = await ctx.tblSchedulazioni.findOne({ where: { id: s.id } });
+                var task = await ctx.tblSchedulazioni.findOne({
+                    where: {
+                        id: s.id,
+                        annuncio: req.body.id,
+                        platform
+                    }
+                });
+                if (!task) {
+                    return res.status(422).json({
+                        code: "SCHEDULE_NOT_FOUND",
+                        error: `La schedulazione ${s.id} non appartiene a questo annuncio o pannello.`
+                    });
+                }
                 if (platform === "moscarossa" && task.remotePostID && s.state === "EDIT" &&
                     isMoscarossaExpired(task)) {
                     return res.status(409).json({ error: "La pubblicazione Moscarossa è scaduta e non può essere modificata." });

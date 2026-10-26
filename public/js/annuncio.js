@@ -838,6 +838,23 @@ let images = [];
 
 let pubs = {};
 
+const markSchedulePanelEdited = (element) => {
+    const panel = element?.closest?.(".newpost-panel");
+    if (!panel) return;
+    if (panel.getAttribute("data-id")) {
+        $(panel).attr("data-state", "EDIT");
+        $(panel).data("state", "EDIT");
+    }
+    enableScheduleUpdate();
+};
+
+const schedulePanelNeedsValidation = (panel) => {
+    if (!panel || $(panel).data("GCRecord")) return false;
+    const scheduleId = `${panel.getAttribute("data-id") || ""}`.trim();
+    const state = `${$(panel).data("state") || panel.getAttribute("data-state") || ""}`.trim().toUpperCase();
+    return !scheduleId || state === "EDIT";
+};
+
 const STAR_ELIGIBLE_CATEGORIES = new Set(["DONNAUOMO", "TRANS"]);
 
 const isStarCategoryEligible = (category = document.querySelector("select[name='categorie']")?.value) =>
@@ -1473,17 +1490,18 @@ const createStarScheduleEditor = () => {
         <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo reali. Nessun pagamento sarà eseguito se il totale supera questo limite.</small>`;
 
     const maxCreditsInput = editor.querySelector(".star-max-total-credits");
-    const refresh = () => {
+    const refresh = (markEdited = true) => {
         const selected = [...editor.querySelectorAll(".star-slot-checkbox:checked")];
         const estimatedCredits = selected.reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
         if (maxCreditsInput.dataset.userEdited !== "true") maxCreditsInput.value = estimatedCredits;
         editor.querySelector(".star-slot-summary").textContent = `${selected.length} slot selezionat${selected.length === 1 ? "o" : "i"} · stima ${estimatedCredits} crediti`;
-        enableScheduleUpdate();
+        if (markEdited) markSchedulePanelEdited(editor);
     };
-    editor.querySelectorAll("input").forEach((input) => input.addEventListener("change", refresh));
+    editor.refreshStarSummary = () => refresh(false);
+    editor.querySelectorAll("input").forEach((input) => input.addEventListener("change", () => refresh(true)));
     maxCreditsInput.addEventListener("input", () => {
         maxCreditsInput.dataset.userEdited = "true";
-        enableScheduleUpdate();
+        markSchedulePanelEdited(editor);
     });
     return editor;
 };
@@ -1590,8 +1608,7 @@ const postsPanelOperations = (panel) => {
                 btnAnteprima.setAttribute("class", "btn btn-secondary btn-anteprima");
                 btnAnteprima.innerHTML = "ANTEPRIMA";
                 checkbox.addEventListener("click", () => {
-                    $(checkbox).parents(".newpost-panel").attr("data-state", "EDIT");
-                    enableScheduleUpdate();
+                    markSchedulePanelEdited(checkbox);
                     const currentAnteprima = checkbox.parentElement.parentElement.querySelector("button.btn.btn-warning");
                     const thisAnteprimaButton = checkbox.parentElement.querySelector("button");
                     const checkedPics = getCheckedPics(checkbox);
@@ -1618,8 +1635,7 @@ const postsPanelOperations = (panel) => {
                     };
                 });
                 btnAnteprima.addEventListener("click", () => {
-                    enableScheduleUpdate();
-                    $(btnAnteprima).parents(".newpost-panel").attr("data-state", "EDIT");
+                    markSchedulePanelEdited(btnAnteprima);
                     if (!$(btnAnteprima).parent().find("input").is(":checked")) {
                         const checkedPics = getCheckedPics(checkbox);
                         if (checkedPics >= 5) return;
@@ -1639,7 +1655,7 @@ const postsPanelOperations = (panel) => {
                 postPics.appendChild(postPicWrapper);
 
                 if (!anteprimaSel){
-                    btnAnteprima.click();
+                    btnAnteprima.setAttribute("class", "btn btn-warning btn-anteprima");
                     anteprimaSel = true;
                 }
             });
@@ -1655,32 +1671,27 @@ const postsPanelOperations = (panel) => {
         });
 
         btnPremium.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnPremium).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnPremium);
             togglePremiumCam(btnPremium, true);
         });
 
         btnHighlight.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnHighlight).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnHighlight);
             togglePremiumCam(btnHighlight, false, true);
         });
 
         btnEtichetta.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnEtichetta).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnEtichetta);
             togglePremiumCam(btnEtichetta, false, false, true);
         });
 
         btnCam.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnCam).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnCam);
             togglePremiumCam(btnCam, false);
         });
 
         cityPost.addEventListener("change", (x) =>{
-            enableScheduleUpdate();
-            $(cityPost).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(cityPost);
             $(cityPost).parents(".newpost-panel").attr("data-city", x.currentTarget.value);
             $(cityPost).parents(".newpost-panel").data("city", x.currentTarget.value);
         });
@@ -1846,8 +1857,7 @@ const timeSlotPanelOperations = (panel) => {
                 btnAnteprima.setAttribute("class", "btn btn-secondary btn-anteprima");
                 btnAnteprima.innerHTML = "ANTEPRIMA";
                 checkbox.addEventListener("click", () => {
-                    $(checkbox).parents(".newpost-panel").attr("data-state", "EDIT");
-                    enableScheduleUpdate();
+                    markSchedulePanelEdited(checkbox);
                     const currentAnteprima = checkbox.parentElement.parentElement.querySelector("button.btn.btn-warning");
                     const thisAnteprimaButton = checkbox.parentElement.querySelector("button");
                     const checkedPics = getCheckedPics(checkbox);
@@ -1874,8 +1884,7 @@ const timeSlotPanelOperations = (panel) => {
                     };
                 });
                 btnAnteprima.addEventListener("click", () => {
-                    enableScheduleUpdate();
-                    $(btnAnteprima).parents(".newpost-panel").attr("data-state", "EDIT");
+                    markSchedulePanelEdited(btnAnteprima);
                     if (!btnAnteprima.parentElement.querySelector("input").checked) {
                         const checkedPics = getCheckedPics(btnAnteprima);
                         if (checkedPics >= 5) return;
@@ -1895,7 +1904,7 @@ const timeSlotPanelOperations = (panel) => {
                 postPics.appendChild(postPicWrapper);
                 
                 if(!anteprimaSel){
-                    btnAnteprima.click();
+                    btnAnteprima.setAttribute("class", "btn btn-warning btn-anteprima");
                     anteprimaSel = true;
                 }
             });
@@ -1914,32 +1923,27 @@ const timeSlotPanelOperations = (panel) => {
         });
 
         btnPremium.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnPremium).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnPremium);
             togglePremiumCam(btnPremium, true);
         });
 
         btnHighlight.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnHighlight).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnHighlight);
             togglePremiumCam(btnHighlight, false, true);
         });
 
         btnEtichetta.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnEtichetta).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnEtichetta);
             togglePremiumCam(btnEtichetta, false, false, true);
         });
 
         btnCam.addEventListener("click", () => {
-            enableScheduleUpdate();
-            $(btnCam).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(btnCam);
             togglePremiumCam(btnCam, false);
         });
 
         cityPost.addEventListener("change", (x) =>{
-            enableScheduleUpdate();
-            $(cityPost).parents(".newpost-panel").attr("data-state", "EDIT");
+            markSchedulePanelEdited(cityPost);
             $(cityPost).parents(".newpost-panel").attr("data-city", x.currentTarget.value);
             $(cityPost).parents(".newpost-panel").data("city", x.currentTarget.value);
         });
@@ -2077,7 +2081,7 @@ document.querySelectorAll(".time-slot").forEach((timeslot) => {
                     btnAnteprima.setAttribute("class", "btn btn-secondary btn-anteprima");
                     btnAnteprima.innerHTML = "ANTEPRIMA";
                     checkbox.addEventListener("click", () => {
-                        $(checkbox).parents(".newpost-panel").attr("data-state", "EDIT");
+                        markSchedulePanelEdited(checkbox);
                         const currentAnteprima = checkbox.parentElement.parentElement.querySelector("button.btn.btn-warning");
                         const thisAnteprimaButton = checkbox.parentElement.querySelector("button");
                         const checkedPics = getCheckedPics(checkbox);
@@ -2104,8 +2108,7 @@ document.querySelectorAll(".time-slot").forEach((timeslot) => {
                         };
                     });
                     btnAnteprima.addEventListener("click", () => {
-                        enableScheduleUpdate();
-                        $(btnAnteprima).parents(".newpost-panel").attr("data-state", "EDIT");
+                        markSchedulePanelEdited(btnAnteprima);
                         if (!btnAnteprima.parentElement.querySelector("input").checked) {
                             const checkedPics = getCheckedPics(btnAnteprima);
                             if (checkedPics >= 5) return;
@@ -2129,32 +2132,27 @@ document.querySelectorAll(".time-slot").forEach((timeslot) => {
             });
     
             btnPremium.addEventListener("click", () => {
-                enableScheduleUpdate();
-                $(btnPremium).parents(".newpost-panel").attr("data-state", "EDIT");
+                markSchedulePanelEdited(btnPremium);
                 togglePremiumCam(btnPremium, true);
             });
 
             btnHighlight.addEventListener("click", () => {
-                enableScheduleUpdate();
-                $(btnHighlight).parents(".newpost-panel").attr("data-state", "EDIT");
+                markSchedulePanelEdited(btnHighlight);
                 togglePremiumCam(btnHighlight, false, true);
             });
 
             btnEtichetta.addEventListener("click", () => {
-                enableScheduleUpdate();
-                $(btnEtichetta).parents(".newpost-panel").attr("data-state", "EDIT");
+                markSchedulePanelEdited(btnEtichetta);
                 togglePremiumCam(btnEtichetta, false, false, true);
             });
 
             btnCam.addEventListener("click", () => {
-                enableScheduleUpdate();
-                $(btnCam).parents(".newpost-panel").attr("data-state", "EDIT");
+                markSchedulePanelEdited(btnCam);
                 togglePremiumCam(btnCam, false);
             });
 
             cityPost.addEventListener("change", (x) =>{
-                enableScheduleUpdate();
-                $(cityPost).parents(".newpost-panel").attr("data-state", "EDIT");
+                markSchedulePanelEdited(cityPost);
                 $(cityPost).parents(".newpost-panel").attr("data-city", x.currentTarget.value);
                 $(cityPost).parents(".newpost-panel").data("city", x.currentTarget.value);
             });
@@ -3035,7 +3033,7 @@ function restoreStarPeriod(panel, rawPeriod) {
         maxCreditsInput.value = Number(period.maxTotalCredits);
         maxCreditsInput.dataset.userEdited = "true";
     }
-    panel.querySelector(".star-slot-checkbox")?.dispatchEvent(new Event("change"));
+    panel.querySelector(".star-schedule-editor")?.refreshStarSummary?.();
 }
 
 function getSelectedDayPubs(currentDate) {
@@ -3328,18 +3326,35 @@ function loadDayData(pubs) {
 
     // Helper function to process images
     function processImages(panel, images) {
-        panel.find(".post-pics div input").each((i, btn) => {
-            const targetID = $(btn).data("id");
+        const wrappers = [...panel[0].querySelectorAll(".post-pic-wrapper")];
+        let previewAssigned = false;
+
+        wrappers.forEach((wrapper) => {
+            const checkbox = wrapper.querySelector("input[type='checkbox']");
+            const previewButton = wrapper.querySelector(".btn-anteprima");
+            const targetID = $(checkbox).data("id");
             const match = images.find(img => img.galleria == targetID);
-            
-            if (!match) {
-                $(btn).click();
-                console.log(`🖼️ Selected image slot: ${targetID}`);
-            } else if (match.isAnteprima) {
-                $(btn).parents(".post-pic-wrapper").find(".btn-anteprima").click();
-                console.log(`⭐ Set anteprima for slot: ${targetID}`);
+
+            checkbox.checked = Boolean(match);
+            checkbox.disabled = false;
+            previewButton.setAttribute("class", "btn btn-secondary btn-anteprima");
+            if (match?.isAnteprima) {
+                previewButton.setAttribute("class", "btn btn-warning btn-anteprima");
+                previewAssigned = true;
             }
         });
+
+        const checkedWrappers = wrappers.filter((wrapper) => wrapper.querySelector("input[type='checkbox']")?.checked);
+        if (!previewAssigned && checkedWrappers.length) {
+            checkedWrappers[0].querySelector(".btn-anteprima")
+                ?.setAttribute("class", "btn btn-warning btn-anteprima");
+        }
+        if (checkedWrappers.length >= 5) {
+            wrappers.forEach((wrapper) => {
+                const checkbox = wrapper.querySelector("input[type='checkbox']");
+                if (!checkbox.checked) checkbox.disabled = true;
+            });
+        }
     }
 }
 
@@ -3379,7 +3394,7 @@ function updateSchedule() {
         return alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans.");
     }
     const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
-        !$(panel).data("GCRecord") &&
+        schedulePanelNeedsValidation(panel) &&
         panel.querySelectorAll(".post-pic-wrapper input[type='checkbox']:checked").length === 0
     );
     if (starWithoutImages) {
