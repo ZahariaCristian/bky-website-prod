@@ -6,7 +6,8 @@ const { authenticateKey } = require("../lib/authentication");
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const { moscarossaImageLimit, selectMoscarossaImages } = require("../lib/moscarossaGalleryApply");
 const ctx = require("../ctx/model");
-const { dirname } = require('path');
+const path = require("path");
+const { dirname } = path;
 const appDir = dirname(require.main.filename);
 const Op = ctx.model.Sequelize.Op;
 var rootPath;
@@ -104,34 +105,44 @@ router.post("/applyMoscarossaGallery", authenticateKey, async (req, res) => {
 });
 
 router.post("/update", upload.array("imgs"), async (req, res) => {
-    if (!req.query.phone) return res.sendStatus(400);
-    if (!req.query.ann) return res.sendStatus(400);
+    try {
+        if (!req.query.phone) return res.status(400).json({ error: "Numero di telefono mancante." });
+        if (!req.query.ann) return res.status(400).json({ error: "ID annuncio mancante." });
 
-    const isMoscarossa = `${req.query.panel || ""}`.toLowerCase() === "moscarossa";
-    if (isMoscarossa) {
+        const isMoscarossa = `${req.query.panel || ""}`.toLowerCase() === "moscarossa";
         const files = Array.isArray(req.files) ? req.files : [];
+        const maximumFileSize = (isMoscarossa ? 5 : 10) * 1024 * 1024;
         const invalidFile = files.find((file) =>
-            !`${file.mimetype || ""}`.toLowerCase().startsWith("image/") || file.size > 5 * 1024 * 1024
+            !`${file.mimetype || ""}`.toLowerCase().startsWith("image/") || file.size > maximumFileSize
         );
-        if (files.length > 20 || invalidFile) return res.sendStatus(413);
-    }
+        if ((isMoscarossa && files.length > 20) || invalidFile) {
+            return res.status(413).json({ error: "Una o più immagini non sono valide o superano il limite consentito." });
+        }
 
-    const bodyArray = (value) => Array.isArray(value) ? value : (value === undefined ? [] : [value]);
-    const origins = bodyArray(req.body.origin);
-    const hiddenFlags = bodyArray(req.body.hidden);
-    const isNewFlags = bodyArray(req.body.isNew);
-    const replacedGalleryIds = new Set(origins.filter((id, index) =>
-        id && index < (req.files?.length || 0) && isNewFlags[index] === "true")
-        .map((id) => `${id}`));
-    let expiredSchedulesSkipped = 0;
+        const bodyArray = (value) => Array.isArray(value) ? value : (value === undefined ? [] : [value]);
+        const origins = bodyArray(req.body.origin);
+        const hiddenFlags = bodyArray(req.body.hidden);
+        const isNewFlags = bodyArray(req.body.isNew);
+        if (origins.length < files.length) {
+            return res.status(400).json({ error: "Dati galleria incompleti." });
+        }
 
-    // Creating the folder if it does not exist
-    if (!fs.existsSync(`${rootPath}/girls/${req.query.phone}`))
-        fs.mkdirSync(`${rootPath}/girls/${req.query.phone}`);
-    if (isMoscarossa) {
-        fs.mkdirSync(`${rootPath}/girls/${req.query.phone}/pics`, { recursive: true });
-    }
-    if(fs.existsSync(`${rootPath}/girls/${req.query.phone}/pics`)){
+        const annuncio = await ctx.tblAnnunci.findOne({ where: { id: req.query.ann } });
+        if (!annuncio) return res.status(404).json({ error: "Annuncio non trovato." });
+
+        const picsPath = resolvePicsPath(req.query.phone);
+        // Every panel stores its permanent gallery files here. Recursive creation is
+        // safe when the directory already exists and prevents silent Bakeca skips.
+        fs.mkdirSync(picsPath, { recursive: true });
+        if (!fs.statSync(picsPath).isDirectory()) {
+            throw new Error(`Il percorso immagini non è una cartella: ${picsPath}`);
+        }
+
+        const replacedGalleryIds = new Set(origins.filter((id, index) =>
+            id && index < files.length && isNewFlags[index] === "true")
+            .map((id) => `${id}`));
+        let expiredSchedulesSkipped = 0;
+
         // var exludeWrite = [];
         //  lstFiles = fs.readdirSync(`${rootPath}/girls/${req.query.phone}/pics`);
         //  for (f of lstFiles){
@@ -143,7 +154,6 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
         //  }
         var sevenDay = new Date();
         sevenDay.setDate(sevenDay.getDate() - 7);
-        var annuncio = await ctx.tblAnnunci.findOne({where:{id: req.query.ann}});
         var scheduled = await annuncio.getTblSchedulazionis({where: isMoscarossa
             ? {
                 platform: "moscarossa",
@@ -160,12 +170,12 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
             }
         }
         // Writing the image files
-        for (let i = 0; i < req.files.length; i++){
+        for (let i = 0; i < files.length; i++){
             const galleryId = origins[i];
             if (!galleryId) continue;
 
             if (isNewFlags[i] == "true") {
-                await writeImgFile(req.files[i], i, galleryId, req.query.phone);
+                await writeImgFile(files[i], i, galleryId, req.query.phone, picsPath);
             } else {
                 await ctx.tblGalleria.update({
                     src: `/images/get?phone=${req.query.phone}&index=${i}`,
@@ -238,44 +248,75 @@ router.post("/update", upload.array("imgs"), async (req, res) => {
                 }
             }
         }
-    }
-        
-    if (isMoscarossa) return res.status(201).json({ expiredSchedulesSkipped });
-    return res.sendStatus(201);
 
+        if (isMoscarossa) return res.status(201).json({ expiredSchedulesSkipped });
+        return res.status(201).json({ saved: files.length });
+    } catch (error) {
+        console.error("Image gallery update failed:", error);
+        return res.status(error.statusCode || 500).json({
+            error: error.statusCode ? error.message : "Impossibile salvare le immagini sul server."
+        });
+    }
 });
+
+function resolvePicsPath(phone) {
+    const configuredRoot = `${rootPath || ""}`.trim();
+    const phoneFolder = `${phone || ""}`.trim();
+    if (!configuredRoot) {
+        throw new Error("APP_PATH_PRODUCTION non è configurato.");
+    }
+    if (!phoneFolder || phoneFolder.includes("/") || phoneFolder.includes("\\") || phoneFolder === "." || phoneFolder === "..") {
+        const error = new Error("Numero di telefono non valido per il percorso immagini.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return path.resolve(configuredRoot, "girls", phoneFolder, "pics");
+}
 
 function sanitizeFileName(fileName) {
     return fileName.replace(/\s+/g, '_').replace(/[()]/g, '');
 }
 
-async function writeImgFile(file, i, id, phone){
-    try {
-        // Sanitize the file name
-        const extension = file.mimetype.split("/")[1];
-        let safeFileName = `${i}.${extension}`;
-        safeFileName = sanitizeFileName(safeFileName); // Ensure valid file name
+async function writeImgFile(file, i, id, phone, picsPath){
+    const mimeType = `${file?.mimetype || ""}`.toLowerCase();
+    const extension = sanitizeFileName(mimeType.split("/")[1] || "jpg");
+    let fileIndex = i;
+    let safeFileName;
+    let destination;
 
-        lstFiles = fs.readdirSync(`${rootPath}/girls/${phone}/pics`);
-
-        if (lstFiles.includes(safeFileName)) {
-            return await writeImgFile(file, i + 1, id, phone); // Recursively find a new valid file name
+    // Retry only filename collisions. Permission, path and disk errors must reach
+    // the route so it cannot report a false successful upload.
+    while (true) {
+        safeFileName = sanitizeFileName(`${fileIndex}.${extension}`);
+        destination = path.join(picsPath, safeFileName);
+        try {
+            fs.writeFileSync(destination, file.buffer, { flag: "wx" });
+            break;
+        } catch (error) {
+            if (error.code !== "EEXIST") throw error;
+            fileIndex += 1;
         }
+    }
 
-        // Write the sanitized file name
-        fs.writeFileSync(`${rootPath}/girls/${phone}/pics/${safeFileName}`, file.buffer);
-
-        // Update the database with the sanitized file name
-        await ctx.tblGalleria.update({
-            src: `/images/get?phone=${phone}&index=${i}`,
+    try {
+        const [updatedRows] = await ctx.tblGalleria.update({
+            src: `/images/get?phone=${encodeURIComponent(phone)}&index=${i}`,
             GCRecord: null,
             origin: safeFileName
         }, {
-            where: { id: id }
+            where: { id }
         });
-    } catch (err) {
-        console.log("Error in Images.js: " + err);
-        await writeImgFile(file, i + 1, id, phone); // Retry with next index in case of error
+        if (updatedRows !== 1) {
+            throw new Error(`Immagine galleria ${id} non trovata nel database.`);
+        }
+    } catch (error) {
+        try {
+            fs.unlinkSync(destination);
+        } catch (cleanupError) {
+            console.error("Unable to remove an image after a database failure:", cleanupError);
+        }
+        throw error;
     }
 }
 

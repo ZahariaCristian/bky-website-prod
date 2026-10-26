@@ -1,54 +1,72 @@
 
-function getImgsFormData() {
-    let formData = new FormData();
-    return new Promise((resolve, reject) => {
-        Promise.all([...document.querySelectorAll(".persistent img")].map(
-            (imgEl) => {
-                return new Promise((res, rej) => {
-                    fetch(imgEl.src).then(response => {
-                        var imgID = $(imgEl).parents(".pic-panel").data("id");
-                        var hidden = $(imgEl).parents(".pics").hasClass("removed");
-                        var isNew = $(imgEl).attr("src").indexOf("blob:") !== -1
-                        response.blob().then(blob => res([blob, imgID, hidden, isNew]));
-                    }).catch(() => rej());
-                })
-            })).then(blobs => {
-                blobs.forEach(file => {
-                    formData.append("imgs", file[0]);
-                    formData.append("origin", file[1]);
-                    formData.append("hidden", file[2]);
-                    formData.append("isNew", file[3]);
-                });
-                resolve(formData);
-            }).catch(() => reject());
+async function getImgsFormData() {
+    const formData = new FormData();
+    const images = [...document.querySelectorAll(".persistent img")];
+    const files = await Promise.all(images.map(async (imgEl) => {
+        const response = await fetch(imgEl.src);
+        if (!response.ok) {
+            throw new Error(`Impossibile leggere un'immagine della galleria (HTTP ${response.status}).`);
+        }
+
+        const imgID = $(imgEl).parents(".pic-panel").data("id");
+        if (!imgID) throw new Error("ID immagine mancante.");
+
+        return {
+            blob: await response.blob(),
+            imgID,
+            hidden: $(imgEl).parents(".pics").hasClass("removed"),
+            isNew: imgEl.src.indexOf("blob:") !== -1
+        };
+    }));
+
+    files.forEach((file) => {
+        formData.append("imgs", file.blob);
+        formData.append("origin", file.imgID);
+        formData.append("hidden", file.hidden);
+        formData.append("isNew", file.isNew);
     });
-};
+    return formData;
+}
 
 // Save images
-function updateImages() {
+async function updateImages() {
     toggleLoader();
-    const phone = document.querySelector("input[name='phone']").value;
-    // alert(JSON.stringify(getImgsFormData()), 'save images')
-    // console.log(phone, 'updateImages')
-    getImgsFormData().then(formData => {
-        console.log(JSON.stringify(formData), "getImgsFormData")
-        updateImg(formData, phone);
-    });
-};
+    try {
+        const phoneInput = document.querySelector("input[name='phone']");
+        const phone = phoneInput ? phoneInput.value.trim() : "";
+        if (!phone) throw new Error("Numero di telefono mancante.");
 
-function updateImg(formData, phone) {
-    fetch(`/images/update?phone=${phone}&ann=${QUERY_NEW}`, {
+        const formData = await getImgsFormData();
+        await updateImg(formData, phone);
+        document.querySelector("#updatePicsBtn").setAttribute("disabled", true);
+        ShowAlert("lblSaved");
+        setTimeout(() => location.reload(), 300);
+    } catch (error) {
+        console.error("Bakeca image update failed:", error);
+        alert(`❌ ${error.message || "Si è verificato un errore durante l'aggiornamento delle immagini."}`);
+    } finally {
+        toggleLoader();
+    }
+}
+
+async function updateImg(formData, phone) {
+    const query = new URLSearchParams({ phone, ann: QUERY_NEW });
+    const response = await fetch(`/images/update?${query.toString()}`, {
         method: "POST",
         body: formData,
-    }).then(res => {
-        if (res.status !== 201) return alert("❌ Si è verificato un errore durante l'aggiornamento delle immagini.");
-        document.querySelector("#updatePicsBtn").setAttribute("disabled", true);
-        //alert("🖼 Immagini aggiornate correttamente.");
-        ShowAlert("lblSaved");
-        setTimeout(() => {
-            location.reload();
-        }, 300);
     });
+    if (!response.ok) {
+        let message = "Si è verificato un errore durante l'aggiornamento delle immagini.";
+        try {
+            const payload = await response.json();
+            if (payload.error) message = payload.error;
+        } catch (_) {
+            // Keep the generic message when the server did not return JSON.
+        }
+        throw new Error(message);
+    }
+
+    return response;
 }
 
 const loadImage = event => {
