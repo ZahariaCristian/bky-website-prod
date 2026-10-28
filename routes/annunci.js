@@ -652,6 +652,7 @@ const normalizeIncontriamociCategory = (category = "") => {
 
 const normalizePanelPlatform = (panel) => {
     const normalized = `${panel || ""}`.toLowerCase();
+    if (normalized === "bakecaincontri" || normalized === "bakecaincontrii") return "bakecaincontrii";
     if (normalized === "me" || normalized === "megaescort") return "megaescort";
     return normalized || "bakecaincontrii";
 };
@@ -2982,7 +2983,13 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
 });
 
 router.post("/updateSchedule", authenticateKey, async (req, res) => {
-    if (!req.body.id || !req.body.schedule) return res.sendStatus(400);
+    try {
+    if (!req.body.id || !req.body.schedule) {
+        return res.status(400).json({
+            code: "SCHEDULE_REQUEST_INVALID",
+            error: "Dati della schedulazione mancanti o non validi."
+        });
+    }
 
     var userid = req.session.userid;
     var girl = await ctx.tblAnnunci.findOne({ where: { id: req.body.id } });
@@ -3248,6 +3255,20 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
 
     res.json({ schedulato: onlySchedulazioni });
 
+    } catch (error) {
+        const databaseError = error?.original || error?.parent || error;
+        console.error("[updateSchedule] Unable to save schedules", {
+            adId: req.body?.id || null,
+            platform: normalizePanelPlatform(req.body?.panel),
+            code: databaseError?.code || error?.name || "SCHEDULE_SAVE_FAILED",
+            message: databaseError?.sqlMessage || databaseError?.message || error?.message || "Unknown error"
+        });
+        if (res.headersSent) return;
+        return res.status(500).json({
+            code: "SCHEDULE_SAVE_FAILED",
+            error: "Impossibile salvare le pubblicazioni. Controlla i dati e riprova."
+        });
+    }
 });
 
 async function updateCreditAnnuncio(annuncio) {

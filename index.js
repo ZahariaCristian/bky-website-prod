@@ -230,6 +230,7 @@ app.get("/annuncio.html", (req, res) => {
 
     switch (panel) {
         case "bakecaincontri":
+        case "bakecaincontrii":
             res.render('pages/annuncio');
             break;
         case "bakeca":
