@@ -4,23 +4,9 @@
     <title>BKY - Gestione Pagamenti</title>
     <%- include('../partials/head'); %>
     <style>
-        .rptItemCosti:nth-child(even) {background: #e3e3e3}
-        .rptItemCosti:nth-child(odd) {background: transparent}
-        .rptItemCosti > div{
-            padding: 6px 12px 6px 12px;
-        }
-        #rptCosti .edited{
-            background: #ccfcd7 !important;
-        }
         .control-label{
             line-height: 27px;
             vertical-align: text-top;
-        }
-        #rptCosti .edited .control-label{
-            display: none;
-        }
-        #rptCosti .form-control{
-            display: none;
         }
         /* Add to your existing styles */
 .panel {
@@ -42,20 +28,11 @@
 .text-danger {
     color: #dc3545;
 }
-        #rptCosti .edited .form-control{
-            display: block !important;
-        }
-        #rptCosti .control-label{
-            cursor: pointer;
-        }
         a > .control-label{
             white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
-        }
-        .superTop input{
-            color:black;
         }
         .incontriamoci-price-toolbar,
         .bakecaincontrii-price-toolbar,
@@ -110,6 +87,218 @@
         .trovagnocca-price-status,
         .moscarossa-price-status {
             margin: 12px 0 0;
+        }
+        .bakecaincontrii-price-editor {
+            background: #fff;
+            border: 1px solid #dfe5ec;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(29, 43, 68, 0.08);
+            overflow: hidden;
+        }
+        .bakecaincontrii-price-editor .bky-price-header {
+            align-items: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef4fb 100%);
+            border-bottom: 1px solid #dfe5ec;
+            display: flex;
+            justify-content: space-between;
+            padding: 18px 20px;
+        }
+        .bky-price-heading {
+            align-items: center;
+            display: flex;
+            gap: 12px;
+        }
+        .bky-price-heading-icon {
+            align-items: center;
+            background: #e8f2ff;
+            border-radius: 8px;
+            color: #1f6fb2;
+            display: inline-flex;
+            font-size: 18px;
+            height: 40px;
+            justify-content: center;
+            width: 40px;
+        }
+        .bky-price-heading h3 {
+            color: #233044;
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 1.25;
+            margin: 0 0 3px;
+        }
+        .bky-price-heading p {
+            color: #697386;
+            margin: 0;
+        }
+        .bky-price-meta {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .bky-price-meta .label {
+            border-radius: 12px;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 10px;
+        }
+        .bakecaincontrii-price-editor .widget-body {
+            padding: 18px 20px 20px;
+        }
+        .bakecaincontrii-price-editor .table-responsive {
+            border: 1px solid #e1e6ed;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .bakecaincontrii-price-editor table {
+            background: #fff;
+            min-width: 900px;
+        }
+        .bakecaincontrii-price-editor thead th {
+            background: #f6f8fb;
+            border-bottom: 1px solid #dfe5ec !important;
+            color: #526174;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .035em;
+            padding: 11px 10px !important;
+            text-transform: uppercase;
+            vertical-align: middle !important;
+        }
+        .bakecaincontrii-price-editor tbody td {
+            border-color: #e7ebf0 !important;
+            padding: 10px !important;
+            vertical-align: middle !important;
+        }
+        .bakecaincontrii-price-editor tbody tr:hover td {
+            background: #f8fbff;
+        }
+        .bakecaincontrii-price-editor tbody tr.bky-night-start td {
+            border-top: 2px solid #b8c6d9 !important;
+        }
+        .bky-period-cell {
+            min-width: 105px;
+        }
+        .bky-period-badge {
+            align-items: center;
+            background: #fff4d9;
+            border: 1px solid #f3d58c;
+            border-radius: 14px;
+            color: #825b00;
+            display: inline-flex;
+            font-size: 12px;
+            font-weight: 600;
+            gap: 6px;
+            padding: 5px 9px;
+        }
+        .bky-period-badge.is-night {
+            background: #edf0ff;
+            border-color: #cbd2f4;
+            color: #44519a;
+        }
+        .bky-price-mode {
+            color: #25364d;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .bky-price-mode small {
+            color: #7b8798;
+            display: block;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+        .bky-days-badge {
+            background: #eef3f8;
+            border-radius: 12px;
+            color: #4e6075;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 9px;
+            white-space: nowrap;
+        }
+        .bky-credit-input {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #d6dde6;
+            border-radius: 5px;
+            display: flex;
+            min-width: 92px;
+            overflow: hidden;
+        }
+        .bakecaincontrii-price-editor .bky-credit-input input[type="number"] {
+            border: 0;
+            box-shadow: none;
+            height: 34px;
+            min-width: 50px;
+            padding: 6px 8px;
+            width: 100%;
+        }
+        .bky-credit-input span {
+            background: #f4f6f8;
+            border-left: 1px solid #dfe5ec;
+            color: #7b8798;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 9px 7px;
+        }
+        .bky-price-euro {
+            color: #1d7a50;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .bky-price-footer {
+            align-items: center;
+            border-top: 1px solid #e6eaf0;
+            display: flex;
+            gap: 16px;
+            justify-content: space-between;
+            margin-top: 16px;
+            padding-top: 16px;
+        }
+        .bky-price-footer-note {
+            color: #6c7888;
+            font-size: 12px;
+            line-height: 1.45;
+            margin: 0;
+            max-width: 650px;
+        }
+        .bky-price-footer-actions {
+            align-items: center;
+            display: flex;
+            flex-shrink: 0;
+            gap: 12px;
+        }
+        .bky-price-footer-actions .bakecaincontrii-price-status {
+            margin: 0;
+            white-space: nowrap;
+        }
+        .bky-price-footer-actions .btn {
+            border-radius: 5px;
+            font-weight: 600;
+            min-width: 210px;
+            padding: 9px 16px;
+        }
+        @media (max-width: 767px) {
+            .bakecaincontrii-price-editor .bky-price-header,
+            .bky-price-footer {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .bky-price-meta {
+                justify-content: flex-start;
+            }
+            .bky-price-footer-actions {
+                align-items: stretch;
+                flex-direction: column;
+                width: 100%;
+            }
+            .bky-price-footer-actions .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -254,119 +443,56 @@
 
 
                 
-                <div class="widget widget-body-gray">
-                    <div class="widget-head" style="background: #eaeaea;">
-                        <h3 class="heading glyphicons download"><i></i>Listino Personale</h3>
-                    </div>
-                    <div class="widget-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="rptCosti">
-                                <thead>
-                                    <tr>
-                                        <th>Uscita ></th>
-                                        <!-- Uscite columns will be added dynamically -->
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr class="center rptNoData">
-                                        <td colspan="100%">Nessun dato rilevato</td>
-                                    </tr>
-                                    <!-- Template rows for each top type -->
-                                    <tr class="rptItemCosti" data-type="oneXone" style="display: none;">
-                                        <td>1x1</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="oneXthree" style="display: none;">
-                                        <td>1x3</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="oneXseven" style="display: none;">
-                                        <td>1x7</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="tenXone" style="display: none;">
-                                        <td>10x1</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="tenXthree" style="display: none;">
-                                        <td>10x3</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="tenXseven" style="display: none;">
-                                        <td>10x7</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="supertop" style="display: none;">
-                                        <td>Supertop</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="highlight" style="display: none;">
-                                        <td>Highlight</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="etichetta" style="display: none;">
-                                        <td>Etichetta</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="supertopnotte" style="display: none;">
-                                        <td>Supertop Notte</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="highlightnotte" style="display: none;">
-                                        <td>Highlight Notte</td>
-                                    </tr>
-                                    <tr class="rptItemCosti" data-type="etichettanotte" style="display: none;">
-                                        <td>Etichetta Notte</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <button class="btn" style="width: 100%; margin-top: 20px;" id="btnAddListino">
-                                    <i class="fa fa-plus"></i> <b>Aggiungi Uscita</b>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnUpdateLisno"><b>Salva</b></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="widget widget-body-gray bakecaincontrii-price-editor"
                     id="bakecaincontriiPriceEditor">
-                    <div class="widget-head" style="background: #eaeaea;">
-                        <h3 class="heading glyphicons euro"><i></i>Listino Bakecaincontrii</h3>
+                    <div class="bky-price-header">
+                        <div class="bky-price-heading">
+                            <span class="bky-price-heading-icon"><i class="fa fa-eur"></i></span>
+                            <div>
+                                <h3>Listino Bakecaincontrii</h3>
+                                <p>Costi stimati per la promozione Top</p>
+                            </div>
+                        </div>
+                        <div class="bky-price-meta" aria-label="Informazioni listino">
+                            <span class="label label-info">7 configurazioni</span>
+                            <span class="label label-default">1 credito = €0,33</span>
+                        </div>
                     </div>
                     <div class="widget-body">
-                        <div class="bakecaincontrii-price-toolbar">
-                            <p class="help-block" style="margin: 0;">
-                                Configura i crediti stimati per Top. L'importo in euro viene calcolato a €0,33 per credito.
-                            </p>
-                        </div>
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Fascia</th>
+                                        <th>Periodo</th>
+                                        <th>Configurazione</th>
                                         <th>Giorni</th>
-                                        <th>Top base</th>
-                                        <th>Super Top</th>
-                                        <th>Sfondo colorato</th>
-                                        <th>Etichetta “Novità”</th>
-                                        <th>Stima base €</th>
+                                        <th>Base <span class="text-muted">(cr)</span></th>
+                                        <th>Super Top <span class="text-muted">(cr)</span></th>
+                                        <th>Sfondo <span class="text-muted">(cr)</span></th>
+                                        <th>“Novità” <span class="text-muted">(cr)</span></th>
+                                        <th>Base stimata</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bakecaincontriiPriceEditorRows">
                                     <tr>
-                                        <td colspan="7" class="text-muted">Caricamento...</td>
+                                        <td colspan="8" class="text-muted">Caricamento...</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                        <p class="help-block" style="margin-top: 10px;">
-                            Il listino è specifico per il gruppo. Il prezzo definitivo viene sempre confermato da Bakecaincontrii prima del pagamento.
-                        </p>
-                        <div id="bakecaincontriiPriceStatus" class="bakecaincontrii-price-status"
-                            role="status" aria-live="polite"></div>
-                        <button type="button" class="btn btn-primary"
-                            style="width: 100%; margin-top: 20px;"
-                            id="saveBakecaincontriiPrices" disabled>
-                            <i class="fa fa-save"></i> <b>Salva listino Bakecaincontrii</b>
-                        </button>
+                        <div class="bky-price-footer">
+                            <p class="bky-price-footer-note">
+                                Listino specifico per il gruppo. Bakecaincontrii confermerà disponibilità e prezzo definitivo prima del pagamento.
+                            </p>
+                            <div class="bky-price-footer-actions">
+                                <div id="bakecaincontriiPriceStatus" class="bakecaincontrii-price-status"
+                                    role="status" aria-live="polite"></div>
+                                <button type="button" class="btn btn-primary"
+                                    id="saveBakecaincontriiPrices" disabled>
+                                    <i class="fa fa-save"></i> Salva listino
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -654,8 +780,8 @@
         </div>
     </div>
             
-    <script src="/js/gestPagamenti.js"></script>
-    <script src="/js/gestPagamenti.bakecaincontrii.js?v=20261030-bakecaincontrii-top-prices"></script>
+    <script src="/js/gestPagamenti.js?v=20261030-remove-legacy-listino"></script>
+    <script src="/js/gestPagamenti.bakecaincontrii.js?v=20261030-bakecaincontrii-top-prices-v2"></script>
     <script src="/js/bakeca-prices.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.bakeca.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.incontriamoci.js?v=20260703-platform-prices"></script>

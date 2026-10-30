@@ -812,21 +812,21 @@
                                     </div>
                                     </div>
                                     <div class="total-cost-container">
-                                        <label for="totalCost">Totale da spendere:</label>
+                                        <label for="totalCost">Totale promozioni stimato:</label>
                                         <span id="totalCost">0 €</span>
                                     </div>
                                     <div class="separator"></div>
                                     
                                     <!-- Dropdown button -->
-                                    <button id="toggleTableBtn" class="btn btn-info">Mostra dettagli per più giorni</button>
+                                    <button id="toggleTableBtn" class="btn btn-info">Mostra dettaglio costi</button>
                                     
                                     <!-- Hidden table -->
                                     <div id="costTableContainer" style="display: none;">
                                         <table class="table">
                                             <thead>
                                                 <tr>
-                                                    <th>Giorni</th>
-                                                    <th>Totale</th>
+                                                    <th>Promozione</th>
+                                                    <th>Costo stimato</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="costTableBody">
@@ -1012,6 +1012,8 @@
     let bakecaincontriiPrices = [];
     let flashPrice = 45;
     let priceDataLoaded = false;
+    let priceDataPromise = null;
+    const isBakecaincontriiPanel = document.body.classList.contains('bakecaincontrii-panel');
 
     // Function to fetch listino data from the server
     async function fetchListinoData() {
@@ -1059,7 +1061,13 @@
     }
 
     function getBakecaincontriiTopEstimate() {
-        const result = { credits: 0, euro: 0, configured: 0, missing: 0 };
+        const result = { credits: 0, euro: 0, configured: 0, missing: 0, items: [] };
+        const rangeLabels = {
+            MORNING: 'Mattina',
+            AFTERNOON: 'Pomeriggio',
+            EVENING: 'Sera',
+            NIGHT: 'Notte'
+        };
         document.querySelectorAll('.promoTop .newpost-panel').forEach(panel => {
             if (panel.dataset.gcrecord === 'true' || panel.style.display === 'none') return;
             const editor = panel.querySelector('.bakecaincontrii-top-editor');
@@ -1079,24 +1087,55 @@
             );
             if (!priceRow) {
                 result.missing++;
+                result.items.push({
+                    label: `Top · ${rangeLabels[range] || range} · ${days} giorn${days === 1 ? 'o' : 'i'}`,
+                    missing: true,
+                    credits: 0,
+                    euro: 0
+                });
                 return;
             }
             const options = getPriceOptions(priceRow);
             let credits = Number(priceRow.price || 0);
+            const extras = [];
             if (editor.querySelector('.top-extra-supertop')?.checked) {
                 credits += Number(options.superTopCredits || 0);
+                extras.push('Super Top');
             }
             if (editor.querySelector('.top-extra-highlight')?.checked) {
                 credits += Number(options.backgroundCredits || 0);
+                extras.push('Sfondo');
             }
             if (editor.querySelector('.top-extra-label')?.checked) {
                 credits += Number(options.labelCredits || 0);
+                extras.push('Novità');
             }
+            const euro = credits * Number(options.euroPerCredit || 0.33);
+            const selectedSlot = range === 'NIGHT'
+                ? '00:00 – 06:00'
+                : (editor.querySelector('.top-slot-select option:checked')?.textContent || slot);
             result.credits += credits;
-            result.euro += credits * Number(options.euroPerCredit || 0.33);
+            result.euro += euro;
             result.configured++;
+            result.items.push({
+                label: `Top · ${rangeLabels[range] || range} · ${selectedSlot} · ${days} giorn${days === 1 ? 'o' : 'i'}${extras.length ? ` · ${extras.join(', ')}` : ''}`,
+                missing: false,
+                credits,
+                euro
+            });
         });
         return result;
+    }
+
+    function getBakecaincontriiFlashEstimate(count = 0) {
+        const priceRow = bakecaincontriiPrices.find(row => row.product === 'flash');
+        const options = getPriceOptions(priceRow || {});
+        const creditsEach = Number(options.credits ?? priceRow?.price ?? flashPrice ?? 0);
+        const credits = creditsEach * Number(count || 0);
+        return {
+            credits,
+            euro: credits * Number(options.euroPerCredit || 0.33)
+        };
     }
 
     function getPromoTypeName(promoType) {
@@ -1129,6 +1168,7 @@
 
         // Count special promos from newpost-panel elements
         document.querySelectorAll('.newpost-panel').forEach(panel => {
+            if (isBakecaincontriiPanel) return;
             if (panel.closest('.promoTop')) return;
             if (panel.dataset.highlight === 'true') selectedPromos.highlight++;
             if (panel.dataset.etichetta === 'true') selectedPromos.etichetta++;
@@ -1149,6 +1189,52 @@
         costTableBody.innerHTML = ''; // Clear the table body
         const selectedPromos = getSelectedPromos();
         const topEstimate = getBakecaincontriiTopEstimate();
+        const flashEstimate = getBakecaincontriiFlashEstimate(selectedPromos.Flash);
+
+        if (isBakecaincontriiPanel) {
+            const appendEstimateRow = (label, euro, credits, missing = false) => {
+                const row = document.createElement('tr');
+                const labelCell = document.createElement('td');
+                const priceCell = document.createElement('td');
+                labelCell.textContent = label;
+                priceCell.textContent = missing
+                    ? 'Prezzo non configurato'
+                    : `${Number(euro).toFixed(2)} € (${Number(credits)} crediti stimati)`;
+                if (missing) priceCell.className = 'text-danger';
+                row.appendChild(labelCell);
+                row.appendChild(priceCell);
+                costTableBody.appendChild(row);
+            };
+
+            topEstimate.items.forEach(item => appendEstimateRow(
+                item.label,
+                item.euro,
+                item.credits,
+                item.missing
+            ));
+            if (selectedPromos.Flash > 0) {
+                appendEstimateRow(
+                    `Flash · ${selectedPromos.Flash} pubblicazion${selectedPromos.Flash === 1 ? 'e' : 'i'}`,
+                    flashEstimate.euro,
+                    flashEstimate.credits
+                );
+            }
+            const starCredits = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
+                .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
+            if (starCredits > 0) {
+                appendEstimateRow(
+                    `Star · ${selectedPromos.Star} slot`,
+                    starCredits * 0.33,
+                    starCredits
+                );
+            }
+            if (!costTableBody.children.length) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="2" class="text-muted">Nessuna promozione a pagamento selezionata.</td>';
+                costTableBody.appendChild(emptyRow);
+            }
+            return;
+        }
 
         // For each selected promo type, create a section in the table
         for (const [promoType, count] of Object.entries(selectedPromos)) {
@@ -1172,7 +1258,9 @@
                         : (promoType === 'Top' ? `${count} configurazion${count === 1 ? 'e' : 'i'}` : 'Singola uscita');
                     
                     const listinoItem = listinoData.find(item => item.uscita === 1);
-                    let price = promoType === 'Flash' ? flashPrice * count : 0;
+                    let price = promoType === 'Flash'
+                        ? (isBakecaincontriiPanel ? flashEstimate.euro : flashPrice * count)
+                        : 0;
                     if (promoType === 'Top') {
                         priceCell.textContent = topEstimate.missing > 0
                             ? 'Prezzo Top non configurato'
@@ -1192,7 +1280,9 @@
                             case 'etichettanotte': price = listinoItem.etichettanotte; break;
                         }
                     }
-                    if (promoType !== 'Top') {
+                    if (promoType === 'Flash' && isBakecaincontriiPanel) {
+                        priceCell.textContent = `${flashEstimate.euro.toFixed(2)} € (${flashEstimate.credits} crediti stimati)`;
+                    } else if (promoType !== 'Top') {
                         priceCell.textContent = price > 0 ? `${price} ${promoType === 'Star' ? 'crediti (stima)' : '€'}` : '-';
                     }
 
@@ -1215,27 +1305,37 @@
     async function calculateTotalCost() {
         // Fetch the listino data if not already loaded
         if (!priceDataLoaded) {
-            listinoData = await fetchListinoData();
+            if (!priceDataPromise) {
+                priceDataPromise = fetchListinoData()
+                    .then((rows) => { listinoData = rows; })
+                    .finally(() => { priceDataPromise = null; });
+            }
+            await priceDataPromise;
         }
 
         const selectedPromos = getSelectedPromos();
         let totalCost = 0;
         const topEstimate = getBakecaincontriiTopEstimate();
+        const flashEstimate = getBakecaincontriiFlashEstimate(selectedPromos.Flash);
         const estimatedStarCredits = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
             .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
+        const estimatedStarEuro = estimatedStarCredits * 0.33;
 
         // Calculate the total cost
         for (const [promoType, count] of Object.entries(selectedPromos)) {
             if (count > 0) {
                 if (promoType === 'Flash') {
-                    totalCost += flashPrice * count;
+                    totalCost += isBakecaincontriiPanel ? flashEstimate.euro : flashPrice * count;
                     continue;
                 }
                 if (promoType === 'Top') {
                     totalCost += topEstimate.euro;
                     continue;
                 }
-                if (promoType === 'Star') continue;
+                if (promoType === 'Star') {
+                    if (isBakecaincontriiPanel) totalCost += estimatedStarEuro;
+                    continue;
+                }
                 const listinoItem = listinoData.find(item => item.uscita === count);
                 if (listinoItem) {
                     switch (promoType) {
@@ -1252,42 +1352,40 @@
 
         const creditNotes = [];
         if (topEstimate.credits > 0) creditNotes.push(`circa ${topEstimate.credits} crediti Top`);
+        if (isBakecaincontriiPanel && flashEstimate.credits > 0) creditNotes.push(`circa ${flashEstimate.credits} crediti Flash`);
         if (estimatedStarCredits > 0) creditNotes.push(`circa ${estimatedStarCredits} crediti Star`);
         if (topEstimate.missing > 0) creditNotes.push('prezzo Top incompleto');
         totalCostElement.textContent = `${totalCost.toFixed(2)} €${creditNotes.length ? ` · ${creditNotes.join(' + ')}` : ''}`;
         updateCostTable();
     }
 
+    let costCalculationTimer = null;
+    const queueCostCalculation = () => {
+        clearTimeout(costCalculationTimer);
+        costCalculationTimer = setTimeout(calculateTotalCost, 50);
+    };
+
     // Set up MutationObserver after DOM is loaded
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
-            console.log('Mutation detected:', mutation);
-            if (mutation.type === 'attributes' && 
+            if (mutation.type === 'childList' || (mutation.type === 'attributes' &&
                 (mutation.attributeName === 'data-highlight' || 
                  mutation.attributeName === 'data-etichetta' ||
                  mutation.attributeName === 'data-supertop' ||
                  mutation.attributeName === 'data-highlightnotte' ||
                  mutation.attributeName === 'data-etichettanotte' ||
-                 mutation.attributeName === 'data-supertopnotte')) {
-                calculateTotalCost();
+                 mutation.attributeName === 'data-supertopnotte'))) {
+                queueCostCalculation();
             }
         });
     });
-    
 
-    // Observe all newpost-panel elements
-    document.querySelectorAll('.newpost-panel').forEach(panel => {
-        observer.observe(panel, {
+    const scheduleContainer = document.querySelector('#wizar-body .tab-content');
+    if (scheduleContainer) {
+        observer.observe(scheduleContainer, {
             attributes: true,
-            attributeFilter: ['data-highlight', 'data-etichetta', 'data-supertop', 
-                             'data-highlightnotte', 'data-etichettanotte', 'data-supertopnotte']
-        });
-    });
-
-    // Also observe dynamically added panels
-    const panelContainer = document.querySelector('.newpost-panel');
-    if (panelContainer) {
-        observer.observe(panelContainer, {
+            attributeFilter: ['data-highlight', 'data-etichetta', 'data-supertop',
+                              'data-highlightnotte', 'data-etichettanotte', 'data-supertopnotte'],
             childList: true,
             subtree: true
         });
@@ -1303,7 +1401,7 @@
         }
     });
     document.addEventListener('click', function(event) {
-        if (event.target.closest('.top-range-button, .top-days-button, .promoTop .btn-danger')) {
+        if (event.target.closest('.top-range-button, .top-days-button, .newpost-panel .btn-danger')) {
             setTimeout(calculateTotalCost, 0);
         }
     });
@@ -1320,10 +1418,10 @@
     toggleTableBtn.addEventListener('click', () => {
         if (costTableContainer.style.display === 'none') {
             costTableContainer.style.display = 'block';
-            toggleTableBtn.textContent = 'Nascondi dettagli per più giorni';
+            toggleTableBtn.textContent = 'Nascondi dettaglio costi';
         } else {
             costTableContainer.style.display = 'none';
-            toggleTableBtn.textContent = 'Mostra dettagli per più giorni';
+            toggleTableBtn.textContent = 'Mostra dettaglio costi';
         }
     });
 

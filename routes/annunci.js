@@ -3321,6 +3321,7 @@ async function updateCreditAnnuncio(annuncio) {
     tipiAnnuncio.tenXone = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x1") return x; });
     tipiAnnuncio.tenXthree = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x3") return x; });
     const flashSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Flash");
+    const starSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Star");
     const bakecaincontriiTopSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Top");
 
     var listino = await ctx.tblListinoPrezzi.findAll({ where: { group: annuncio.groupOwner } });
@@ -3359,7 +3360,20 @@ async function updateCreditAnnuncio(annuncio) {
             },
             defaults: { ...flashDefaults, group: annuncio.groupOwner }
         });
-        credit += Number(flashPrice.price || 0) * flashSchedules.length;
+        let flashOptions = flashPrice.optionsJson || {};
+        if (typeof flashOptions === "string") {
+            try {
+                flashOptions = JSON.parse(flashOptions);
+            } catch {
+                flashOptions = {};
+            }
+        }
+        const flashCredits = Number(flashOptions.credits ?? flashPrice.price ?? 0)
+            * flashSchedules.length;
+        const flashEuro = flashCredits * Number(
+            flashOptions.euroPerCredit || BAKECAINCONTRII_EURO_PER_CREDIT
+        );
+        credit += Number(flashEuro.toFixed(2));
     }
 
     if (bakecaincontriiTopSchedules.length > 0) {
@@ -3415,6 +3429,20 @@ async function updateCreditAnnuncio(annuncio) {
             );
             credit += Number(estimatedEuro.toFixed(2));
         }
+    }
+
+    for (const schedule of starSchedules) {
+        let period = {};
+        try {
+            period = typeof schedule.period === "string"
+                ? JSON.parse(schedule.period || "{}")
+                : (schedule.period || {});
+        } catch {
+            period = {};
+        }
+        const starCredits = (Array.isArray(period.slots) ? period.slots : [])
+            .reduce((total, slot) => total + Number(slot?.quotedCredits || 0), 0);
+        credit += Number((starCredits * BAKECAINCONTRII_EURO_PER_CREDIT).toFixed(2));
     }
     return credit;
 }

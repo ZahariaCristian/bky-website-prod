@@ -81,7 +81,11 @@ function getDefaultBakecaincontriiPrices() {
         product,
         days: 1,
         variantKey: "default",
-        optionsJson: { credits: Number(settings.credits) },
+        optionsJson: {
+            credits: Number(settings.credits),
+            unit: "credits",
+            euroPerCredit: BAKECAINCONTRII_EURO_PER_CREDIT
+        },
         price: Number(settings.price),
         standardPrice: null,
         active: true

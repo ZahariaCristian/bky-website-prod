@@ -106,72 +106,20 @@ var setValidations = (classSelector) =>{
             },
             redirect: "follow",
             referrerPolicy: "no-referrer"
-        }).then((r) => {
+        }).then(async (r) => {
             if (r.status == 401){
                 window.location.href = "/";
+                return;
             }else if(r.status !== 200) {
-                return alert("❌ Si è verificato un errore durante l'aggiornamento dei crediti.");
+                throw new Error("Impossibile aggiornare i crediti.");
             }
-            r.json().then(async (res) => {
-                res.crediti.forEach(data => loadCrediti(data));
-            });
-        });
-
-
-        fetch("/gestPagamenti/getListino", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            }
-        }).then((r) => {
-            if (r.status == 401) {
-                window.location.href = "/";
-            } else if (r.status !== 200) {
-                return alert("Error loading listino");
-            }
-            return r.json();
-        }).then(response => {
-            console.log("Raw response:", response);
-            // Handle both direct array response and wrapped response
-            const data = Array.isArray(response) ? response : 
-                        response.listino ? response.listino : 
-                        [response];
-            console.log("Data to load:", data);
-            loadListino(data);
+            const res = await r.json();
+            (res.crediti || []).forEach(data => loadCrediti(data));
         }).catch(error => {
-            console.error("Fetch error:", error);
-        });
-
-
-
-        fetch("/gestPagamenti/getListinoSuper", {
-            method: "GET",
-            mode: "cors",
-            cache: "no-cache",
-            credentials: "same-origin",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            redirect: "follow",
-            referrerPolicy: "no-referrer"
-        }).then((r) => {
+            console.error("Unable to load credits:", error);
+            alert("❌ Si è verificato un errore durante l'aggiornamento dei crediti.");
+        }).finally(() => {
             toggleLoader();
-            if (r.status == 401){
-                window.location.href = "/";
-            }else if(r.status !== 200) {
-                return alert("❌ Si è verificato un errore durante l'aggiornamento del listino Super.");
-            }
-            r.json().then(async (res) => {
-                res.listino.forEach(
-                    function(data){
-                        if (data.typeSuper == "SUPERTOP"){
-                            loadSuperTop(data);
-                        }else if(data.typeSuper == "VIDEO"){
-                            loadVideoCall(data);
-                        }
-                    }
-                );
-            });
         });
     }, 100);
  });

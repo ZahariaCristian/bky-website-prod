@@ -33,6 +33,8 @@
 
     const appendCreditInput = (tableRow, priceRow, field, label, optionField = false) => {
         const cell = document.createElement("td");
+        const wrapper = document.createElement("div");
+        const suffix = document.createElement("span");
         const input = document.createElement("input");
         const options = getOptions(priceRow);
         input.type = "number";
@@ -44,7 +46,11 @@
         input.dataset.priceField = field;
         input.dataset.optionField = optionField ? "true" : "false";
         input.setAttribute("aria-label", label);
-        cell.appendChild(input);
+        suffix.textContent = "cr";
+        wrapper.className = "bky-credit-input";
+        wrapper.appendChild(input);
+        wrapper.appendChild(suffix);
+        cell.appendChild(wrapper);
         tableRow.appendChild(cell);
     };
 
@@ -55,31 +61,59 @@
 
         priceRows.forEach((priceRow) => {
             const options = getOptions(priceRow);
+            const isNight = priceRow.variantKey === "night";
+            const isFull = priceRow.variantKey === "daytime-full";
             const row = document.createElement("tr");
             row.dataset.priceKey = getKey(priceRow);
+            if (isNight && Number(priceRow.days) === 1) row.classList.add("bky-night-start");
 
-            const label = document.createElement("td");
-            label.textContent = options.label || priceRow.variantKey;
-            row.appendChild(label);
+            const period = document.createElement("td");
+            period.className = "bky-period-cell";
+            const periodBadge = document.createElement("span");
+            periodBadge.className = `bky-period-badge${isNight ? " is-night" : ""}`;
+            const periodIcon = document.createElement("i");
+            periodIcon.className = `fa ${isNight ? "fa-moon-o" : "fa-sun-o"}`;
+            periodBadge.appendChild(periodIcon);
+            periodBadge.appendChild(document.createTextNode(isNight ? "Notte" : "Diurno"));
+            period.appendChild(periodBadge);
+            row.appendChild(period);
+
+            const mode = document.createElement("td");
+            mode.className = "bky-price-mode";
+            const modeTitle = document.createElement("span");
+            const modeDescription = document.createElement("small");
+            modeTitle.textContent = isNight
+                ? "00:00 – 06:00"
+                : (isFull ? "Fascia completa" : "Fascia oraria");
+            modeDescription.textContent = isNight
+                ? "6 ore · 10 risalite"
+                : (isFull ? "6 ore · 9 risalite" : "1 ora · 1 risalita");
+            mode.appendChild(modeTitle);
+            mode.appendChild(modeDescription);
+            row.appendChild(mode);
 
             const days = document.createElement("td");
-            days.textContent = Number(priceRow.days) === 1 ? "1 giorno" : `${priceRow.days} giorni`;
+            const daysBadge = document.createElement("span");
+            daysBadge.className = "bky-days-badge";
+            daysBadge.textContent = Number(priceRow.days) === 1 ? "1 giorno" : `${priceRow.days} giorni`;
+            days.appendChild(daysBadge);
             row.appendChild(days);
 
-            appendCreditInput(row, priceRow, "price", `Crediti Top base ${label.textContent}`);
-            appendCreditInput(row, priceRow, "superTopCredits", `Crediti Super Top ${label.textContent}`, true);
-            appendCreditInput(row, priceRow, "backgroundCredits", `Crediti sfondo ${label.textContent}`, true);
-            appendCreditInput(row, priceRow, "labelCredits", `Crediti etichetta ${label.textContent}`, true);
+            const accessibleLabel = `${isNight ? "Notte" : "Diurno"} ${priceRow.days} giorni`;
+            appendCreditInput(row, priceRow, "price", `Crediti Top base ${accessibleLabel}`);
+            appendCreditInput(row, priceRow, "superTopCredits", `Crediti Super Top ${accessibleLabel}`, true);
+            appendCreditInput(row, priceRow, "backgroundCredits", `Crediti sfondo ${accessibleLabel}`, true);
+            appendCreditInput(row, priceRow, "labelCredits", `Crediti etichetta ${accessibleLabel}`, true);
 
             const euro = document.createElement("td");
-            euro.className = "bakecaincontrii-base-euro";
+            euro.className = "bakecaincontrii-base-euro bky-price-euro";
             euro.textContent = formatEuro(priceRow.price, options.euroPerCredit);
             row.appendChild(euro);
             body.appendChild(row);
         });
 
         if (!priceRows.length) {
-            body.innerHTML = '<tr><td colspan="7" class="text-muted">Nessuna combinazione Bakecaincontrii disponibile.</td></tr>';
+            body.innerHTML = '<tr><td colspan="8" class="text-muted">Nessuna combinazione Bakecaincontrii disponibile.</td></tr>';
         }
     };
 
