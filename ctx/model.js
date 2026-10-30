@@ -780,6 +780,16 @@ var tblSchedulazioni = model.define("tblSchedulazioni",{
                 dead.setDate(dead.getDate() + 1);
                 return dead;
             }
+            if (`${this.platform || ""}`.toLowerCase() === "bakecaincontrii" && this.typeAnnuncio === "Top") {
+                let details = {};
+                try { details = JSON.parse(this.period || "{}"); } catch { details = {}; }
+                const requestedDays = Number.parseInt(details.days, 10);
+                const days = [1, 3, 7].includes(requestedDays) ? requestedDays : 1;
+                // Keep the existing Top expiry convention: the publication day plus
+                // the purchased duration, with the deadline at the following boundary.
+                dead.setDate(dead.getDate() + days + 1);
+                return dead;
+            }
             switch(this.typeAnnuncio){
                 case "Free":
                 case "Flash":

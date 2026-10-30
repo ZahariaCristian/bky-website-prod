@@ -3050,6 +3050,42 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
             slot.typePeriodic = "Star";
         }
     }
+    if (schedulePlatform === "bakecaincontrii") {
+        const topRanges = {
+            MORNING: new Set(["MORNING", "06:00 - 07:00", "07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00"]),
+            AFTERNOON: new Set(["AFTERNOON", "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00"]),
+            EVENING: new Set(["EVENING", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00", "21:00 - 22:00", "22:00 - 23:00", "23:00 - 00:00"]),
+            NIGHT: new Set(["00:00 - 06:00"])
+        };
+        for (const slots of Object.values(allSchedulazioni)) {
+            for (const slot of (Array.isArray(slots) ? slots : [])) {
+                if (slot.GCRecord || slot.typeAnnuncio !== "Top") continue;
+                let details;
+                try { details = JSON.parse(slot.period || "{}"); } catch { details = null; }
+                const range = `${details?.timeRange || ""}`.toUpperCase();
+                const timeSlot = `${details?.timeSlot || ""}`;
+                const days = Number.parseInt(details?.days, 10);
+                const climbs = Number.parseInt(details?.climbs, 10);
+                const fullRangeBundle = range !== "NIGHT" && timeSlot === range;
+                const validCommercialOptions = fullRangeBundle
+                    ? days === 1 && climbs === 9
+                    : [1, 3, 7].includes(days) && [1, 10].includes(climbs);
+                const valid = details?.product === "top" &&
+                    Boolean(topRanges[range]?.has(timeSlot)) &&
+                    validCommercialOptions;
+                if (!valid) {
+                    return res.status(422).json({
+                        code: "TOP_CONFIGURATION_INVALID",
+                        error: "Configurazione Top non valida: seleziona momento del giorno, fascia oraria, durata e numero di risalite."
+                    });
+                }
+                details.schemaVersion = 2;
+                details.slotMode = range === "NIGHT" ? "fixed-range" : (fullRangeBundle ? "full-range" : "hourly");
+                slot.period = JSON.stringify(details);
+                slot.typePeriodic = "Top";
+            }
+        }
+    }
     if (schedulePlatform === "moscarossa") {
         const allowedDurations = new Set([1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30]);
         for (const slots of Object.values(allSchedulazioni)) {

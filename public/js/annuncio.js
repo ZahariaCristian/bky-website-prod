@@ -1507,6 +1507,272 @@ const createStarScheduleEditor = () => {
     return editor;
 };
 
+const BAKECAINCONTRII_TOP_RANGES = {
+    MORNING: {
+        label: "Mattina",
+        hours: "Dalle 06:00 alle 12:00",
+        fullLabel: "Tutta la mattina",
+        slots: ["06:00 - 07:00", "07:00 - 08:00", "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00"]
+    },
+    AFTERNOON: {
+        label: "Pomeriggio",
+        hours: "Dalle 12:00 alle 18:00",
+        fullLabel: "Tutto il pomeriggio",
+        slots: ["12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00"]
+    },
+    EVENING: {
+        label: "Sera",
+        hours: "Dalle 18:00 alle 00:00",
+        fullLabel: "Tutta la sera",
+        slots: ["18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00", "21:00 - 22:00", "22:00 - 23:00", "23:00 - 00:00"]
+    },
+    NIGHT: {
+        label: "Notte",
+        hours: "Dalle 00:00 alle 06:00",
+        fullLabel: "00:00 - 06:00",
+        slots: []
+    }
+};
+
+const inferBakecaincontriiTopRange = (slot = "") => {
+    if (["MORNING", "AFTERNOON", "EVENING", "NIGHT"].includes(`${slot}`)) return `${slot}`;
+    const start = Number.parseInt(`${slot}`.match(/^(\d{1,2}):/)?.[1], 10);
+    if (!Number.isFinite(start) || start < 6) return "NIGHT";
+    if (start < 12) return "MORNING";
+    if (start < 18) return "AFTERNOON";
+    return "EVENING";
+};
+
+const normalizeBakecaincontriiTopPeriod = (rawPeriod, typeAnnuncio = "Top") => {
+    let parsed = {};
+    try {
+        const value = typeof rawPeriod === "string" ? JSON.parse(rawPeriod) : rawPeriod;
+        if (value && !Array.isArray(value) && typeof value === "object") parsed = value;
+    } catch {}
+
+    const legacy = `${typeAnnuncio || ""}`.trim().match(/^(1|10)x(1|3|7)$/i);
+    const legacySlot = typeof rawPeriod === "string" && !Object.keys(parsed).length ? rawPeriod.trim() : "";
+    const timeSlot = `${parsed.timeSlot || legacySlot || "MORNING"}`.trim();
+    const timeRange = `${parsed.timeRange || inferBakecaincontriiTopRange(timeSlot)}`.toUpperCase();
+    const normalizedRange = BAKECAINCONTRII_TOP_RANGES[timeRange] ? timeRange : "MORNING";
+    const normalizedSlot = normalizedRange === "NIGHT" ? "00:00 - 06:00" : timeSlot;
+    const isFullRangeBundle = normalizedRange !== "NIGHT" && normalizedSlot === normalizedRange;
+    const requestedDays = Number.parseInt(parsed.days ?? legacy?.[2] ?? 1, 10);
+    const requestedClimbs = Number.parseInt(parsed.climbs ?? legacy?.[1] ?? 1, 10);
+    return {
+        schemaVersion: 2,
+        product: "top",
+        timeRange: normalizedRange,
+        timeSlot: normalizedSlot,
+        slotMode: normalizedRange === "NIGHT"
+            ? "fixed-range"
+            : (isFullRangeBundle ? "full-range" : "hourly"),
+        days: isFullRangeBundle ? 1 : ([1, 3, 7].includes(requestedDays) ? requestedDays : 1),
+        climbs: isFullRangeBundle ? 9 : ([1, 10].includes(requestedClimbs) ? requestedClimbs : 1)
+    };
+};
+
+const syncBakecaincontriiTopExtras = (panel) => {
+    const editor = panel.querySelector(".bakecaincontrii-top-editor");
+    if (!editor) return;
+    const values = {
+        premium: editor.querySelector(".top-extra-supertop")?.checked || false,
+        highlight: editor.querySelector(".top-extra-highlight")?.checked || false,
+        etichetta: editor.querySelector(".top-extra-label")?.checked || false
+    };
+    Object.entries(values).forEach(([name, value]) => {
+        $(panel).data(name, value);
+        $(panel).attr(`data-${name}`, value);
+    });
+    const all = editor.querySelector(".top-extra-all");
+    if (all) all.checked = Object.values(values).every(Boolean);
+};
+
+const refreshBakecaincontriiTopSlots = (editor, preferredSlot = "") => {
+    const range = editor.querySelector(".top-range-button.active")?.dataset.range || "MORNING";
+    const definition = BAKECAINCONTRII_TOP_RANGES[range];
+    const select = editor.querySelector(".top-slot-select");
+    const fixed = editor.querySelector(".top-night-slot");
+    if (range === "NIGHT") {
+        select.hidden = true;
+        fixed.hidden = false;
+        fixed.textContent = definition.fullLabel;
+        return;
+    }
+    fixed.hidden = true;
+    select.hidden = false;
+    select.innerHTML = [
+        `<option value="${range}">${definition.fullLabel}</option>`,
+        ...definition.slots.map((slot) => `<option value="${slot}">${slot}</option>`)
+    ].join("");
+    select.value = [...select.options].some((option) => option.value === preferredSlot)
+        ? preferredSlot
+        : range;
+};
+
+const selectBakecaincontriiTopButton = (editor, selector, value, dataName) => {
+    editor.querySelectorAll(selector).forEach((button) => {
+        const selected = `${button.dataset[dataName]}` === `${value}`;
+        button.classList.toggle("active", selected);
+        button.classList.toggle("btn-info", selected);
+        button.classList.toggle("btn-default", !selected);
+    });
+};
+
+const applyBakecaincontriiTopBundleRules = (editor) => {
+    const range = editor.querySelector(".top-range-button.active")?.dataset.range || "MORNING";
+    const selectedSlot = range === "NIGHT" ? "00:00 - 06:00" : editor.querySelector(".top-slot-select")?.value;
+    const isFullRangeBundle = range !== "NIGHT" && selectedSlot === range;
+    editor.querySelectorAll(".top-days-button").forEach((button) => {
+        button.hidden = isFullRangeBundle && button.dataset.days !== "1";
+    });
+    editor.querySelectorAll(".top-climbs-button").forEach((button) => {
+        button.hidden = isFullRangeBundle ? button.dataset.climbs !== "9" : button.dataset.climbs === "9";
+    });
+    const bundleNote = editor.querySelector(".top-full-range-bundle");
+    if (bundleNote) {
+        bundleNote.hidden = !isFullRangeBundle;
+        bundleNote.textContent = isFullRangeBundle
+            ? `${BAKECAINCONTRII_TOP_RANGES[range].fullLabel} · 9 risalite in 6 ore · durata 1 giorno`
+            : "";
+    }
+    if (isFullRangeBundle) {
+        selectBakecaincontriiTopButton(editor, ".top-days-button", 1, "days");
+        selectBakecaincontriiTopButton(editor, ".top-climbs-button", 9, "climbs");
+    } else {
+        const activeDays = editor.querySelector(".top-days-button.active:not([hidden])")?.dataset.days || 1;
+        const activeClimbs = editor.querySelector(".top-climbs-button.active:not([hidden])")?.dataset.climbs || 1;
+        selectBakecaincontriiTopButton(editor, ".top-days-button", activeDays, "days");
+        selectBakecaincontriiTopButton(editor, ".top-climbs-button", activeClimbs, "climbs");
+    }
+};
+
+const createBakecaincontriiTopScheduleEditor = (panel) => {
+    const editor = document.createElement("div");
+    editor.className = "bakecaincontrii-top-editor alert alert-info";
+    editor.style.margin = "10px 0 0";
+    editor.innerHTML = `
+        <div style="font-weight:600; margin-bottom:8px;">Configura la tua promo Top</div>
+        <small class="text-muted">Scegli quando comparire tra i primi risultati.</small>
+        <div style="font-weight:600; margin:12px 0 6px;">Momento del giorno</div>
+        <div class="top-range-buttons" style="display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:8px;">
+            ${Object.entries(BAKECAINCONTRII_TOP_RANGES).map(([value, item]) => `
+                <button type="button" class="btn btn-default top-range-button" data-range="${value}" style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>${item.label}</strong><small>${item.hours}</small>
+                </button>`).join("")}
+        </div>
+        <div style="font-weight:600; margin:12px 0 6px;">Fascia oraria</div>
+        <select class="form-control top-slot-select"></select>
+        <div class="form-control top-night-slot" hidden style="height:auto; background:#eef6ff;"></div>
+        <div class="top-full-range-bundle text-success" hidden style="margin-top:8px; font-weight:600;"></div>
+        <div style="font-weight:600; margin:12px 0 6px;">Durata promo (giorni)</div>
+        <div class="top-days-buttons">
+            ${[1, 3, 7].map((days) => `<button type="button" class="btn btn-default top-days-button" data-days="${days}" style="margin-right:8px;">${days}</button>`).join("")}
+        </div>
+        <div style="font-weight:600; margin:12px 0 6px;">Numero di risalite</div>
+        <div class="top-climbs-buttons">
+            ${[1, 9, 10].map((climbs) => `<button type="button" class="btn btn-default top-climbs-button" data-climbs="${climbs}" style="margin-right:8px;">${climbs}</button>`).join("")}
+        </div>
+        <div style="font-weight:600; margin:16px 0 4px;">Extra</div>
+        <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo durante la pubblicazione.</small>
+        <div class="top-extra-options" style="margin-top:8px;">
+            <label style="display:block;"><input type="checkbox" class="top-extra-all"> <strong>Seleziona tutto</strong></label>
+            <label style="display:block;"><input type="checkbox" class="top-extra-supertop"> Super Top</label>
+            <label style="display:block;"><input type="checkbox" class="top-extra-highlight"> Sfondo colorato</label>
+            <label style="display:block;"><input type="checkbox" class="top-extra-label"> Etichetta “Novità”</label>
+        </div>`;
+
+    selectBakecaincontriiTopButton(editor, ".top-range-button", "MORNING", "range");
+    selectBakecaincontriiTopButton(editor, ".top-days-button", 1, "days");
+    selectBakecaincontriiTopButton(editor, ".top-climbs-button", 9, "climbs");
+    refreshBakecaincontriiTopSlots(editor, "MORNING");
+    applyBakecaincontriiTopBundleRules(editor);
+
+    editor.querySelectorAll(".top-range-button").forEach((button) => button.addEventListener("click", () => {
+        selectBakecaincontriiTopButton(editor, ".top-range-button", button.dataset.range, "range");
+        refreshBakecaincontriiTopSlots(editor, button.dataset.range);
+        applyBakecaincontriiTopBundleRules(editor);
+        markSchedulePanelEdited(editor);
+    }));
+    editor.querySelectorAll(".top-days-button").forEach((button) => button.addEventListener("click", () => {
+        selectBakecaincontriiTopButton(editor, ".top-days-button", button.dataset.days, "days");
+        markSchedulePanelEdited(editor);
+    }));
+    editor.querySelectorAll(".top-climbs-button").forEach((button) => button.addEventListener("click", () => {
+        selectBakecaincontriiTopButton(editor, ".top-climbs-button", button.dataset.climbs, "climbs");
+        markSchedulePanelEdited(editor);
+    }));
+    editor.querySelector(".top-slot-select").addEventListener("change", () => {
+        applyBakecaincontriiTopBundleRules(editor);
+        markSchedulePanelEdited(editor);
+    });
+    editor.querySelector(".top-extra-all").addEventListener("change", (event) => {
+        editor.querySelectorAll(".top-extra-supertop, .top-extra-highlight, .top-extra-label")
+            .forEach((input) => { input.checked = event.target.checked; });
+        syncBakecaincontriiTopExtras(panel);
+        markSchedulePanelEdited(editor);
+    });
+    editor.querySelectorAll(".top-extra-supertop, .top-extra-highlight, .top-extra-label")
+        .forEach((input) => input.addEventListener("change", () => {
+            syncBakecaincontriiTopExtras(panel);
+            markSchedulePanelEdited(editor);
+        }));
+    return editor;
+};
+
+const getBakecaincontriiTopPeriodFromPanel = (panel) => {
+    const editor = panel.querySelector(".bakecaincontrii-top-editor");
+    const timeRange = editor?.querySelector(".top-range-button.active")?.dataset.range || "MORNING";
+    const timeSlot = timeRange === "NIGHT"
+        ? "00:00 - 06:00"
+        : (editor?.querySelector(".top-slot-select")?.value || "06:00 - 07:00");
+    return normalizeBakecaincontriiTopPeriod({
+        timeRange,
+        timeSlot,
+        days: Number(editor?.querySelector(".top-days-button.active")?.dataset.days || 1),
+        climbs: Number(editor?.querySelector(".top-climbs-button.active")?.dataset.climbs || 1)
+    }, "Top");
+};
+
+const restoreBakecaincontriiTopPeriod = (panel, rawPeriod, typeAnnuncio = "Top", extras = {}) => {
+    const editor = panel.querySelector(".bakecaincontrii-top-editor");
+    if (!editor) return;
+    const period = normalizeBakecaincontriiTopPeriod(rawPeriod, typeAnnuncio);
+    selectBakecaincontriiTopButton(editor, ".top-range-button", period.timeRange, "range");
+    refreshBakecaincontriiTopSlots(editor, period.timeSlot);
+    applyBakecaincontriiTopBundleRules(editor);
+    selectBakecaincontriiTopButton(editor, ".top-days-button", period.days, "days");
+    selectBakecaincontriiTopButton(editor, ".top-climbs-button", period.climbs, "climbs");
+    editor.querySelector(".top-extra-supertop").checked = Boolean(extras.premium);
+    editor.querySelector(".top-extra-highlight").checked = Boolean(extras.highlight);
+    editor.querySelector(".top-extra-label").checked = Boolean(extras.etichetta);
+    syncBakecaincontriiTopExtras(panel);
+};
+
+const setupBakecaincontriiTopPanel = () => {
+    if (CURRENT_PANEL !== "bakecaincontrii" || document.querySelector("#tabTop")) return;
+    const navigation = document.querySelector(".promoType ul");
+    const content = document.querySelector("#wizar-body .tab-content");
+    if (!navigation || !content) return;
+    ["tab1x1", "tab1x3", "tab1x7", "tab10x1", "tab10x3", "tab10x7"].forEach((id) => {
+        document.querySelector(`a[href="#${id}"]`)?.closest("li")?.setAttribute("hidden", "hidden");
+        document.querySelector(`#${id}`)?.setAttribute("hidden", "hidden");
+    });
+    const item = document.createElement("li");
+    item.className = "bakecaincontrii-only";
+    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#d9f2ff;">Top</a>';
+    const flashItem = navigation.querySelector('a[href="#tabFlash"]')?.closest("li");
+    navigation.insertBefore(item, flashItem || null);
+
+    const panel = document.createElement("div");
+    panel.className = "promoPanel promoTop tab-pane animated fadeInUp";
+    panel.id = "tabTop";
+    panel.innerHTML = '<div class="posts"><div class="post-list"></div><button class="btn btn-primary" type="button"><span><b><i class="fa fa-plus"></i></b></span></button></div>';
+    content.insertBefore(panel, document.querySelector("#tabFlash") || null);
+};
+
+setupBakecaincontriiTopPanel();
+
 const postsPanelOperations = (panel) => {
     panel.querySelector(".btn-primary").addEventListener("click", () => {
         enableScheduleUpdate();
@@ -1702,7 +1968,8 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(delButton);
         newPost.appendChild(picsButton);
         const isStar = Boolean(panel.closest(".promoStar"));
-        if (!isStar) {
+        const isBakecaincontriiTop = Boolean(panel.closest(".promoTop"));
+        if (!isStar && !isBakecaincontriiTop) {
             newPost.appendChild(btnPremium);
             newPost.appendChild(btnHighlight);
             newPost.appendChild(btnEtichetta);
@@ -1712,6 +1979,7 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
         if (isStar) newPostPanel.appendChild(createStarScheduleEditor());
+        if (isBakecaincontriiTop) newPostPanel.appendChild(createBakecaincontriiTopScheduleEditor(newPostPanel));
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
     });
@@ -3040,7 +3308,7 @@ function restoreStarPeriod(panel, rawPeriod) {
 function getSelectedDayPubs(currentDate) {
     let result = [];
     let i = 0;
-    ["Free", "Flash", "Star", "10x1", "10x3", "10x7"].forEach(promoType => {
+    ["Free", "Flash", "Star", "Top", "10x1", "10x3", "10x7"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
             let typeData = {};
             typeData.typeAnnuncio = promoType;
@@ -3049,6 +3317,8 @@ function getSelectedDayPubs(currentDate) {
                 typeData.period = JSON.stringify({ product: "flash" });
             } else if (promoType === "Star") {
                 typeData.period = JSON.stringify(getStarPeriodFromPanel(panel));
+            } else if (promoType === "Top") {
+                typeData.period = JSON.stringify(getBakecaincontriiTopPeriodFromPanel(panel));
             }
             typeData.hasPremium = $(panel).data("premium");
             typeData.hasVideo = $(panel).data("cam");
@@ -3192,11 +3462,19 @@ function clearPubsViews() {
 };
 
 function loadDayData(pubs) {
-    // Process Free, 10x1, 10x3, 10x7 promo types (unchanged)
-    ["Free", "Flash", "Star", "10x1", "10x3", "10x7"].forEach(promoType => {
+    // New Bakecaincontrii Top rows and legacy 1x*/10x* rows share the same editor.
+    const legacyBakecaincontriiTopTypes = new Set(["1x1", "1x3", "1x7", "10x1", "10x3", "10x7"]);
+    ["Free", "Flash", "Star", "Top", "10x1", "10x3", "10x7"].forEach(promoType => {
         pubs
             .filter(x => !x.GCRecord)
-            .filter(x => x.typeAnnuncio === promoType)
+            .filter((announcement) => {
+                if (CURRENT_PANEL !== "bakecaincontrii") return announcement.typeAnnuncio === promoType;
+                if (promoType === "Top") {
+                    return announcement.typeAnnuncio === "Top" || legacyBakecaincontriiTopTypes.has(announcement.typeAnnuncio);
+                }
+                if (legacyBakecaincontriiTopTypes.has(promoType)) return false;
+                return announcement.typeAnnuncio === promoType;
+            })
             .forEach(announcement => {
                 if (announcement.status !== undefined && announcement.status !== "pending") return;
 
@@ -3207,12 +3485,19 @@ function loadDayData(pubs) {
                 announcement.time = announcement.data.split("T")[1].split(":00.")[0];
                 panel.find(".schedule-time-input").val(announcement.time);
                 if (promoType === "Star") restoreStarPeriod(panel[0], announcement.period);
+                if (promoType === "Top") {
+                    restoreBakecaincontriiTopPeriod(panel[0], announcement.period, announcement.typeAnnuncio, {
+                        premium: announcement.hasPremium,
+                        highlight: announcement.hasHighlight,
+                        etichetta: announcement.hasEtichetta
+                    });
+                }
 
                 panel.attr("data-city", announcement.city);
-                panel.find("select").val(announcement.city);
+                panel.find(".newpost-wrapper select").val(announcement.city);
                 panel.attr("data-state", announcement.state);
 
-                if (promoType !== "Free" && promoType !== "Star") {
+                if (promoType !== "Free" && promoType !== "Star" && promoType !== "Top") {
                     if (announcement.hasPremium) togglePremiumCam(panel.find(".btnPremium"), true);
                     if (announcement.hasVideo) togglePremiumCam(panel.find(".btnCam"), false);
                     if (announcement.hasHighlight) togglePremiumCam(panel.find(".btnHighlight"), false, true);
@@ -3244,6 +3529,7 @@ function loadDayData(pubs) {
     // Get relevant announcements for this promo and time
     const relevantAnnouncements = pubs
       .filter(x => !x.GCRecord)
+      .filter(() => CURRENT_PANEL !== "bakecaincontrii")
       .filter(x => x.typeAnnuncio === promoType &&
                    x.period === timeslotLabel &&
                    (x.status === undefined || x.status === "pending"));
@@ -3403,6 +3689,22 @@ function updateSchedule() {
         starWithoutImages.scrollIntoView({ behavior: "smooth", block: "center" });
         starWithoutImages.querySelector(".btnPhoto")?.focus();
         return alert("La promozione Star richiede almeno una foto. Apri la selezione foto e scegli almeno un'immagine.");
+    }
+    const invalidTopPanel = [...document.querySelectorAll(".promoTop .newpost-panel")].find((panel) => {
+        if (!schedulePanelNeedsValidation(panel)) return false;
+        const details = getBakecaincontriiTopPeriodFromPanel(panel);
+        const fullRangeBundle = details.slotMode === "full-range";
+        return details.product !== "top" ||
+            !BAKECAINCONTRII_TOP_RANGES[details.timeRange] ||
+            (fullRangeBundle
+                ? details.days !== 1 || details.climbs !== 9
+                : ![1, 3, 7].includes(details.days) || ![1, 10].includes(details.climbs)) ||
+            !details.timeSlot;
+    });
+    if (invalidTopPanel) {
+        document.querySelector('a[href="#tabTop"]')?.click();
+        invalidTopPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+        return alert("Completa la configurazione Top: momento del giorno, fascia oraria, durata e numero di risalite.");
     }
     pubs[currentDay] = getSelectedDayPubs();
     const phone = document.querySelector("input[name='phone']").value;
