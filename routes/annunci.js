@@ -3065,11 +3065,10 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 const range = `${details?.timeRange || ""}`.toUpperCase();
                 const timeSlot = `${details?.timeSlot || ""}`;
                 const days = Number.parseInt(details?.days, 10);
-                const climbs = Number.parseInt(details?.climbs, 10);
                 const fullRangeBundle = range !== "NIGHT" && timeSlot === range;
                 const validCommercialOptions = fullRangeBundle
-                    ? days === 1 && climbs === 9
-                    : [1, 3, 7].includes(days) && [1, 10].includes(climbs);
+                    ? days === 1
+                    : [1, 3, 7].includes(days);
                 const valid = details?.product === "top" &&
                     Boolean(topRanges[range]?.has(timeSlot)) &&
                     validCommercialOptions;
@@ -3081,6 +3080,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 }
                 details.schemaVersion = 2;
                 details.slotMode = range === "NIGHT" ? "fixed-range" : (fullRangeBundle ? "full-range" : "hourly");
+                details.climbs = null;
                 slot.period = JSON.stringify(details);
                 slot.typePeriodic = "Top";
             }
