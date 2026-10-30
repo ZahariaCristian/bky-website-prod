@@ -219,6 +219,134 @@ label[for="age"] {
 .btn-anteprima div {
     transform: translate(-3px, -5px) scale(1.25);
 }
+
+.bakecaincontrii-top-editor {
+    margin: 10px 0 0;
+    padding: 16px;
+    color: #333;
+    background: #fff;
+    border: 1px solid #dfe4e8;
+    border-radius: 6px;
+}
+
+.bakecaincontrii-top-editor .top-editor-title {
+    margin-bottom: 14px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.bakecaincontrii-top-editor .top-section-label {
+    margin: 14px 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+.bakecaincontrii-top-editor .top-range-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.bakecaincontrii-top-editor .top-range-button.btn {
+    display: flex;
+    min-height: 40px;
+    padding: 8px 10px;
+    align-items: center;
+    justify-content: space-between;
+    color: #444;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #d7dde2;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.bakecaincontrii-top-editor .top-range-button small {
+    margin-left: 12px;
+    color: #777;
+    font-weight: 400;
+}
+
+.bakecaincontrii-top-editor .top-range-button.btn-info,
+.bakecaincontrii-top-editor .top-range-button.active {
+    color: #1769aa;
+    background: #f2f8fd;
+    border-color: #4b9fe1;
+}
+
+.bakecaincontrii-top-editor .top-slot-select,
+.bakecaincontrii-top-editor .top-night-slot {
+    height: 38px;
+    padding: 8px 10px;
+    background: #fff;
+    border-color: #d7dde2;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.bakecaincontrii-top-editor .top-night-slot {
+    display: none;
+    line-height: 20px;
+}
+
+.bakecaincontrii-top-editor .top-full-range-bundle {
+    margin-top: 8px;
+    padding: 7px 9px;
+    color: #31724a;
+    font-size: 12px;
+    background: #f2faf5;
+    border-radius: 4px;
+}
+
+.bakecaincontrii-top-editor .top-full-range-bundle[hidden] {
+    display: none !important;
+}
+
+.bakecaincontrii-top-editor .top-days-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.bakecaincontrii-top-editor .top-days-button.btn {
+    min-width: 44px;
+    padding: 7px 12px;
+    color: #444;
+    background: #fff;
+    border-color: #d7dde2;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.bakecaincontrii-top-editor .top-days-button.btn-info,
+.bakecaincontrii-top-editor .top-days-button.active {
+    color: #1769aa;
+    background: #f2f8fd;
+    border-color: #4b9fe1;
+}
+
+.bakecaincontrii-top-editor .top-extra-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.bakecaincontrii-top-editor .top-extra-options label {
+    margin: 0;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 400;
+    background: #f7f8f9;
+    border: 1px solid #e2e5e8;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.bakecaincontrii-top-editor .top-extra-options input {
+    margin: 0 5px 0 0;
+    vertical-align: -2px;
+}
+
 @media (max-width: 991px) {
     #txtTitle{
         height: 4em;
@@ -226,6 +354,9 @@ label[for="age"] {
 }
 
 @media screen and (max-width: 767px){
+   .bakecaincontrii-top-editor .top-range-buttons {
+       grid-template-columns: 1fr;
+   }
    .post-pics{
        min-width: 380px !important;   
     }

@@ -1594,12 +1594,22 @@ const refreshBakecaincontriiTopSlots = (editor, preferredSlot = "") => {
     const fixed = editor.querySelector(".top-night-slot");
     if (range === "NIGHT") {
         select.hidden = true;
+        select.disabled = true;
+        select.style.display = "none";
+        select.setAttribute("aria-hidden", "true");
         fixed.hidden = false;
+        fixed.style.display = "block";
+        fixed.setAttribute("aria-hidden", "false");
         fixed.textContent = definition.fullLabel;
         return;
     }
     fixed.hidden = true;
+    fixed.style.display = "none";
+    fixed.setAttribute("aria-hidden", "true");
     select.hidden = false;
+    select.disabled = false;
+    select.style.display = "block";
+    select.setAttribute("aria-hidden", "false");
     select.innerHTML = [
         `<option value="${range}">${definition.fullLabel}</option>`,
         ...definition.slots.map((slot) => `<option value="${slot}">${slot}</option>`)
@@ -1642,33 +1652,30 @@ const applyBakecaincontriiTopBundleRules = (editor) => {
 
 const createBakecaincontriiTopScheduleEditor = (panel) => {
     const editor = document.createElement("div");
-    editor.className = "bakecaincontrii-top-editor alert alert-info";
-    editor.style.margin = "10px 0 0";
+    editor.className = "bakecaincontrii-top-editor";
     editor.innerHTML = `
-        <div style="font-weight:600; margin-bottom:8px;">Configura la tua promo Top</div>
-        <small class="text-muted">Scegli quando comparire tra i primi risultati.</small>
-        <div style="font-weight:600; margin:12px 0 6px;">Momento del giorno</div>
-        <div class="top-range-buttons" style="display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:8px;">
+        <div class="top-editor-title">Configura la tua promo Top</div>
+        <div class="top-section-label">Momento del giorno</div>
+        <div class="top-range-buttons">
             ${Object.entries(BAKECAINCONTRII_TOP_RANGES).map(([value, item]) => `
-                <button type="button" class="btn btn-default top-range-button" data-range="${value}" style="display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="btn btn-default top-range-button" data-range="${value}">
                     <strong>${item.label}</strong><small>${item.hours}</small>
                 </button>`).join("")}
         </div>
-        <div style="font-weight:600; margin:12px 0 6px;">Fascia oraria</div>
+        <div class="top-section-label">Fascia oraria</div>
         <select class="form-control top-slot-select"></select>
-        <div class="form-control top-night-slot" hidden style="height:auto; background:#eef6ff;"></div>
-        <div class="top-full-range-bundle text-success" hidden style="margin-top:8px; font-weight:600;"></div>
-        <div style="font-weight:600; margin:12px 0 6px;">Durata promo (giorni)</div>
+        <div class="form-control top-night-slot" hidden aria-hidden="true"></div>
+        <div class="top-full-range-bundle" hidden></div>
+        <div class="top-section-label">Durata promo (giorni)</div>
         <div class="top-days-buttons">
-            ${[1, 3, 7].map((days) => `<button type="button" class="btn btn-default top-days-button" data-days="${days}" style="margin-right:8px;">${days}</button>`).join("")}
+            ${[1, 3, 7].map((days) => `<button type="button" class="btn btn-default top-days-button" data-days="${days}">${days}</button>`).join("")}
         </div>
-        <div style="font-weight:600; margin:16px 0 4px;">Extra</div>
-        <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo durante la pubblicazione.</small>
-        <div class="top-extra-options" style="margin-top:8px;">
-            <label style="display:block;"><input type="checkbox" class="top-extra-all"> <strong>Seleziona tutto</strong></label>
-            <label style="display:block;"><input type="checkbox" class="top-extra-supertop"> Super Top</label>
-            <label style="display:block;"><input type="checkbox" class="top-extra-highlight"> Sfondo colorato</label>
-            <label style="display:block;"><input type="checkbox" class="top-extra-label"> Etichetta “Novità”</label>
+        <div class="top-section-label">Extra</div>
+        <div class="top-extra-options">
+            <label><input type="checkbox" class="top-extra-all"> <strong>Seleziona tutto</strong></label>
+            <label><input type="checkbox" class="top-extra-supertop"> Super Top</label>
+            <label><input type="checkbox" class="top-extra-highlight"> Sfondo colorato</label>
+            <label><input type="checkbox" class="top-extra-label"> Etichetta “Novità”</label>
         </div>`;
 
     selectBakecaincontriiTopButton(editor, ".top-range-button", "MORNING", "range");
