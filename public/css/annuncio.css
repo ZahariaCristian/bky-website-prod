@@ -229,6 +229,10 @@ label[for="age"] {
     border-radius: 6px;
 }
 
+.promoTop .newpost-panel {
+    padding: 15px 0;
+}
+
 .bakecaincontrii-top-editor .top-editor-title {
     margin-bottom: 14px;
     font-size: 16px;
