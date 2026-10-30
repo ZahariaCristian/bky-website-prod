@@ -1633,7 +1633,10 @@ const applyBakecaincontriiTopBundleRules = (editor) => {
     const selectedSlot = range === "NIGHT" ? "00:00 - 06:00" : editor.querySelector(".top-slot-select")?.value;
     const isFullRangeBundle = range !== "NIGHT" && selectedSlot === range;
     editor.querySelectorAll(".top-days-button").forEach((button) => {
-        button.hidden = isFullRangeBundle && button.dataset.days !== "1";
+        const unavailable = isFullRangeBundle && button.dataset.days !== "1";
+        button.hidden = unavailable;
+        button.disabled = unavailable;
+        button.style.display = unavailable ? "none" : "inline-block";
     });
     const bundleNote = editor.querySelector(".top-full-range-bundle");
     if (bundleNote) {
@@ -1666,9 +1669,11 @@ const createBakecaincontriiTopScheduleEditor = (panel) => {
         <select class="form-control top-slot-select"></select>
         <div class="form-control top-night-slot" hidden aria-hidden="true"></div>
         <div class="top-full-range-bundle" hidden></div>
-        <div class="top-section-label">Durata promo (giorni)</div>
-        <div class="top-days-buttons">
-            ${[1, 3, 7].map((days) => `<button type="button" class="btn btn-default top-days-button" data-days="${days}">${days}</button>`).join("")}
+        <div class="top-duration-row">
+            <div class="top-section-label top-duration-label">Durata promo (giorni)</div>
+            <div class="top-days-buttons">
+                ${[1, 3, 7].map((days) => `<button type="button" class="btn btn-default top-days-button" data-days="${days}">${days}</button>`).join("")}
+            </div>
         </div>
         <div class="top-section-label">Extra</div>
         <div class="top-extra-options">
@@ -1745,7 +1750,7 @@ const setupBakecaincontriiTopPanel = () => {
     if (!navigation || !content) return;
     const item = document.createElement("li");
     item.className = "bakecaincontrii-only";
-    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#d9f2ff;">Top</a>';
+    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#d9534f; color:#fff;">Top</a>';
     const flashItem = navigation.querySelector('a[href="#tabFlash"]')?.closest("li");
     navigation.insertBefore(item, flashItem || null);
 

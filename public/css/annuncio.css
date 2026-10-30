@@ -308,6 +308,18 @@ label[for="age"] {
     gap: 8px;
 }
 
+.bakecaincontrii-top-editor .top-duration-row {
+    display: flex;
+    margin-top: 14px;
+    align-items: center;
+    gap: 12px;
+}
+
+.bakecaincontrii-top-editor .top-duration-label {
+    margin: 0;
+    white-space: nowrap;
+}
+
 .bakecaincontrii-top-editor .top-days-button.btn {
     min-width: 44px;
     padding: 7px 12px;
@@ -356,6 +368,11 @@ label[for="age"] {
 @media screen and (max-width: 767px){
    .bakecaincontrii-top-editor .top-range-buttons {
        grid-template-columns: 1fr;
+   }
+   .bakecaincontrii-top-editor .top-duration-row {
+       align-items: flex-start;
+       flex-direction: column;
+       gap: 6px;
    }
    .post-pics{
        min-width: 380px !important;   
