@@ -36,6 +36,9 @@ const defaultAmasensPrices = getDefaultAmasensPrices();
 const defaultMoscarossaPrices = getDefaultMoscarossaPrices();
 const trovagnoccaPriceDefinitions = getTrovagnoccaPriceDefinitions();
 const defaultBakecaincontriiPrices = getDefaultBakecaincontriiPrices();
+const defaultBakecaincontriiTopPrices = defaultBakecaincontriiPrices.filter(
+    (row) => row.product === "top"
+);
 const validIncontriamociPriceKeys = new Set(
     defaultIncontriamociPrices.map(getPlatformPriceKey)
 );
@@ -50,6 +53,9 @@ const validMoscarossaPriceKeys = new Set(
 );
 const validTrovagnoccaPriceKeys = new Set(
     trovagnoccaPriceDefinitions.map(getPlatformPriceKey)
+);
+const validBakecaincontriiTopPriceKeys = new Set(
+    defaultBakecaincontriiTopPrices.map(getPlatformPriceKey)
 );
 let platformPriceTablePromise;
 
@@ -233,6 +239,51 @@ const normalizeTrovagnoccaPrice = (row = {}) => {
     }
 
     return normalized;
+};
+
+const normalizeBakecaincontriiTopPrice = (row = {}) => {
+    const candidate = {
+        platform: BAKECAINCONTRII_PLATFORM,
+        product: "top",
+        days: Number(row.days),
+        variantKey: `${row.variantKey || ""}`
+    };
+    const definition = defaultBakecaincontriiTopPrices.find(
+        (item) => getPlatformPriceKey(item) === getPlatformPriceKey(candidate)
+    );
+    if (!definition || !validBakecaincontriiTopPriceKeys.has(getPlatformPriceKey(candidate))) {
+        throw new Error("Invalid Bakecaincontrii Top price combination.");
+    }
+
+    let submittedOptions = row.optionsJson || {};
+    if (typeof submittedOptions === "string") {
+        try {
+            submittedOptions = JSON.parse(submittedOptions);
+        } catch {
+            submittedOptions = {};
+        }
+    }
+    const price = Number(row.price);
+    const optionCredits = {
+        superTopCredits: Number(submittedOptions.superTopCredits),
+        backgroundCredits: Number(submittedOptions.backgroundCredits),
+        labelCredits: Number(submittedOptions.labelCredits)
+    };
+    const values = [price, ...Object.values(optionCredits)];
+    if (values.some((value) => !Number.isInteger(value) || value < 0)) {
+        throw new Error("Bakecaincontrii prices must be non-negative whole credit values.");
+    }
+
+    return {
+        ...candidate,
+        optionsJson: {
+            ...definition.optionsJson,
+            ...optionCredits
+        },
+        price,
+        standardPrice: null,
+        active: true
+    };
 };
 
 const seedPlatformPrices = async (group, platform, defaults) => {
@@ -467,11 +518,92 @@ router.get("/getListino", authenticateKey, async (req, res) => {
             active: true
         }
     });
+    const bakecaincontriiPrices = await findPlatformPrices(
+        groupM.group,
+        BAKECAINCONTRII_PLATFORM
+    );
 
     res.json({
         listino: listino,
-        flashPrice: flashPrice ? Number(flashPrice.price) : 45
+        flashPrice: flashPrice ? Number(flashPrice.price) : 45,
+        bakecaincontriiPrices
     });
+});
+
+router.get("/getBakecaincontriiPrices", authenticateKey, async (req, res) => {
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        await seedPlatformPrices(
+            group,
+            BAKECAINCONTRII_PLATFORM,
+            defaultBakecaincontriiPrices
+        );
+        const prices = (await findPlatformPrices(group, BAKECAINCONTRII_PLATFORM))
+            .filter((row) => row.product === "top");
+        res.json({ definitions: defaultBakecaincontriiTopPrices, prices });
+    } catch (error) {
+        console.error("Unable to load Bakecaincontrii prices:", error);
+        res.status(500).json({ error: "Unable to load Bakecaincontrii prices." });
+    }
+});
+
+router.post("/updateBakecaincontriiPrices", authenticateKey, async (req, res) => {
+    if (
+        !Array.isArray(req.body.rows) ||
+        req.body.rows.length === 0 ||
+        req.body.rows.length > defaultBakecaincontriiTopPrices.length
+    ) {
+        return res.status(400).json({ error: "A valid Bakecaincontrii price list is required." });
+    }
+
+    try {
+        await ensurePlatformPriceTable();
+        const group = await getRequestGroupId(req);
+        if (!group) return res.status(404).json({ error: "Group not found." });
+        const rows = Array.from(new Map(
+            req.body.rows
+                .map(normalizeBakecaincontriiTopPrice)
+                .map((row) => [getPlatformPriceKey(row), row])
+        ).values());
+
+        await ctx.model.transaction(async (transaction) => {
+            for (const row of rows) {
+                const where = {
+                    group,
+                    platform: row.platform,
+                    product: row.product,
+                    days: row.days,
+                    variantKey: row.variantKey
+                };
+                const [price] = await ctx.tblPlatformPrices.findOrCreate({
+                    where,
+                    defaults: { ...where, ...row },
+                    transaction
+                });
+                await price.update({
+                    optionsJson: row.optionsJson,
+                    price: row.price,
+                    standardPrice: null,
+                    active: true
+                }, { transaction });
+            }
+        });
+
+        const prices = (await findPlatformPrices(group, BAKECAINCONTRII_PLATFORM))
+            .filter((row) => row.product === "top");
+        res.json({ definitions: defaultBakecaincontriiTopPrices, prices });
+    } catch (error) {
+        if (
+            error?.message?.startsWith("Invalid Bakecaincontrii") ||
+            error?.message?.startsWith("Bakecaincontrii prices")
+        ) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error("Unable to save Bakecaincontrii prices:", error);
+        res.status(500).json({ error: "Unable to save Bakecaincontrii prices." });
+    }
 });
 
 router.get("/getIncontriamociPrices", authenticateKey, async (req, res) => {

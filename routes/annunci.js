@@ -23,6 +23,7 @@ const Op = ctx.model.Sequelize.Op;
 const amasensLocations = require("../data/amasens-locations.json");
 const {
     BAKECAINCONTRII_PLATFORM,
+    BAKECAINCONTRII_EURO_PER_CREDIT,
     getDefaultBakecaincontriiPrices
 } = require("../config/bakecaincontriiPrices");
 
@@ -3320,6 +3321,7 @@ async function updateCreditAnnuncio(annuncio) {
     tipiAnnuncio.tenXone = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x1") return x; });
     tipiAnnuncio.tenXthree = allTimeAdsNotPay.filter(x => { if (x.typeAnnuncio == "10x3") return x; });
     const flashSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Flash");
+    const bakecaincontriiTopSchedules = allTimeAdsNotPay.filter(x => x.typeAnnuncio == "Top");
 
     var listino = await ctx.tblListinoPrezzi.findAll({ where: { group: annuncio.groupOwner } });
     //console.log({listino, groupOwner: annuncio.groupOwner})
@@ -3358,6 +3360,61 @@ async function updateCreditAnnuncio(annuncio) {
             defaults: { ...flashDefaults, group: annuncio.groupOwner }
         });
         credit += Number(flashPrice.price || 0) * flashSchedules.length;
+    }
+
+    if (bakecaincontriiTopSchedules.length > 0) {
+        await ctx.tblPlatformPrices.sync();
+        const defaults = getDefaultBakecaincontriiPrices().filter((row) => row.product === "top");
+        await ctx.tblPlatformPrices.bulkCreate(
+            defaults.map((row) => ({ ...row, group: annuncio.groupOwner })),
+            { ignoreDuplicates: true }
+        );
+        const topPrices = await ctx.tblPlatformPrices.findAll({
+            where: {
+                group: annuncio.groupOwner,
+                platform: BAKECAINCONTRII_PLATFORM,
+                product: "top",
+                active: true
+            }
+        });
+
+        for (const schedule of bakecaincontriiTopSchedules) {
+            let period = {};
+            try {
+                period = typeof schedule.period === "string"
+                    ? JSON.parse(schedule.period || "{}")
+                    : (schedule.period || {});
+            } catch {
+                period = {};
+            }
+            const timeRange = `${period.timeRange || "MORNING"}`.toUpperCase();
+            const timeSlot = `${period.timeSlot || timeRange}`;
+            const variantKey = timeRange === "NIGHT"
+                ? "night"
+                : (timeSlot === timeRange ? "daytime-full" : "daytime-hourly");
+            const days = variantKey === "daytime-full" ? 1 : Number(period.days || 1);
+            const priceRow = topPrices.find((row) =>
+                row.variantKey === variantKey && Number(row.days) === days
+            );
+            if (!priceRow) continue;
+
+            let options = priceRow.optionsJson || {};
+            if (typeof options === "string") {
+                try {
+                    options = JSON.parse(options);
+                } catch {
+                    options = {};
+                }
+            }
+            let credits = Number(priceRow.price || 0);
+            if (schedule.hasPremium) credits += Number(options.superTopCredits || 0);
+            if (schedule.hasHighlight) credits += Number(options.backgroundCredits || 0);
+            if (schedule.hasEtichetta) credits += Number(options.labelCredits || 0);
+            const estimatedEuro = credits * Number(
+                options.euroPerCredit || BAKECAINCONTRII_EURO_PER_CREDIT
+            );
+            credit += Number(estimatedEuro.toFixed(2));
+        }
     }
     return credit;
 }

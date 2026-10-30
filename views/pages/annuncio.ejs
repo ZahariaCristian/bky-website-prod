@@ -1009,7 +1009,9 @@
     const costTableContainer = document.getElementById('costTableContainer');
     const costTableBody = document.getElementById('costTableBody');
     let listinoData = []; // Global variable for listino data
+    let bakecaincontriiPrices = [];
     let flashPrice = 45;
+    let priceDataLoaded = false;
 
     // Function to fetch listino data from the server
     async function fetchListinoData() {
@@ -1028,16 +1030,73 @@
 
             const data = await response.json();
             flashPrice = Number(data.flashPrice || 45);
+            bakecaincontriiPrices = Array.isArray(data.bakecaincontriiPrices)
+                ? data.bakecaincontriiPrices
+                : [];
+            priceDataLoaded = true;
             return data.listino || [];
         } catch (error) {
             console.error('Error fetching listino data:', error);
+            priceDataLoaded = true;
             return [];
         }
     }
 
     function countPromoPanels(promoType) {
         const container = document.querySelector(`#tab${promoType} .post-list`);
-        return container ? container.children.length : 0;
+        return container
+            ? [...container.children].filter(panel => panel.dataset.gcrecord !== 'true' && panel.style.display !== 'none').length
+            : 0;
+    }
+
+    function getPriceOptions(row = {}) {
+        if (row.optionsJson && typeof row.optionsJson === 'object') return row.optionsJson;
+        try {
+            return JSON.parse(row.optionsJson || '{}');
+        } catch {
+            return {};
+        }
+    }
+
+    function getBakecaincontriiTopEstimate() {
+        const result = { credits: 0, euro: 0, configured: 0, missing: 0 };
+        document.querySelectorAll('.promoTop .newpost-panel').forEach(panel => {
+            if (panel.dataset.gcrecord === 'true' || panel.style.display === 'none') return;
+            const editor = panel.querySelector('.bakecaincontrii-top-editor');
+            if (!editor) return;
+            const range = editor.querySelector('.top-range-button.active')?.dataset.range || 'MORNING';
+            const slot = range === 'NIGHT'
+                ? '00:00 - 06:00'
+                : (editor.querySelector('.top-slot-select')?.value || range);
+            const variantKey = range === 'NIGHT'
+                ? 'night'
+                : (slot === range ? 'daytime-full' : 'daytime-hourly');
+            const days = Number(editor.querySelector('.top-days-button.active:not([hidden])')?.dataset.days || 1);
+            const priceRow = bakecaincontriiPrices.find(row =>
+                row.product === 'top' &&
+                row.variantKey === variantKey &&
+                Number(row.days) === days
+            );
+            if (!priceRow) {
+                result.missing++;
+                return;
+            }
+            const options = getPriceOptions(priceRow);
+            let credits = Number(priceRow.price || 0);
+            if (editor.querySelector('.top-extra-supertop')?.checked) {
+                credits += Number(options.superTopCredits || 0);
+            }
+            if (editor.querySelector('.top-extra-highlight')?.checked) {
+                credits += Number(options.backgroundCredits || 0);
+            }
+            if (editor.querySelector('.top-extra-label')?.checked) {
+                credits += Number(options.labelCredits || 0);
+            }
+            result.credits += credits;
+            result.euro += credits * Number(options.euroPerCredit || 0.33);
+            result.configured++;
+        });
+        return result;
     }
 
     function getPromoTypeName(promoType) {
@@ -1070,6 +1129,7 @@
 
         // Count special promos from newpost-panel elements
         document.querySelectorAll('.newpost-panel').forEach(panel => {
+            if (panel.closest('.promoTop')) return;
             if (panel.dataset.highlight === 'true') selectedPromos.highlight++;
             if (panel.dataset.etichetta === 'true') selectedPromos.etichetta++;
             if (panel.dataset.supertop === 'true') selectedPromos.supertop++;
@@ -1088,6 +1148,7 @@
     function updateCostTable() {
         costTableBody.innerHTML = ''; // Clear the table body
         const selectedPromos = getSelectedPromos();
+        const topEstimate = getBakecaincontriiTopEstimate();
 
         // For each selected promo type, create a section in the table
         for (const [promoType, count] of Object.entries(selectedPromos)) {
@@ -1112,6 +1173,11 @@
                     
                     const listinoItem = listinoData.find(item => item.uscita === 1);
                     let price = promoType === 'Flash' ? flashPrice * count : 0;
+                    if (promoType === 'Top') {
+                        priceCell.textContent = topEstimate.missing > 0
+                            ? 'Prezzo Top non configurato'
+                            : `${topEstimate.euro.toFixed(2)} € (${topEstimate.credits} crediti stimati)`;
+                    }
                     if (promoType === 'Star') {
                         price = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
                             .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
@@ -1126,7 +1192,9 @@
                             case 'etichettanotte': price = listinoItem.etichettanotte; break;
                         }
                     }
-                    priceCell.textContent = price > 0 ? `${price} ${promoType === 'Star' ? 'crediti (stima)' : '€'}` : '-';
+                    if (promoType !== 'Top') {
+                        priceCell.textContent = price > 0 ? `${price} ${promoType === 'Star' ? 'crediti (stima)' : '€'}` : '-';
+                    }
 
                     row.appendChild(typeCell);
                     row.appendChild(priceCell);
@@ -1146,16 +1214,13 @@
 
     async function calculateTotalCost() {
         // Fetch the listino data if not already loaded
-        if (listinoData.length === 0) {
+        if (!priceDataLoaded) {
             listinoData = await fetchListinoData();
-            if (listinoData.length === 0) {
-                console.warn('No listino data available.');
-                return;
-            }
         }
 
         const selectedPromos = getSelectedPromos();
         let totalCost = 0;
+        const topEstimate = getBakecaincontriiTopEstimate();
         const estimatedStarCredits = [...document.querySelectorAll('.promoStar .star-slot-checkbox:checked')]
             .reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
 
@@ -1166,7 +1231,11 @@
                     totalCost += flashPrice * count;
                     continue;
                 }
-                if (promoType === 'Top' || promoType === 'Star') continue;
+                if (promoType === 'Top') {
+                    totalCost += topEstimate.euro;
+                    continue;
+                }
+                if (promoType === 'Star') continue;
                 const listinoItem = listinoData.find(item => item.uscita === count);
                 if (listinoItem) {
                     switch (promoType) {
@@ -1181,7 +1250,11 @@
             }
         }
 
-        totalCostElement.textContent = `${totalCost.toFixed(2)} €${estimatedStarCredits > 0 ? ` + circa ${estimatedStarCredits} crediti Star` : ''}`;
+        const creditNotes = [];
+        if (topEstimate.credits > 0) creditNotes.push(`circa ${topEstimate.credits} crediti Top`);
+        if (estimatedStarCredits > 0) creditNotes.push(`circa ${estimatedStarCredits} crediti Star`);
+        if (topEstimate.missing > 0) creditNotes.push('prezzo Top incompleto');
+        totalCostElement.textContent = `${totalCost.toFixed(2)} €${creditNotes.length ? ` · ${creditNotes.join(' + ')}` : ''}`;
         updateCostTable();
     }
 
@@ -1225,7 +1298,14 @@
         checkbox.addEventListener('change', calculateTotalCost);
     });
     document.addEventListener('change', function(event) {
-        if (event.target.matches('.star-slot-checkbox, .star-slot-date, .star-max-total-credits')) calculateTotalCost();
+        if (event.target.matches('.star-slot-checkbox, .star-slot-date, .star-max-total-credits, .top-slot-select, .top-extra-all, .top-extra-supertop, .top-extra-highlight, .top-extra-label')) {
+            calculateTotalCost();
+        }
+    });
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('.top-range-button, .top-days-button, .promoTop .btn-danger')) {
+            setTimeout(calculateTotalCost, 0);
+        }
     });
 
     

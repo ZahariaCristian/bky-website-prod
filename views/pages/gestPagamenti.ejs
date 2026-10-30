@@ -58,6 +58,7 @@
             color:black;
         }
         .incontriamoci-price-toolbar,
+        .bakecaincontrii-price-toolbar,
         .bakeca-price-toolbar,
         .amasens-price-toolbar,
         .trovagnocca-price-toolbar,
@@ -70,6 +71,7 @@
             margin-bottom: 14px;
         }
         .incontriamoci-price-toolbar .form-group,
+        .bakecaincontrii-price-toolbar .form-group,
         .bakeca-price-toolbar .form-group,
         .amasens-price-toolbar .form-group,
         .trovagnocca-price-toolbar .form-group,
@@ -77,6 +79,7 @@
             margin-bottom: 0;
         }
         .incontriamoci-price-editor input[type="number"],
+        .bakecaincontrii-price-editor input[type="number"],
         .bakeca-price-editor input[type="number"],
         .amasens-price-editor input[type="number"],
         .trovagnocca-price-editor input[type="number"],
@@ -85,6 +88,7 @@
             width: 100%;
         }
         .incontriamoci-price-editor table,
+        .bakecaincontrii-price-editor table,
         .bakeca-price-editor table,
         .amasens-price-editor table,
         .trovagnocca-price-editor table,
@@ -92,6 +96,7 @@
             margin-bottom: 0;
         }
         .incontriamoci-price-editor [hidden],
+        .bakecaincontrii-price-editor [hidden],
         .bakeca-price-editor [hidden],
         .amasens-price-editor [hidden],
         .trovagnocca-price-editor [hidden],
@@ -99,6 +104,7 @@
             display: none;
         }
         .incontriamoci-price-status,
+        .bakecaincontrii-price-status,
         .bakeca-price-status,
         .amasens-price-status,
         .trovagnocca-price-status,
@@ -317,6 +323,50 @@
                                 <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="btnUpdateLisno"><b>Salva</b></button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="widget widget-body-gray bakecaincontrii-price-editor"
+                    id="bakecaincontriiPriceEditor">
+                    <div class="widget-head" style="background: #eaeaea;">
+                        <h3 class="heading glyphicons euro"><i></i>Listino Bakecaincontrii</h3>
+                    </div>
+                    <div class="widget-body">
+                        <div class="bakecaincontrii-price-toolbar">
+                            <p class="help-block" style="margin: 0;">
+                                Configura i crediti stimati per Top. L'importo in euro viene calcolato a €0,33 per credito.
+                            </p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Fascia</th>
+                                        <th>Giorni</th>
+                                        <th>Top base</th>
+                                        <th>Super Top</th>
+                                        <th>Sfondo colorato</th>
+                                        <th>Etichetta “Novità”</th>
+                                        <th>Stima base €</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bakecaincontriiPriceEditorRows">
+                                    <tr>
+                                        <td colspan="7" class="text-muted">Caricamento...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="help-block" style="margin-top: 10px;">
+                            Il listino è specifico per il gruppo. Il prezzo definitivo viene sempre confermato da Bakecaincontrii prima del pagamento.
+                        </p>
+                        <div id="bakecaincontriiPriceStatus" class="bakecaincontrii-price-status"
+                            role="status" aria-live="polite"></div>
+                        <button type="button" class="btn btn-primary"
+                            style="width: 100%; margin-top: 20px;"
+                            id="saveBakecaincontriiPrices" disabled>
+                            <i class="fa fa-save"></i> <b>Salva listino Bakecaincontrii</b>
+                        </button>
                     </div>
                 </div>
 
@@ -605,6 +655,7 @@
     </div>
             
     <script src="/js/gestPagamenti.js"></script>
+    <script src="/js/gestPagamenti.bakecaincontrii.js?v=20261030-bakecaincontrii-top-prices"></script>
     <script src="/js/bakeca-prices.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.bakeca.js?v=20260703-bakeca-prices"></script>
     <script src="/js/gestPagamenti.incontriamoci.js?v=20260703-platform-prices"></script>
