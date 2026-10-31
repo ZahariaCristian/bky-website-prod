@@ -1763,6 +1763,82 @@ const setupBakecaincontriiTopPanel = () => {
 
 setupBakecaincontriiTopPanel();
 
+const BAKECAINCONTRII_LEGACY_TOP_TABS = [
+    { type: "1x1", label: "Top: 1x1", color: "#b1f390", timeSlots: true },
+    { type: "1x3", label: "Top: 1x3", color: "#d0d174", timeSlots: true },
+    { type: "1x7", label: "Top: 1x7", color: "#d47ed4", timeSlots: true },
+    { type: "10x1", label: "Top: 10x1", color: "#6ac5ca", timeSlots: false },
+    { type: "10x3", label: "Top: 10x3", color: "#8597d8", timeSlots: false },
+    { type: "10x7", label: "Top: 10x7", color: "#ffaa00", timeSlots: false }
+];
+
+const createBakecaincontriiLegacyTimeSlotPanel = (definition) => {
+    const panel = document.createElement("div");
+    panel.className = `promoPanel promo${definition.type} tab-pane animated fadeInUp`;
+    panel.id = `tab${definition.type}`;
+
+    const title = document.createElement("label");
+    title.className = "form-check-label";
+    title.style.fontSize = "18px";
+    title.textContent = "Fascia oraria";
+    panel.appendChild(title);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = `wpromo${definition.type}`;
+    for (let hour = 6; hour < 24; hour += 1) {
+        const start = `${hour}`.padStart(2, "0");
+        const end = `${(hour + 1) % 24}`.padStart(2, "0");
+        const inputId = `legacy-${definition.type}-${start}-${end}`;
+        const timeSlot = document.createElement("div");
+        timeSlot.className = "time-slot";
+        timeSlot.innerHTML = `
+            <div class="flex-checkbox">
+                <input id="${inputId}" type="checkbox" class="form-check-input">
+                <label for="${inputId}" class="form-check-label">${start}:00 - ${end}:00</label>
+            </div>`;
+        wrapper.appendChild(timeSlot);
+    }
+    panel.appendChild(wrapper);
+    return panel;
+};
+
+const createBakecaincontriiLegacyPostPanel = (definition) => {
+    const panel = document.createElement("div");
+    panel.className = `promoPanel promo${definition.type} tab-pane animated fadeInUp`;
+    panel.id = `tab${definition.type}`;
+    panel.innerHTML = `
+        <div class="posts">
+            <div class="post-list"></div>
+            <button class="btn btn-primary" type="button"><span><b><i class="fa fa-plus"></i></b></span></button>
+        </div>`;
+    return panel;
+};
+
+const setupBakecaincontriiLegacyTopPanels = () => {
+    if (CURRENT_PANEL !== "bakecaincontrii") return;
+    const navigation = document.querySelector(".promoType ul");
+    const content = document.querySelector("#wizar-body .tab-content");
+    if (!navigation || !content) return;
+
+    const topNavigationItem = navigation.querySelector('a[href="#tabTop"]')?.closest("li");
+    const topPanel = content.querySelector("#tabTop");
+    BAKECAINCONTRII_LEGACY_TOP_TABS.forEach((definition) => {
+        if (!document.querySelector(`#tab${definition.type}`)) {
+            const item = document.createElement("li");
+            item.className = "bakecaincontrii-only legacy-top-tab";
+            item.innerHTML = `<a href="#tab${definition.type}" data-toggle="tab" style="background-color:${definition.color};">${definition.label}</a>`;
+            navigation.insertBefore(item, topNavigationItem || null);
+
+            const panel = definition.timeSlots
+                ? createBakecaincontriiLegacyTimeSlotPanel(definition)
+                : createBakecaincontriiLegacyPostPanel(definition);
+            content.insertBefore(panel, topPanel || document.querySelector("#tabFlash") || null);
+        }
+    });
+};
+
+setupBakecaincontriiLegacyTopPanels();
+
 const postsPanelOperations = (panel) => {
     panel.querySelector(".btn-primary").addEventListener("click", () => {
         enableScheduleUpdate();
@@ -3452,19 +3528,10 @@ function clearPubsViews() {
 };
 
 function loadDayData(pubs) {
-    // New Bakecaincontrii Top rows and legacy 1x*/10x* rows share the same editor.
-    const legacyBakecaincontriiTopTypes = new Set(["1x1", "1x3", "1x7", "10x1", "10x3", "10x7"]);
     ["Free", "Flash", "Star", "Top", "10x1", "10x3", "10x7"].forEach(promoType => {
         pubs
             .filter(x => !x.GCRecord)
-            .filter((announcement) => {
-                if (CURRENT_PANEL !== "bakecaincontrii") return announcement.typeAnnuncio === promoType;
-                if (promoType === "Top") {
-                    return announcement.typeAnnuncio === "Top" || legacyBakecaincontriiTopTypes.has(announcement.typeAnnuncio);
-                }
-                if (legacyBakecaincontriiTopTypes.has(promoType)) return false;
-                return announcement.typeAnnuncio === promoType;
-            })
+            .filter((announcement) => announcement.typeAnnuncio === promoType)
             .forEach(announcement => {
                 if (announcement.status !== undefined && announcement.status !== "pending") return;
 
@@ -3519,7 +3586,6 @@ function loadDayData(pubs) {
     // Get relevant announcements for this promo and time
     const relevantAnnouncements = pubs
       .filter(x => !x.GCRecord)
-      .filter(() => CURRENT_PANEL !== "bakecaincontrii")
       .filter(x => x.typeAnnuncio === promoType &&
                    x.period === timeslotLabel &&
                    (x.status === undefined || x.status === "pending"));
