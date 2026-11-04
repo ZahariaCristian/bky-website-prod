@@ -658,27 +658,6 @@ const normalizePanelPlatform = (panel) => {
     return normalized || "bakecaincontrii";
 };
 
-const STAR_ELIGIBLE_CATEGORIES = new Set(["DONNAUOMO", "TRANS"]);
-const isBakecaincontriiStarCategoryEligible = (category) => {
-    const compact = `${category || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z]/gi, "").toUpperCase();
-    if (compact === "DONNACERCAUOMO") return true;
-    return STAR_ELIGIBLE_CATEGORIES.has(compact);
-};
-
-const hasProtectedStarSchedules = async (annuncioId) => Boolean(await ctx.tblSchedulazioni.count({
-    where: {
-        annuncio: annuncioId,
-        platform: "bakecaincontrii",
-        typeAnnuncio: "Star",
-        GCRecord: null,
-        [Op.or]: [
-            { state: null },
-            { state: { [Op.notIn]: ["CLOSE", "CLOSED", "DELETE", "DELETED"] } }
-        ]
-    }
-}));
-
 const SCHEDULE_IMAGE_LIMITS = Object.freeze({
     amasens: 9,
     incontriamoci: 9,
@@ -2887,13 +2866,6 @@ router.post("/updateInfo", authenticateKey, async (req, res) => {
         donna = await annuncio.getTblDonne();
         const previousCategory = normalizeMegaescortCategory(annuncio.categorie);
         const nextCategory = normalizeMegaescortCategory(info.categorie || annuncio.categorie);
-        if (panel === "bakecaincontrii" && previousCategory !== nextCategory &&
-            !isBakecaincontriiStarCategoryEligible(nextCategory) && await hasProtectedStarSchedules(annuncio.id)) {
-            return res.status(409).json({
-                code: "STAR_CATEGORY_CHANGE_BLOCKED",
-                error: "Rimuovi prima le schedulazioni Star: Star è disponibile solo per Donna Cerca Uomo e Trans."
-            });
-        }
     } else {
         donna = await ctx.tblDonne.findOne({ where: { phone: req.body.info.phone } });
     }
@@ -3014,12 +2986,6 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
             if (slot.GCRecord) continue;
             if (schedulePlatform !== "bakecaincontrii") {
                 return res.status(422).json({ error: "La promozione Star è disponibile solo per Bakecaincontrii." });
-            }
-            if (!isBakecaincontriiStarCategoryEligible(girl.categorie)) {
-                return res.status(422).json({
-                    code: "STAR_CATEGORY_NOT_ELIGIBLE",
-                    error: "La promozione Star è disponibile solo per Donna Cerca Uomo e Trans."
-                });
             }
             const starScheduleIsNew = !`${slot.id ?? ""}`.trim();
             const starScheduleIsEdited = `${slot.state || ""}`.trim().toUpperCase() === "EDIT";
@@ -3659,13 +3625,6 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
         var previousCategory = panel == "incontriamoci"
             ? normalizeIncontriamociCategory(annuncio.categorie)
             : normalizeMegaescortCategory(annuncio.categorie);
-        if (panel === "bakecaincontrii" && previousCategory !== nextCategory &&
-            !isBakecaincontriiStarCategoryEligible(nextCategory) && await hasProtectedStarSchedules(annuncio.id)) {
-            return res.status(409).json({
-                code: "STAR_CATEGORY_CHANGE_BLOCKED",
-                error: "Rimuovi prima le schedulazioni Star: Star è disponibile solo per Donna Cerca Uomo e Trans."
-            });
-        }
         var shouldRepublishBakeca = panel == "bakeca" && nextCategory != previousCategory;
         const panelTags = req.body.info.trovagnoccaTags || req.body.info.incontriamociTags || {};
         const nextNote = panel == "trovagnocca"

@@ -699,6 +699,38 @@ var clearStorico = ()=>{
     $(".oldStorico").remove();
 }
 
+function getHistoryStatusIconHtml(schedule) {
+    switch (schedule?.state) {
+        case "BLOCKED":
+            return `<a class="btn btn-xs btn-danger" style="font-size: 12px;">NUMERO BLOCCATO</a>`;
+        case "OK":
+            if (schedule.urlBK) {
+                return `<a class="btn btn-xs btn-success" style="font-size: 12px;" href="${schedule.urlBK}" target="_blank">BK</a>`;
+            }
+            return "<h3 class='fa fa-check-square text-success'><i></i></h3>";
+        case "KO":
+            return "<button type='button' class='btn btn-xs btn-danger btnScheduleError' aria-label='Visualizza il motivo dell errore'><span class='fa fa-times'></span></button>";
+        case "ALERT":
+            return "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>";
+        default:
+            return "<h3 class='fa fa-clock-o text-default'><i></i></h3>";
+    }
+}
+
+function configureHistoryErrorButton(row, schedule) {
+    const errorButton = row.find(".btnScheduleError");
+    if (!errorButton.length) return;
+
+    const reason = `${schedule?.errorReason || ""}`.trim() ||
+        "Il publisher non ha fornito ulteriori dettagli per questo tentativo.";
+    const message = `Pubblicazione non riuscita: ${reason}`;
+
+    errorButton.attr("title", reason);
+    errorButton.off("click.publishError").on("click.publishError", () => {
+        ShowAlert("custom", message, 8000);
+    });
+}
+
 var addRptStorico = (sxhedule, i) =>{
     $(".rptNoData").hide();
     var root = $("#rptStorico");
@@ -740,26 +772,9 @@ if (sxhedule.hasVideo){
     }
     
     newRow.find(".btnSuspend").hide();
-    switch(sxhedule.state){
-        case "BLOCKED":
-            newRow.html(newRow.html().replace(/@stato@/g, `<a class="btn btn-xs btn-danger" style="font-size: 12px;">NUMERO BLOCCATO</a>`));
-            break;
-        case "OK":
-            if (sxhedule.urlBK){
-                newRow.html(newRow.html().replace(/@stato@/g, `<a class="btn btn-xs btn-success" style="font-size: 12px;" href="${sxhedule.urlBK}" target="_blank">BK</a>`));
-                newRow.find(".btnSuspend").show();
-            }else{
-                newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-check-square text-success'><i></i></h3>"));
-            }
-            break;
-        case "KO":
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-times text-danger'><i></i></h3>"));
-            break;
-        case "ALERT":
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>"));
-            break;
-        default:
-            newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-clock-o text-default'><i></i></h3>"));
+    newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    if (sxhedule.state === "OK" && sxhedule.urlBK) {
+        newRow.find(".btnSuspend").show();
     }
     switch(sxhedule.payed){
         case true:
@@ -768,6 +783,8 @@ if (sxhedule.hasVideo){
         default:
             newRow.html(newRow.html().replace(/@pagato@/g, "<h3 class='fa fa-times text-danger'><i></i></h3>"));
     }
+
+    configureHistoryErrorButton(newRow, sxhedule);
 
     newRow.appendTo(root);
 
@@ -855,47 +872,6 @@ const schedulePanelNeedsValidation = (panel) => {
     const state = `${$(panel).data("state") || panel.getAttribute("data-state") || ""}`.trim().toUpperCase();
     return !scheduleId || state === "EDIT";
 };
-
-const STAR_ELIGIBLE_CATEGORIES = new Set(["DONNAUOMO", "TRANS"]);
-
-const isStarCategoryEligible = (category = document.querySelector("select[name='categorie']")?.value) =>
-    CURRENT_PANEL === "bakecaincontrii" && STAR_ELIGIBLE_CATEGORIES.has(`${category || ""}`.trim().toUpperCase());
-
-const hasActiveStarSchedules = () => {
-    const savedStar = Object.values(pubs || {}).some((daySchedules) =>
-        (Array.isArray(daySchedules) ? daySchedules : []).some((schedule) =>
-            schedule.typeAnnuncio === "Star" && !schedule.GCRecord
-        )
-    );
-    const visibleStar = [...document.querySelectorAll(".promoStar .newpost-panel")].some((panel) =>
-        !$(panel).data("GCRecord")
-    );
-    return savedStar || visibleStar;
-};
-
-const refreshStarCategoryAvailability = () => {
-    const category = document.querySelector("select[name='categorie']");
-    const eligible = isStarCategoryEligible(category?.value);
-    document.body.classList.toggle("star-category-eligible", eligible);
-    if (!eligible && document.querySelector("#starPromotionTab")?.classList.contains("active")) {
-        document.querySelector('a[href="#tabFree"]')?.click();
-    }
-    if (category) category.dataset.starAcceptedCategory = category.value;
-};
-
-const categorySelect = document.querySelector("select[name='categorie']");
-categorySelect?.addEventListener("focus", () => {
-    categorySelect.dataset.starAcceptedCategory = categorySelect.value;
-});
-categorySelect?.addEventListener("change", () => {
-    const previousCategory = categorySelect.dataset.starAcceptedCategory || "DONNAUOMO";
-    if (!isStarCategoryEligible(categorySelect.value) && hasActiveStarSchedules()) {
-        categorySelect.value = previousCategory;
-        alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans. Rimuovi prima le schedulazioni Star.");
-    }
-    refreshStarCategoryAvailability();
-});
-refreshStarCategoryAvailability();
 
 $("#select2_3").on("change", (x)=>{
     window.location = "/annuncio.html?edit=" + x.target.value;
@@ -3733,9 +3709,6 @@ function deletefuture() {
 }
 
 function updateSchedule() {
-    if (CURRENT_PANEL === "bakecaincontrii" && !isStarCategoryEligible() && hasActiveStarSchedules()) {
-        return alert("La promozione Star è disponibile solo per Donna Cerca Uomo e Trans.");
-    }
     const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
         schedulePanelNeedsValidation(panel) &&
         panel.querySelectorAll(".post-pic-wrapper input[type='checkbox']:checked").length === 0
