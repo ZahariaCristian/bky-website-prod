@@ -1086,7 +1086,6 @@ async function loadAdvertisement (res) {
     if(res.categorie){
         document.querySelector("select[name='categorie']").value = res.categorie;
     }
-    refreshStarCategoryAvailability();
 
     if (res.isPhoneChecked) phoneApprove();
 
