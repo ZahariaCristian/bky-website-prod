@@ -15,18 +15,6 @@ const formatPanelDateKey = (date = new Date()) => date.toLocaleDateString(
     "zh-hans-cn",
     PANEL_DATE_FORMAT_OPTIONS
 ).replace(/\//g, "-");
-const formatRomeMinuteKey = (date = new Date()) => {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Europe/Rome",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23"
-    }).formatToParts(date).map((part) => [part.type, part.value]));
-    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
-};
 var blacklist = [];
 var tmpID = 0;
 var sCalendar = null;
@@ -1525,26 +1513,6 @@ const STAR_SLOT_DEFINITIONS = [
     { start: "18:00", end: "02:00", quotedCredits: 119 }
 ];
 
-const refreshStarSlotAvailability = (editor) => {
-    if (!editor) return;
-    const panel = editor.closest(".newpost-panel");
-    const slotDate = editor.querySelector(".star-slot-date")?.value || "";
-    const publicationDate = panel?.querySelector(".lblDateTime")?.textContent?.match(/\d{4}-\d{2}-\d{2}/)?.[0] || "";
-    const publicationTime = panel?.querySelector(".schedule-time-input")?.value || "";
-    const publicationKey = publicationDate && publicationTime ? `${publicationDate}T${publicationTime}` : "";
-    const threshold = [formatRomeMinuteKey(), publicationKey].filter(Boolean).sort().pop();
-
-    editor.querySelectorAll(".star-slot-checkbox").forEach((checkbox) => {
-        const slotKey = slotDate && checkbox.dataset.start ? `${slotDate}T${checkbox.dataset.start}` : "";
-        const unavailable = !slotKey || slotKey <= threshold;
-        checkbox.disabled = unavailable;
-        if (unavailable) checkbox.checked = false;
-        const label = checkbox.closest("label");
-        label?.classList.toggle("star-slot-unavailable", unavailable);
-        if (label) label.title = unavailable ? "Questo slot inizia prima della pubblicazione" : "";
-    });
-};
-
 const createStarScheduleEditor = () => {
     const editor = document.createElement("div");
     editor.className = "star-schedule-editor alert";
@@ -1565,10 +1533,8 @@ const createStarScheduleEditor = () => {
         <div class="star-slot-options">${slots}</div>`;
 
     const refresh = (markEdited = true) => {
-        refreshStarSlotAvailability(editor);
         if (markEdited) markSchedulePanelEdited(editor);
     };
-    editor.refreshStarAvailability = () => refreshStarSlotAvailability(editor);
     editor.refreshStarSummary = () => refresh(false);
     editor.querySelectorAll("input").forEach((input) => input.addEventListener("change", () => refresh(true)));
     return editor;
@@ -2109,12 +2075,7 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(cityPost);
         newPost.appendChild(isStar ? createStarCategorySelect() : createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
-        if (isStar) {
-            const starEditor = createStarScheduleEditor();
-            newPostPanel.appendChild(starEditor);
-            timeInput.addEventListener("change", () => starEditor.refreshStarAvailability());
-            starEditor.refreshStarAvailability();
-        }
+        if (isStar) newPostPanel.appendChild(createStarScheduleEditor());
         if (isBakecaincontriiTop) newPostPanel.appendChild(createBakecaincontriiTopScheduleEditor(newPostPanel));
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
@@ -3402,7 +3363,6 @@ function addDaysToDateString(dateString, days) {
 }
 
 function getStarPeriodFromPanel(panel) {
-    panel.querySelector(".star-schedule-editor")?.refreshStarAvailability?.();
     const date = panel.querySelector(".star-slot-date")?.value || document.querySelector("#txtDate")?.value;
     const slots = [...panel.querySelectorAll(".star-slot-checkbox:checked")].map((checkbox) => {
         const startTime = checkbox.dataset.start;
@@ -3822,12 +3782,6 @@ function updateSchedule() {
         starPanelsToSave[0].scrollIntoView({ behavior: "smooth", block: "center" });
         categorySelect?.focus();
         return alert("Per pubblicare Star, seleziona la categoria Donna Cerca Uomo oppure Trans.");
-    }
-    const starWithoutFutureSlots = starPanelsToSave.find((panel) => getStarPeriodFromPanel(panel).slots.length === 0);
-    if (starWithoutFutureSlots) {
-        document.querySelector('a[href="#tabStar"]')?.click();
-        starWithoutFutureSlots.scrollIntoView({ behavior: "smooth", block: "center" });
-        return alert("Seleziona almeno uno slot Star che inizi dopo l'orario di pubblicazione.");
     }
     const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
         schedulePanelNeedsValidation(panel) &&
