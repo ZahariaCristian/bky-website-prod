@@ -110,6 +110,10 @@
             border-color: #d3c4f2;
             color: #333;
         }
+        .promoStar .star-slot-unavailable {
+            cursor: not-allowed;
+            opacity: .45;
+        }
         .time-slot .lblDateTime{
             margin-left: -36px;
         }
@@ -1008,7 +1012,7 @@
         </div>
     </div>
     <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
-    <script src="/js/annuncio.js?v=20261105-star-simplified"></script>
+    <script src="/js/annuncio.js?v=20261105-star-slot-availability"></script>
     <script>
  document.addEventListener('DOMContentLoaded', function() {
     const totalCostElement = document.getElementById('totalCost');
