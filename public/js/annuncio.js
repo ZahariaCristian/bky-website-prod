@@ -683,7 +683,7 @@ function requestStorico(annuncio, suspended){
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ id: annuncio, sus: suspended })
+        body: JSON.stringify({ id: annuncio, sus: suspended, panel: CURRENT_PANEL })
     }).then((r) => {
         if (r.status == 401){
             window.location.href = "/";
@@ -736,6 +736,16 @@ function getHistoryStatusIconHtml(schedule) {
             return "<button type='button' class='btn btn-xs btn-danger btnScheduleError' aria-label='Visualizza il motivo dell errore'><span class='fa fa-times'></span></button>";
         case "ALERT":
             return "<h3 class='fa fa-hourglass text-warning' style='padding-left: 2px;'><i></i></h3>";
+        case "CLOSE":
+            return `<a class="btn btn-xs btn-warning" style="font-size: 12px;">SOSPENSIONE IN ATTESA</a>`;
+        case "CLOSED":
+            return `<a class="btn btn-xs btn-default" style="font-size: 12px;">SOSPESO</a>`;
+        case "REPUBLISH":
+            return `<a class="btn btn-xs btn-warning" style="font-size: 12px;">RIPUBBLICAZIONE IN ATTESA</a>`;
+        case "DELETE":
+            return `<a class="btn btn-xs btn-warning" style="font-size: 12px;">ELIMINAZIONE IN ATTESA</a>`;
+        case "DELETED":
+            return `<a class="btn btn-xs btn-default" style="font-size: 12px;">ELIMINATO</a>`;
         default:
             return "<h3 class='fa fa-clock-o text-default'><i></i></h3>";
     }
@@ -795,10 +805,11 @@ if (sxhedule.hasVideo){
         newRow.find(".dateTimeTop").remove();
     }
     
-    newRow.find(".btnSuspend").hide();
+    newRow.find(".btnSuspend, .btnPublishState, .btnDeleteState").hide();
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
-    if (sxhedule.state === "OK" && sxhedule.urlBK) {
+    if (sxhedule.state === "OK" && sxhedule.remotePostID) {
         newRow.find(".btnSuspend").show();
+        newRow.find(".btnDeleteState").show();
     }
     switch(sxhedule.payed){
         case true:
@@ -817,6 +828,7 @@ if (sxhedule.hasVideo){
 };
 
 function deleteStorico(me, idString){
+    if (!confirm("Rimuovere solo questa voce dallo storico locale? L'annuncio remoto Bakecaincontrii non verrà eliminato.")) return;
     toggleLoader();
     let id = parseInt(idString);
     var anID = $("#annuncioID").val();
@@ -4160,30 +4172,76 @@ function copyPub(source){
     return u;
 }
 
-function suspendAds(e, ids){
-    if(confirm("Sicuro di voler procedere con la sospensione? ATTENZIONE: l'annuncio verrà sospeso anche se risultasse a pagamento.")){+
-        $(e).attr("onclick", "void(0)");
-        $(e).text("In Sospensione..");
-        $(e).removeClass("btn-danger");
-        $(e).addClass("btn-warning");
-        toggleLoader();
-        fetch("/annuncio/suspend", {
+async function queueBakecaincontriiHistoryAction(button, scheduleId, options) {
+    if (!confirm(options.confirmText)) return;
+
+    const element = $(button);
+    const previousText = element.text();
+    const previousOnclick = element.attr("onclick");
+    element.attr("onclick", "void(0)").prop("disabled", true).text(options.pendingText);
+    toggleLoader();
+    try {
+        const response = await fetch(options.endpoint, {
             method: "POST",
             mode: "cors",
             cache: "no-cache",
             credentials: "same-origin",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             redirect: "follow",
             referrerPolicy: "no-referrer",
             body: JSON.stringify({
-                id: ids
-            }),
-        }).then((r) => {
-            toggleLoader();
+                id: scheduleId,
+                annuncio: parseInt(QUERY_NEW, 10),
+                panel: CURRENT_PANEL
+            })
         });
+        if (response.status === 401) {
+            window.location.href = "/";
+            return;
+        }
+        if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || options.errorText);
+        }
+
+        ShowAlert("custom", options.successText, 4000);
+        setTimeout(() => window.location.reload(), 350);
+    } catch (error) {
+        element.attr("onclick", previousOnclick).prop("disabled", false).text(previousText);
+        alert(`❌ ${error.message || options.errorText}`);
+    } finally {
+        toggleLoader();
     }
+}
+
+function suspendAds(button, scheduleId) {
+    return queueBakecaincontriiHistoryAction(button, scheduleId, {
+        endpoint: "/annuncio/suspend",
+        confirmText: "Sospendere questo annuncio Bakecaincontrii? L'annuncio verrà sospeso anche se è a pagamento.",
+        pendingText: "IN SOSPENSIONE...",
+        successText: "Sospensione Bakecaincontrii accodata.",
+        errorText: "Impossibile accodare la sospensione Bakecaincontrii."
+    });
+}
+
+function republishAds(button, scheduleId) {
+    return queueBakecaincontriiHistoryAction(button, scheduleId, {
+        endpoint: "/annuncio/republishSchedule",
+        confirmText: "Ripubblicare questo annuncio Bakecaincontrii usando il pulsante Pubblica della pagina Gestisci annuncio?",
+        pendingText: "IN RIPUBBLICAZIONE...",
+        successText: "Ripubblicazione Bakecaincontrii accodata.",
+        errorText: "Impossibile accodare la ripubblicazione Bakecaincontrii."
+    });
+}
+
+function deletePublishedAd(button, scheduleId) {
+    return queueBakecaincontriiHistoryAction(button, scheduleId, {
+        endpoint: "/annuncio/deleteSchedule",
+        confirmText: "Eliminare definitivamente questo annuncio da Bakecaincontrii? Questa operazione non può essere annullata.",
+        pendingText: "IN ELIMINAZIONE...",
+        successText: "Eliminazione Bakecaincontrii accodata.",
+        errorText: "Impossibile accodare l'eliminazione Bakecaincontrii."
+    });
 }
 var showSus = false;
 function toggleSuspended(){
@@ -4225,7 +4283,11 @@ function addRptStoricoSus(sxhedule){
     }else{
         newRow.find(".dateTimeTop").remove();
     }
-    newRow.html(newRow.html().replace(/@stato@/g, "<h3 class='fa fa-check-square text-success'><i></i></h3>"));
+    newRow.find(".btnPublishState, .btnDeleteState").hide();
+    newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    if (sxhedule.state === "CLOSED" && sxhedule.remotePostID) {
+        newRow.find(".btnPublishState, .btnDeleteState").show();
+    }
     switch(sxhedule.payed){
         case true:
             newRow.html(newRow.html().replace(/@pagato@/g, "<h3 class='fa fa-check-square text-success'><i></i></h3>"));

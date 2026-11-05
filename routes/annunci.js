@@ -10,6 +10,7 @@ const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const { needsMoscarossaGallerySync, needsMoscarossaBulkGallerySync } = require("../lib/moscarossaGalleryApply");
 const { normalizeDeletedScheduleIds } = require("../lib/scheduleDeletion");
+const { getAllowedHistoryStates } = require("../lib/historyManagement");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -3846,7 +3847,8 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     if (!req.body.id) return res.sendStatus(400);
 
     const platform = normalizePanelPlatform(req.body.panel);
-    if (platform !== "moscarossa") {
+    const securedManagementPlatforms = new Set(["moscarossa", "bakecaincontrii"]);
+    if (!securedManagementPlatforms.has(platform)) {
         await ctx.tblSchedulazioni.update({ state: nextState }, { where: { id: req.body.id } });
         return res.sendStatus(200);
     }
@@ -3857,7 +3859,7 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
 
     const scheduleWhere = {
         id: req.body.id,
-        platform: "moscarossa",
+        platform,
         GCRecord: null
     };
     if (req.body.annuncio) scheduleWhere.annuncio = req.body.annuncio;
@@ -3871,17 +3873,17 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     });
     if (!advertisement) return res.sendStatus(403);
     const currentState = `${schedule.state || ""}`.toUpperCase();
-    const republishUpgrade = nextState === "REPUBLISH" &&
+    const republishUpgrade = platform === "moscarossa" && nextState === "REPUBLISH" &&
         Boolean(`${req.body.promotionPlan || ""}`.trim());
-    const allowedStates = nextState === "DELETE"
-        ? ["OK", "CLOSED"]
-        : (nextState === "REPUBLISH" ? (republishUpgrade ? ["CLOSED", "ALERT"] : ["CLOSED"]) : ["OK"]);
+    const allowedStates = getAllowedHistoryStates(platform, nextState, { republishUpgrade });
     if (!allowedStates.includes(currentState) || !schedule.remotePostID) {
         return res.status(409).json({
-            error: "L'annuncio Moscarossa deve essere pubblicato e avere un identificativo remoto."
+            error: platform === "bakecaincontrii"
+                ? "L'annuncio Bakecaincontrii non è nello stato corretto o non ha un identificativo remoto."
+                : "L'annuncio Moscarossa deve essere pubblicato e avere un identificativo remoto."
         });
     }
-    if (currentState === "ALERT" && !/free_limit|limite (?:moscarossa )?(?:di )?10 giorni|un solo annuncio (?:free|gratuito)/i
+    if (platform === "moscarossa" && currentState === "ALERT" && !/free_limit|limite (?:moscarossa )?(?:di )?10 giorni|un solo annuncio (?:free|gratuito)/i
         .test(`${schedule.errorReason || ""}`)) {
         return res.status(409).json({
             error: "Questa pubblicazione Moscarossa richiede prima la risoluzione dell'avviso corrente."
@@ -3889,7 +3891,7 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     }
 
     const update = { state: nextState, editedBy: req.session.userid, errorReason: null };
-    if (nextState === "REPUBLISH" && `${req.body.promotionPlan || ""}`.trim()) {
+    if (platform === "moscarossa" && nextState === "REPUBLISH" && `${req.body.promotionPlan || ""}`.trim()) {
         const promotionPlan = MOSCAROSSA_PROMOTION_NAMES[
             `${req.body.promotionPlan}`.trim().toLowerCase()
         ];
@@ -3923,7 +3925,7 @@ router.post("/suspend", authenticateKey, async (req, res) => {
 
 router.post("/republishSchedule", authenticateKey, async (req, res) => {
     if (!req.body.id) return res.sendStatus(400);
-    if (normalizePanelPlatform(req.body.panel) === "moscarossa") {
+    if (["moscarossa", "bakecaincontrii"].includes(normalizePanelPlatform(req.body.panel))) {
         return queueHistoryManagementAction(req, res, "REPUBLISH");
     }
     await ctx.tblSchedulazioni.update({ state: "REPUBLISH", editedBy: req.session.userid }, { where: { id: req.body.id } });

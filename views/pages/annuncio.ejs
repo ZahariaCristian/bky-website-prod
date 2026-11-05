@@ -941,7 +941,7 @@
                                     <div class="row center rptNoData">Nessun dato rilevato</div>
                                     <div class="rptItemStorico row" data-id="@id@" style="display: none;">
                                         <div class="col-md-2 col-sm-2">
-                                            <a class="btn" onclick="deleteStorico(this, '@id@')"><i class="fa fa-times text-danger"></i></a>
+                                            <a class="btn" title="Rimuovi dallo storico" onclick="deleteStorico(this, '@id@')"><i class="fa fa-times text-danger"></i></a>
                                             <a class="btn" onclick="copyStorico(this, '@id@')"><i class="fa fa-copy text-primary"></i></a>
                                             <a class="btn btnCondividi" data-id="@id@" href="whatsapp://send?text=" target="_blank"><i class="fa fa-whatsapp text-primary"></i></a>
                                         </div>
@@ -952,6 +952,7 @@
                                         <div class="col-md-2 col-sm-2">
                                             @stato@
                                             <a class="btn btn-danger btn-xs btnSuspend" onclick="suspendAds(this, '@id@')" style="font-size: 12px;" data-id="@id@">SOSPENDI</a>
+                                            <a class="btn btn-default btn-xs btnDeleteState" onclick="deletePublishedAd(this, '@id@')" style="font-size: 12px; display: none;" data-id="@id@">ELIMINA</a>
                                         </div>
                                         <div class="col-md-1 col-sm-1">
                                             @pagato@
@@ -968,7 +969,7 @@
                                     <div class="row center rptNoData">Nessun dato rilevato</div>
                                     <div class="rptItemStoricoSospesi row" data-id="@id@" style="display: none;">
                                         <div class="col-md-2 col-sm-2">
-                                            <a class="btn" onclick="deleteStorico(this, '@id@')"><i class="fa fa-times text-danger"></i></a>
+                                            <a class="btn" title="Rimuovi dallo storico" onclick="deleteStorico(this, '@id@')"><i class="fa fa-times text-danger"></i></a>
                                         </div>
                                         <div class="col-md-6 col-sm-6">
                                             <b>@descrizione@</b> (@città@)
@@ -976,6 +977,8 @@
                                         </div>
                                         <div class="col-md-2 col-sm-2">
                                             @stato@
+                                            <a class="btn btn-success btn-xs btnPublishState" onclick="republishAds(this, '@id@')" style="font-size: 12px; display: none;" data-id="@id@">RIPUBBLICA</a>
+                                            <a class="btn btn-default btn-xs btnDeleteState" onclick="deletePublishedAd(this, '@id@')" style="font-size: 12px; display: none;" data-id="@id@">ELIMINA</a>
                                         </div>
                                         <div class="col-md-1 col-sm-1">
                                             @pagato@
@@ -1000,7 +1003,7 @@
         </div>
     </div>
     <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
-    <script src="/js/annuncio.js?v=20261105-explicit-schedule-deletion"></script>
+    <script src="/js/annuncio.js?v=20261105-bakecaincontrii-manage-actions"></script>
     <script>
  document.addEventListener('DOMContentLoaded', function() {
     const totalCostElement = document.getElementById('totalCost');
