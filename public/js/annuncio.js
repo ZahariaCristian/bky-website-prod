@@ -4285,8 +4285,14 @@ function addRptStoricoSus(sxhedule){
     }
     newRow.find(".btnPublishState, .btnDeleteState").hide();
     newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
-    if (sxhedule.state === "CLOSED" && sxhedule.remotePostID) {
+    if (sxhedule.state === "CLOSED") {
         newRow.find(".btnPublishState, .btnDeleteState").show();
+        if (!sxhedule.remotePostID) {
+            newRow.find(".btnPublishState, .btnDeleteState").attr(
+                "title",
+                "Identificativo remoto non presente: il server tenterà un recupero sicuro prima dell'operazione."
+            );
+        }
     }
     switch(sxhedule.payed){
         case true:

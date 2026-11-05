@@ -11,6 +11,7 @@ const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const { needsMoscarossaGallerySync, needsMoscarossaBulkGallerySync } = require("../lib/moscarossaGalleryApply");
 const { normalizeDeletedScheduleIds } = require("../lib/scheduleDeletion");
 const { getAllowedHistoryStates } = require("../lib/historyManagement");
+const { extractBakecaincontriiRemoteId } = require("../lib/bakecaincontriiRemoteId");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -3843,6 +3844,34 @@ router.post("/updateAllDataSchedule", authenticateKey, async (req, res) => {
     res.sendStatus(201);
 });
 
+const resolveBakecaincontriiScheduleRemoteId = async (schedule) => {
+    const current = `${schedule?.remotePostID || ""}`.trim();
+    if (current) return current;
+
+    const embedded = extractBakecaincontriiRemoteId(schedule?.urlBK);
+    if (embedded) {
+        await schedule.update({ remotePostID: embedded });
+        return embedded;
+    }
+
+    const publicUrl = `${schedule?.urlBK || ""}`.trim();
+    if (!publicUrl) return "";
+    const linkedSchedule = await ctx.tblSchedulazioni.findOne({
+        where: {
+            id: { [Op.ne]: schedule.id },
+            annuncio: schedule.annuncio,
+            platform: "bakecaincontrii",
+            GCRecord: null,
+            urlBK: publicUrl,
+            remotePostID: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }] }
+        },
+        order: [["updatedAt", "DESC"], ["id", "DESC"]]
+    });
+    const recovered = `${linkedSchedule?.remotePostID || ""}`.trim();
+    if (recovered) await schedule.update({ remotePostID: recovered });
+    return recovered;
+};
+
 const queueHistoryManagementAction = async (req, res, nextState) => {
     if (!req.body.id) return res.sendStatus(400);
 
@@ -3873,10 +3902,13 @@ const queueHistoryManagementAction = async (req, res, nextState) => {
     });
     if (!advertisement) return res.sendStatus(403);
     const currentState = `${schedule.state || ""}`.toUpperCase();
+    const remotePostID = platform === "bakecaincontrii"
+        ? await resolveBakecaincontriiScheduleRemoteId(schedule)
+        : `${schedule.remotePostID || ""}`.trim();
     const republishUpgrade = platform === "moscarossa" && nextState === "REPUBLISH" &&
         Boolean(`${req.body.promotionPlan || ""}`.trim());
     const allowedStates = getAllowedHistoryStates(platform, nextState, { republishUpgrade });
-    if (!allowedStates.includes(currentState) || !schedule.remotePostID) {
+    if (!allowedStates.includes(currentState) || !remotePostID) {
         return res.status(409).json({
             error: platform === "bakecaincontrii"
                 ? "L'annuncio Bakecaincontrii non è nello stato corretto o non ha un identificativo remoto."
