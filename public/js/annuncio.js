@@ -15,6 +15,18 @@ const formatPanelDateKey = (date = new Date()) => date.toLocaleDateString(
     "zh-hans-cn",
     PANEL_DATE_FORMAT_OPTIONS
 ).replace(/\//g, "-");
+const formatRomeMinuteKey = (date = new Date()) => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Rome",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+    }).formatToParts(date).map((part) => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
 var blacklist = [];
 var tmpID = 0;
 var sCalendar = null;
@@ -1513,7 +1525,35 @@ const STAR_SLOT_DEFINITIONS = [
     { start: "18:00", end: "02:00", quotedCredits: 119 }
 ];
 
-const createStarScheduleEditor = () => {
+const getSchedulePublicationMinuteKey = (panel) => {
+    const date = `${panel?.querySelector(".lblDateTime")?.textContent || document.querySelector("#txtDate")?.value || ""}`
+        .match(/\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    const time = `${panel?.querySelector(".schedule-time-input")?.value || ""}`.slice(0, 5);
+    return date && /^\d{2}:\d{2}$/.test(time) ? `${date}T${time}` : "";
+};
+
+const getStarSlotThreshold = (panel) => {
+    const now = formatRomeMinuteKey();
+    const publication = getSchedulePublicationMinuteKey(panel);
+    return publication && publication > now ? publication : now;
+};
+
+const getDefaultStarSlotDate = (panel) => {
+    const publication = getSchedulePublicationMinuteKey(panel);
+    const publicationDate = publication.slice(0, 10) || document.querySelector("#txtDate")?.value || formatPanelDateKey();
+    const threshold = getStarSlotThreshold(panel);
+    const hasUpcomingSlot = STAR_SLOT_DEFINITIONS.some((slot) => `${publicationDate}T${slot.start}` > threshold);
+    return hasUpcomingSlot ? publicationDate : addDaysToDateString(publicationDate, 1);
+};
+
+const getInvalidStarSlot = (panel) => {
+    const date = panel?.querySelector(".star-slot-date")?.value || "";
+    const threshold = getStarSlotThreshold(panel);
+    return [...(panel?.querySelectorAll(".star-slot-checkbox:checked") || [])]
+        .find((checkbox) => `${date}T${checkbox.dataset.start || ""}` <= threshold) || null;
+};
+
+const createStarScheduleEditor = (panel) => {
     const editor = document.createElement("div");
     editor.className = "star-schedule-editor alert";
     editor.style.margin = "10px 0 0";
@@ -1528,7 +1568,7 @@ const createStarScheduleEditor = () => {
         <div style="font-weight:600; margin-bottom:8px;">Slot Star richiesti</div>
         <div class="form-inline" style="margin-bottom:8px;">
             <label>Data slot&nbsp;</label>
-            <input class="form-control star-slot-date" type="date" value="${document.querySelector("#txtDate")?.value || ""}">
+            <input class="form-control star-slot-date" type="date" value="${getDefaultStarSlotDate(panel)}">
         </div>
         <div class="star-slot-options">${slots}</div>`;
 
@@ -2075,7 +2115,7 @@ const postsPanelOperations = (panel) => {
         newPost.appendChild(cityPost);
         newPost.appendChild(isStar ? createStarCategorySelect() : createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
-        if (isStar) newPostPanel.appendChild(createStarScheduleEditor());
+        if (isStar) newPostPanel.appendChild(createStarScheduleEditor(newPostPanel));
         if (isBakecaincontriiTop) newPostPanel.appendChild(createBakecaincontriiTopScheduleEditor(newPostPanel));
 
         panel.querySelector(".post-list").appendChild(newPostPanel);
@@ -3782,6 +3822,23 @@ function updateSchedule() {
         starPanelsToSave[0].scrollIntoView({ behavior: "smooth", block: "center" });
         categorySelect?.focus();
         return alert("Per pubblicare Star, seleziona la categoria Donna Cerca Uomo oppure Trans.");
+    }
+    const starWithoutSlots = starPanelsToSave.find((panel) =>
+        panel.querySelectorAll(".star-slot-checkbox:checked").length === 0
+    );
+    if (starWithoutSlots) {
+        document.querySelector('a[href="#tabStar"]')?.click();
+        starWithoutSlots.scrollIntoView({ behavior: "smooth", block: "center" });
+        starWithoutSlots.querySelector(".star-slot-checkbox")?.focus();
+        return alert("Seleziona almeno uno slot Star prima di salvare.");
+    }
+    const starPanelWithStartedSlot = starPanelsToSave.find((panel) => getInvalidStarSlot(panel));
+    if (starPanelWithStartedSlot) {
+        const invalidSlot = getInvalidStarSlot(starPanelWithStartedSlot);
+        document.querySelector('a[href="#tabStar"]')?.click();
+        starPanelWithStartedSlot.scrollIntoView({ behavior: "smooth", block: "center" });
+        invalidSlot?.focus();
+        return alert("Lo slot Star selezionato è già iniziato. Scegli una data o una fascia successiva all'orario di pubblicazione.");
     }
     const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
         schedulePanelNeedsValidation(panel) &&
