@@ -414,6 +414,7 @@ function deletefuture() {
 //===============================================================
 const setDefaultDatetime = (timeInput) => {
     timeInput.value = new Date().toLocaleTimeString("it", {
+        timeZone: "Europe/Rome",
         hour: "2-digit",
         minute: "2-digit",
     });

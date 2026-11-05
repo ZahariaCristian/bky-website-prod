@@ -13,6 +13,7 @@ let images = []; //slider images
 var picIds = [];
 var pubs = {};
 var currentDay = new Date().toLocaleDateString("zh-hans-cn", {
+    timeZone: "Europe/Rome",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

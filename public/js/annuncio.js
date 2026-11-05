@@ -5,6 +5,16 @@ const EDIT = URL_PARAMS.get("enableEdit");
 const RAW_PANEL = `${URL_PARAMS.get("panel") || "bakecaincontrii"}`.trim().toLowerCase();
 const CURRENT_PANEL = RAW_PANEL === "bakecaincontri" ? "bakecaincontrii" : RAW_PANEL;
 const deletedScheduleIds = new Set();
+const PANEL_DATE_FORMAT_OPTIONS = {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+};
+const formatPanelDateKey = (date = new Date()) => date.toLocaleDateString(
+    "zh-hans-cn",
+    PANEL_DATE_FORMAT_OPTIONS
+).replace(/\//g, "-");
 var blacklist = [];
 var tmpID = 0;
 var sCalendar = null;
@@ -859,30 +869,14 @@ function deleteStorico(me, idString){
     }
 }
 
-document.querySelector("#txtDate").value = new Date().toLocaleDateString("zh-hans-cn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-}).replace(/\//g, "-");
+document.querySelector("#txtDate").value = formatPanelDateKey();
 
 var tmpToday = new Date();
 tmpToday.setDate(tmpToday.getDate() + 1);
-document.querySelector("#txtDateClona").value = new Date(tmpToday).toLocaleDateString("zh-hans-cn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-}).replace(/\//g, "-");
-document.querySelector("#txtDateClonaFrom").value = new Date(tmpToday).toLocaleDateString("zh-hans-cn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-}).replace(/\//g, "-");
+document.querySelector("#txtDateClona").value = formatPanelDateKey(new Date(tmpToday));
+document.querySelector("#txtDateClonaFrom").value = formatPanelDateKey(new Date(tmpToday));
 tmpToday.setDate(tmpToday.getDate() + 1);
-document.querySelector("#txtDateClonaTo").value = new Date(tmpToday).toLocaleDateString("zh-hans-cn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-}).replace(/\//g, "-");
+document.querySelector("#txtDateClonaTo").value = formatPanelDateKey(new Date(tmpToday));
 
 let currentDay = document.querySelector("#txtDate").value;
 
@@ -1426,6 +1420,7 @@ const phoneTestApprove = () => {
 
 const setDefaultDatetime = (timeInput) => {
     timeInput.value = new Date().toLocaleTimeString("it", {
+        timeZone: "Europe/Rome",
         hour: "2-digit",
         minute: "2-digit",
     });
@@ -3503,11 +3498,7 @@ function getSelectedDayPubs(currentDate) {
 };
 
 document.querySelector("#txtDate").addEventListener("change", () => {
-    const currentDayString = new Date().toLocaleDateString("zh-hans-cn", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).replace(/\//g, "-");
+    const currentDayString = formatPanelDateKey();
     const selectedDay = document.querySelector("#txtDate").value;
     let newDay;
     // if (new Date(selectedDay) < new Date(currentDayString)) {
