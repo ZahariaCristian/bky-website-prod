@@ -1008,7 +1008,7 @@
         </div>
     </div>
     <textarea id="txtCopy" class="" style="position: absolute; left: -100000000px"></textarea>
-    <script src="/js/annuncio.js?v=20261105-star-category-header"></script>
+    <script src="/js/annuncio.js?v=20261105-star-simplified"></script>
     <script>
  document.addEventListener('DOMContentLoaded', function() {
     const totalCostElement = document.getElementById('totalCost');
@@ -1404,7 +1404,7 @@
         checkbox.addEventListener('change', calculateTotalCost);
     });
     document.addEventListener('change', function(event) {
-        if (event.target.matches('.star-slot-checkbox, .star-slot-date, .star-max-total-credits, .top-slot-select, .top-extra-all, .top-extra-supertop, .top-extra-highlight, .top-extra-label')) {
+        if (event.target.matches('.star-slot-checkbox, .star-slot-date, .top-slot-select, .top-extra-all, .top-extra-supertop, .top-extra-highlight, .top-extra-label')) {
             calculateTotalCost();
         }
     });

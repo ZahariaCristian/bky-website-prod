@@ -1530,29 +1530,13 @@ const createStarScheduleEditor = () => {
             <label>Data slot&nbsp;</label>
             <input class="form-control star-slot-date" type="date" value="${document.querySelector("#txtDate")?.value || ""}">
         </div>
-        <div class="star-slot-options">${slots}</div>
-        <div class="form-inline" style="margin-top:8px;">
-            <label>Limite massimo&nbsp;</label>
-            <input class="form-control star-max-total-credits" type="number" min="1" step="1" value="0" style="width:100px;">
-            <span>&nbsp;crediti</span>
-            <span class="star-slot-summary" style="margin-left:12px;">0 slot selezionati</span>
-        </div>
-        <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo reali. Nessun pagamento sarà eseguito se il totale supera questo limite.</small>`;
+        <div class="star-slot-options">${slots}</div>`;
 
-    const maxCreditsInput = editor.querySelector(".star-max-total-credits");
     const refresh = (markEdited = true) => {
-        const selected = [...editor.querySelectorAll(".star-slot-checkbox:checked")];
-        const estimatedCredits = selected.reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
-        if (maxCreditsInput.dataset.userEdited !== "true") maxCreditsInput.value = estimatedCredits;
-        editor.querySelector(".star-slot-summary").textContent = `${selected.length} slot selezionat${selected.length === 1 ? "o" : "i"} · stima ${estimatedCredits} crediti`;
         if (markEdited) markSchedulePanelEdited(editor);
     };
     editor.refreshStarSummary = () => refresh(false);
     editor.querySelectorAll("input").forEach((input) => input.addEventListener("change", () => refresh(true)));
-    maxCreditsInput.addEventListener("input", () => {
-        maxCreditsInput.dataset.userEdited = "true";
-        markSchedulePanelEdited(editor);
-    });
     return editor;
 };
 
@@ -3393,7 +3377,7 @@ function getStarPeriodFromPanel(panel) {
     return {
         product: "star",
         slots,
-        maxTotalCredits: Number(panel.querySelector(".star-max-total-credits")?.value || 0)
+        maxTotalCredits: slots.reduce((total, slot) => total + Number(slot.quotedCredits || 0), 0)
     };
 }
 
@@ -3411,11 +3395,6 @@ function restoreStarPeriod(panel, rawPeriod) {
             .find((candidate) => candidate.dataset.start === startTime && candidate.dataset.end === endTime);
         if (checkbox) checkbox.checked = true;
     });
-    const maxCreditsInput = panel.querySelector(".star-max-total-credits");
-    if (maxCreditsInput && Number(period.maxTotalCredits) > 0) {
-        maxCreditsInput.value = Number(period.maxTotalCredits);
-        maxCreditsInput.dataset.userEdited = "true";
-    }
     panel.querySelector(".star-schedule-editor")?.refreshStarSummary?.();
 }
 
