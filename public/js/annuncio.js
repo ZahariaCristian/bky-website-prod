@@ -1756,7 +1756,7 @@ const setupBakecaincontriiTopPanel = () => {
     if (!navigation || !content) return;
     const item = document.createElement("li");
     item.className = "bakecaincontrii-only";
-    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#f5c2c7; color:#842029;">Top</a>';
+    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#f5c2c7; color:#842029;">UCU</a>';
     const flashItem = navigation.querySelector('a[href="#tabFlash"]')?.closest("li");
     navigation.insertBefore(item, flashItem || null);
 
