@@ -1465,6 +1465,27 @@ const syncStarCategorySelectors = () => {
     });
 };
 
+const createStarCategorySelect = () => {
+    const select = document.createElement("select");
+    select.className = "form-control star-category-select";
+    select.title = "Categoria Star";
+    select.setAttribute("aria-label", "Categoria Star");
+    select.innerHTML = `
+        <option value="">Seleziona categoria</option>
+        <option value="DONNAUOMO">Donna Cerca Uomo</option>
+        <option value="TRANS">Trans</option>`;
+    select.value = isStarCategoryAllowed() ? getAdvertisementCategory() : "";
+    select.addEventListener("change", () => {
+        const advertisementCategory = document.querySelector("select[name='categorie']");
+        if (!advertisementCategory || !select.value) return;
+        advertisementCategory.value = select.value;
+        advertisementCategory.dispatchEvent(new Event("change", { bubbles: true }));
+        if (typeof enableInfoUpdate === "function") enableInfoUpdate();
+        markSchedulePanelEdited(select);
+    });
+    return select;
+};
+
 const createTimeslotCategoryBadge = () => {
     const badge = document.createElement("span");
     badge.classList.add("timeslot-category-badge");
@@ -1505,15 +1526,6 @@ const createStarScheduleEditor = () => {
 
     editor.innerHTML = `
         <div style="font-weight:600; margin-bottom:8px;">Slot Star richiesti</div>
-        <div class="form-group" style="margin-bottom:10px; max-width:280px;">
-            <label>Categoria Star</label>
-            <select class="form-control star-category-select">
-                <option value="">Seleziona categoria</option>
-                <option value="DONNAUOMO">Donna Cerca Uomo</option>
-                <option value="TRANS">Trans</option>
-            </select>
-            <small class="text-muted">Star è disponibile solo per Donna Cerca Uomo e Trans.</small>
-        </div>
         <div class="form-inline" style="margin-bottom:8px;">
             <label>Data slot&nbsp;</label>
             <input class="form-control star-slot-date" type="date" value="${document.querySelector("#txtDate")?.value || ""}">
@@ -1528,18 +1540,6 @@ const createStarScheduleEditor = () => {
         <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo reali. Nessun pagamento sarà eseguito se il totale supera questo limite.</small>`;
 
     const maxCreditsInput = editor.querySelector(".star-max-total-credits");
-    const categorySelect = editor.querySelector(".star-category-select");
-    categorySelect.value = isStarCategoryAllowed()
-        ? getAdvertisementCategory()
-        : "";
-    categorySelect.addEventListener("change", () => {
-        const advertisementCategory = document.querySelector("select[name='categorie']");
-        if (!advertisementCategory || !categorySelect.value) return;
-        advertisementCategory.value = categorySelect.value;
-        advertisementCategory.dispatchEvent(new Event("change", { bubbles: true }));
-        if (typeof enableInfoUpdate === "function") enableInfoUpdate();
-        markSchedulePanelEdited(editor);
-    });
     const refresh = (markEdited = true) => {
         const selected = [...editor.querySelectorAll(".star-slot-checkbox:checked")];
         const estimatedCredits = selected.reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
@@ -2089,7 +2089,7 @@ const postsPanelOperations = (panel) => {
             newPost.appendChild(btnCam);
         }
         newPost.appendChild(cityPost);
-        newPost.appendChild(createTimeslotCategoryBadge());
+        newPost.appendChild(isStar ? createStarCategorySelect() : createTimeslotCategoryBadge());
         newPostPanel.appendChild(newPost);
         if (isStar) newPostPanel.appendChild(createStarScheduleEditor());
         if (isBakecaincontriiTop) newPostPanel.appendChild(createBakecaincontriiTopScheduleEditor(newPostPanel));
