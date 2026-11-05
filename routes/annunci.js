@@ -9,6 +9,7 @@ const scrapeMoscarossa = require("../lib/scraper/moscarossa");
 const moscarossaDetailsConfig = require("../public/js/panels/moscarossa/details-config");
 const { isMoscarossaExpired } = require("../lib/moscarossaExpiration");
 const { needsMoscarossaGallerySync, needsMoscarossaBulkGallerySync } = require("../lib/moscarossaGalleryApply");
+const { normalizeDeletedScheduleIds } = require("../lib/scheduleDeletion");
 const axios = require("axios");
 const fs = require("fs");
 const os = require("os");
@@ -2980,6 +2981,35 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
     }
     var allSchedulazioni = req.body.schedule;
     const schedulePlatform = normalizePanelPlatform(req.body.panel);
+    const deletedScheduleIds = schedulePlatform === "bakecaincontrii"
+        ? normalizeDeletedScheduleIds(req.body.deletedScheduleIds)
+        : [];
+    if (schedulePlatform === "bakecaincontrii") {
+        for (const slots of Object.values(allSchedulazioni)) {
+            for (const slot of (Array.isArray(slots) ? slots : [])) {
+                // GCRecord is an internal soft-delete timestamp. Browser state
+                // must never turn an active schedule into a deleted record.
+                slot.GCRecord = null;
+            }
+        }
+        if (deletedScheduleIds.length) {
+            const ownedSchedules = await ctx.tblSchedulazioni.findAll({
+                attributes: ["id"],
+                where: {
+                    id: { [Op.in]: deletedScheduleIds },
+                    annuncio: req.body.id,
+                    platform: schedulePlatform
+                }
+            });
+            const ownedIds = new Set(ownedSchedules.map((schedule) => Number(schedule.id)));
+            if (deletedScheduleIds.some((id) => !ownedIds.has(id))) {
+                return res.status(422).json({
+                    code: "SCHEDULE_DELETE_INVALID",
+                    error: "Una o più pubblicazioni da eliminare non appartengono a questo annuncio o pannello."
+                });
+            }
+        }
+    }
     for (const slots of Object.values(allSchedulazioni)) {
         for (const slot of (Array.isArray(slots) ? slots : [])) {
             if (slot.typeAnnuncio !== "Star") continue;
@@ -3124,7 +3154,8 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                         hasEtichetta: s.hasEtichetta,
                         payed: payed,
                         city: s.city,
-                        platform
+                        platform,
+                        GCRecord: null
                     });
                     s.id = schedulato.id;
                     if (s.images) {
@@ -3173,7 +3204,8 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 }
                 if (task.payed) payed = task.payed;
                 var deleteThis = null;
-                if (s.GCRecord == true) deleteThis = ctx.newGCRecord();
+                const legacyDeleteRequested = platform !== "bakecaincontrii" && s.GCRecord == true;
+                if (legacyDeleteRequested) deleteThis = ctx.newGCRecord();
                 console.log(deleteThis, 'deleteThis');
 
                 var state = task.state;
@@ -3221,7 +3253,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     }
                 }
 
-                if (s.state == "EDIT" || s.GCRecord) {
+                if (s.state == "EDIT" || legacyDeleteRequested) {
                     const period = normalizePanelPlatform(req.body.panel) === "megaescort" && s.typeAnnuncio == "Free" ? "" : s.period;
                     await task.update({
                         data: s.data,
@@ -3250,6 +3282,20 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
             }
             onlySchedulazioni.push(s);
         }
+    }
+
+    if (schedulePlatform === "bakecaincontrii" && deletedScheduleIds.length) {
+        await ctx.tblSchedulazioni.update({
+            GCRecord: ctx.newGCRecord(),
+            editedBy: userid
+        }, {
+            where: {
+                id: { [Op.in]: deletedScheduleIds },
+                annuncio: req.body.id,
+                platform: schedulePlatform,
+                GCRecord: null
+            }
+        });
     }
 
     await girl.update({

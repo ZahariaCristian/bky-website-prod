@@ -4,6 +4,7 @@ const QUERY_NEW = URL_PARAMS.get("edit");
 const EDIT = URL_PARAMS.get("enableEdit");
 const RAW_PANEL = `${URL_PARAMS.get("panel") || "bakecaincontrii"}`.trim().toLowerCase();
 const CURRENT_PANEL = RAW_PANEL === "bakecaincontri" ? "bakecaincontrii" : RAW_PANEL;
+const deletedScheduleIds = new Set();
 var blacklist = [];
 var tmpID = 0;
 var sCalendar = null;
@@ -11,6 +12,29 @@ var sCalendar = null;
 if (CURRENT_PANEL === "bakecaincontrii") {
     document.body.classList.add("bakecaincontrii-panel");
 }
+
+const rememberDeletedScheduleId = (value) => {
+    const id = Number.parseInt(value, 10);
+    if (Number.isInteger(id) && id > 0) deletedScheduleIds.add(id);
+    return id;
+};
+
+const removeSchedulePanel = (panel) => {
+    if (!panel) return;
+    if (CURRENT_PANEL === "bakecaincontrii") {
+        rememberDeletedScheduleId($(panel).data("id") || panel.dataset.id);
+        panel.remove();
+        return;
+    }
+    $(panel).hide();
+    $(panel).data("GCRecord", true);
+};
+
+const shouldSerializeSchedulePanel = (panel) => {
+    if (!panel) return false;
+    if (CURRENT_PANEL !== "bakecaincontrii") return true;
+    return panel.isConnected && panel.style.display !== "none" && panel.dataset.gcrecord !== "true";
+};
 
 
 // Global variable to store reports
@@ -1972,9 +1996,7 @@ const postsPanelOperations = (panel) => {
         });
 
         delButton.addEventListener("click", () => {
-            //newPostPanel.remove();
-            $(newPostPanel).hide();
-            $(newPostPanel).data("GCRecord", true);
+            removeSchedulePanel(newPostPanel);
             enableScheduleUpdate();
         });
 
@@ -2227,9 +2249,7 @@ const timeSlotPanelOperations = (panel) => {
             if (panel.querySelectorAll(".newpost-wrapper").length === 1) {
                 panel.parentElement.querySelector("input").click();
             }
-            //newPostPanel.remove();
-            $(newPostPanel).fadeOut();
-            $(newPostPanel).data("GCRecord", true);
+            removeSchedulePanel(newPostPanel);
         });
 
         btnPremium.addEventListener("click", () => {
@@ -2276,9 +2296,7 @@ const timeSlotPanelOperations = (panel) => {
     newSinglePanel.querySelector(".btn-danger").addEventListener("click", () => {
         if (panel.querySelectorAll(".newpost-wrapper").length == 1)
             panel.parentElement.querySelector("input").click();
-        //newSinglePanel.parentElement.remove();
-        $(newSinglePanel.parentElement).fadeOut();
-        $(newSinglePanel.parentElement).data("GCRecord", true);
+        removeSchedulePanel(newSinglePanel.parentElement);
     });
 }
 document.querySelectorAll(".time-slot").forEach((timeslot) => {
@@ -2287,7 +2305,12 @@ document.querySelectorAll(".time-slot").forEach((timeslot) => {
         enableScheduleUpdate();
         if (!checkbox.checked) {
             $(timeslot).find(".posts").hide();
-            $(timeslot).find(".posts").find(".newpost-panel").data("GCRecord", true);
+            const panels = $(timeslot).find(".posts").find(".newpost-panel").toArray();
+            if (CURRENT_PANEL === "bakecaincontrii") {
+                panels.forEach(removeSchedulePanel);
+            } else {
+                $(panels).data("GCRecord", true);
+            }
         }else{
             const postsDiv = document.createElement("div");
             postsDiv.classList.add("posts");
@@ -3351,6 +3374,7 @@ function getSelectedDayPubs(currentDate) {
     let i = 0;
     ["Free", "Flash", "Star", "Top", "10x1", "10x3", "10x7"].forEach(promoType => {
         document.querySelectorAll(`.promo${promoType} .newpost-panel`).forEach(panel => {
+            if (!shouldSerializeSchedulePanel(panel)) return;
             let typeData = {};
             typeData.typeAnnuncio = promoType;
             typeData.typePeriodic = promoType === "Flash" ? "Flash" : (promoType === "Star" ? "Star" : "Top");
@@ -3372,7 +3396,9 @@ function getSelectedDayPubs(currentDate) {
             if($(panel).data("relativeID")) typeData.relativeID = $(panel).data("relativeID");
             if($(panel).data("state")) typeData.state = $(panel).data("state");
             typeData.GCRecord = null;
-            if($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
+            if(CURRENT_PANEL !== "bakecaincontrii" && $(panel).data("GCRecord")) {
+                typeData.GCRecord = $(panel).data("GCRecord");
+            }
             if (panel.querySelector(".btnPhoto")?.classList.contains("btn-success")) {
             //     let i = -1;
                 panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
@@ -3405,6 +3431,7 @@ function getSelectedDayPubs(currentDate) {
             //if (!timeslot.querySelector("input").checked) return;
             let timeslotData = [];
             timeslot.querySelectorAll(".newpost-panel").forEach(panel => {
+                if (!shouldSerializeSchedulePanel(panel)) return;
                 let typeData = {};
                 typeData.typeAnnuncio = promoType;
                 typeData.typePeriodic = "Top";
@@ -3420,7 +3447,9 @@ function getSelectedDayPubs(currentDate) {
                 if($(panel).data("relativeID")) typeData.relativeID = $(panel).data("relativeID");
                 if($(panel).data("state")) typeData.state = $(panel).data("state");
                 typeData.GCRecord = null;
-                if($(panel).data("GCRecord")) typeData.GCRecord = $(panel).data("GCRecord");
+                if(CURRENT_PANEL !== "bakecaincontrii" && $(panel).data("GCRecord")) {
+                    typeData.GCRecord = $(panel).data("GCRecord");
+                }
                 if (panel.querySelector(".btnPhoto")?.classList.contains("btn-success")) {
                 //     let i = -1;
                     panel.querySelectorAll(".post-pic-wrapper").forEach(p => {
@@ -3678,6 +3707,18 @@ function loadDayData(pubs) {
 
 function deletefuture() {
     if (confirm("Sicuro di voler eliminare le pubblicazioni programmate?")){
+        if (CURRENT_PANEL === "bakecaincontrii") {
+            Object.keys(pubs).forEach(date => {
+                if (new Date(date) <= new Date()) return;
+                (Array.isArray(pubs[date]) ? pubs[date] : []).forEach(schedule => {
+                    rememberDeletedScheduleId(schedule.id);
+                });
+                pubs[date] = [];
+            });
+            document.querySelectorAll(".newpost-panel").forEach((panel) => panel.remove());
+            requestUpdate();
+            return;
+        }
         Object.keys(pubs).forEach(x => {
             if (new Date(x) > new Date){
                 pubs[x].forEach(y =>{
@@ -3752,7 +3793,10 @@ function requestUpdate(reload){
         body: JSON.stringify({
             id: anID,
             schedule: pubs,
-            panel: CURRENT_PANEL
+            panel: CURRENT_PANEL,
+            deletedScheduleIds: CURRENT_PANEL === "bakecaincontrii"
+                ? [...deletedScheduleIds]
+                : []
         }),
     }).then(async (r) => {
         toggleLoader();
@@ -3764,6 +3808,7 @@ function requestUpdate(reload){
             const failure = await r.json().catch(() => null);
             return alert(`⚠ ${failure?.error || "Si è verificato un errore durante l'aggiornamento delle pubblicazioni."}`);
         }
+        if (CURRENT_PANEL === "bakecaincontrii") deletedScheduleIds.clear();
         document.querySelector("#updateScheduleBtn").setAttribute("disabled", true);
         if (reload) window.location.reload();
         r.json().then(async (res) => {
