@@ -1115,6 +1115,8 @@ async function loadAdvertisement (res) {
 
     if(res.categorie){
         document.querySelector("select[name='categorie']").value = res.categorie;
+        refreshTimeslotCategoryBadges();
+        syncStarCategorySelectors();
     }
 
     if (res.isPhoneChecked) phoneApprove();
@@ -1446,6 +1448,23 @@ const getBakecaincontriiCategoryLabel = () => {
     return category.options[category.selectedIndex]?.text?.trim() || category.value || "";
 };
 
+const STAR_ALLOWED_CATEGORIES = Object.freeze({
+    DONNAUOMO: "Donna Cerca Uomo",
+    TRANS: "Trans"
+});
+
+const getAdvertisementCategory = () => `${document.querySelector("select[name='categorie']")?.value || ""}`.toUpperCase();
+const isStarCategoryAllowed = (category = getAdvertisementCategory()) =>
+    Object.prototype.hasOwnProperty.call(STAR_ALLOWED_CATEGORIES, `${category || ""}`.toUpperCase());
+
+const syncStarCategorySelectors = () => {
+    const category = getAdvertisementCategory();
+    const selectedValue = isStarCategoryAllowed(category) ? category : "";
+    document.querySelectorAll(".star-category-select").forEach((select) => {
+        select.value = selectedValue;
+    });
+};
+
 const createTimeslotCategoryBadge = () => {
     const badge = document.createElement("span");
     badge.classList.add("timeslot-category-badge");
@@ -1462,7 +1481,10 @@ const refreshTimeslotCategoryBadges = () => {
     });
 };
 
-document.querySelector("select[name='categorie']")?.addEventListener("change", refreshTimeslotCategoryBadges);
+document.querySelector("select[name='categorie']")?.addEventListener("change", () => {
+    refreshTimeslotCategoryBadges();
+    syncStarCategorySelectors();
+});
 
 const STAR_SLOT_DEFINITIONS = [
     { start: "02:00", end: "10:00", quotedCredits: 69 },
@@ -1483,6 +1505,15 @@ const createStarScheduleEditor = () => {
 
     editor.innerHTML = `
         <div style="font-weight:600; margin-bottom:8px;">Slot Star richiesti</div>
+        <div class="form-group" style="margin-bottom:10px; max-width:280px;">
+            <label>Categoria Star</label>
+            <select class="form-control star-category-select">
+                <option value="">Seleziona categoria</option>
+                <option value="DONNAUOMO">Donna Cerca Uomo</option>
+                <option value="TRANS">Trans</option>
+            </select>
+            <small class="text-muted">Star è disponibile solo per Donna Cerca Uomo e Trans.</small>
+        </div>
         <div class="form-inline" style="margin-bottom:8px;">
             <label>Data slot&nbsp;</label>
             <input class="form-control star-slot-date" type="date" value="${document.querySelector("#txtDate")?.value || ""}">
@@ -1497,6 +1528,18 @@ const createStarScheduleEditor = () => {
         <small class="text-muted">Bakecaincontrii confermerà disponibilità e prezzo reali. Nessun pagamento sarà eseguito se il totale supera questo limite.</small>`;
 
     const maxCreditsInput = editor.querySelector(".star-max-total-credits");
+    const categorySelect = editor.querySelector(".star-category-select");
+    categorySelect.value = isStarCategoryAllowed()
+        ? getAdvertisementCategory()
+        : "";
+    categorySelect.addEventListener("change", () => {
+        const advertisementCategory = document.querySelector("select[name='categorie']");
+        if (!advertisementCategory || !categorySelect.value) return;
+        advertisementCategory.value = categorySelect.value;
+        advertisementCategory.dispatchEvent(new Event("change", { bubbles: true }));
+        if (typeof enableInfoUpdate === "function") enableInfoUpdate();
+        markSchedulePanelEdited(editor);
+    });
     const refresh = (markEdited = true) => {
         const selected = [...editor.querySelectorAll(".star-slot-checkbox:checked")];
         const estimatedCredits = selected.reduce((total, checkbox) => total + Number(checkbox.dataset.credits || 0), 0);
@@ -3752,6 +3795,15 @@ function deletefuture() {
 }
 
 function updateSchedule() {
+    const starPanelsToSave = [...document.querySelectorAll(".promoStar .newpost-panel")]
+        .filter(schedulePanelNeedsValidation);
+    if (starPanelsToSave.length && !isStarCategoryAllowed()) {
+        document.querySelector('a[href="#tabStar"]')?.click();
+        const categorySelect = starPanelsToSave[0].querySelector(".star-category-select");
+        starPanelsToSave[0].scrollIntoView({ behavior: "smooth", block: "center" });
+        categorySelect?.focus();
+        return alert("Per pubblicare Star, seleziona la categoria Donna Cerca Uomo oppure Trans.");
+    }
     const starWithoutImages = [...document.querySelectorAll(".promoStar .newpost-panel")].find((panel) =>
         schedulePanelNeedsValidation(panel) &&
         panel.querySelectorAll(".post-pic-wrapper input[type='checkbox']:checked").length === 0
@@ -3797,6 +3849,7 @@ function requestUpdate(reload){
             id: anID,
             schedule: pubs,
             panel: CURRENT_PANEL,
+            starCategory: CURRENT_PANEL === "bakecaincontrii" ? getAdvertisementCategory() : undefined,
             deletedScheduleIds: CURRENT_PANEL === "bakecaincontrii"
                 ? [...deletedScheduleIds]
                 : []

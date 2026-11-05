@@ -2983,6 +2983,22 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
     }
     var allSchedulazioni = req.body.schedule;
     const schedulePlatform = normalizePanelPlatform(req.body.panel);
+    const starSchedulesToSave = Object.values(allSchedulazioni)
+        .flatMap((slots) => Array.isArray(slots) ? slots : [])
+        .filter((slot) => slot.typeAnnuncio === "Star")
+        .filter((slot) => !`${slot.id ?? ""}`.trim() || `${slot.state || ""}`.trim().toUpperCase() === "EDIT");
+    if (schedulePlatform === "bakecaincontrii" && starSchedulesToSave.length) {
+        const starCategory = `${req.body.starCategory || girl.categorie || ""}`.trim().toUpperCase();
+        if (!["DONNAUOMO", "TRANS"].includes(starCategory)) {
+            return res.status(422).json({
+                code: "STAR_CATEGORY_UNSUPPORTED",
+                error: "La promozione Star richiede la categoria Donna Cerca Uomo oppure Trans."
+            });
+        }
+        if (`${girl.categorie || ""}`.trim().toUpperCase() !== starCategory) {
+            await girl.update({ categorie: starCategory, editedBy: userid });
+        }
+    }
     const deletedScheduleIds = schedulePlatform === "bakecaincontrii"
         ? normalizeDeletedScheduleIds(req.body.deletedScheduleIds)
         : [];
