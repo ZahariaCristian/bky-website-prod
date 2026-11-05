@@ -4284,7 +4284,8 @@ function addRptStoricoSus(sxhedule){
         newRow.find(".dateTimeTop").remove();
     }
     newRow.find(".btnPublishState, .btnDeleteState").hide();
-    newRow.html(newRow.html().replace(/@stato@/g, getHistoryStatusIconHtml(sxhedule)));
+    const suspendedStatus = sxhedule.state === "CLOSED" ? "" : getHistoryStatusIconHtml(sxhedule);
+    newRow.html(newRow.html().replace(/@stato@/g, suspendedStatus));
     if (sxhedule.state === "CLOSED") {
         newRow.find(".btnPublishState, .btnDeleteState").show();
         if (!sxhedule.remotePostID) {
