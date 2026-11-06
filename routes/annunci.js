@@ -3083,8 +3083,15 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 const category = `${details?.category || ""}`.trim().toUpperCase();
                 const topScheduleIsNew = !`${slot.id ?? ""}`.trim();
                 const topScheduleIsEdited = `${slot.state || ""}`.trim().toUpperCase() === "EDIT";
+                const requestedOperation = `${slot.operation || ""}`.trim().toUpperCase();
                 const categoryProvided = Boolean(category);
                 const categoryAllowed = ["UOMOUOMO", "UOMODONNA"].includes(category);
+                if (!topScheduleIsNew || topScheduleIsEdited || requestedOperation !== "CREATE") {
+                    return res.status(409).json({
+                        code: "BAKECAINCONTRII_TOP_CREATE_ONLY",
+                        error: "UCU/UCD pubblica sempre un nuovo annuncio. Aggiorna la pagina e aggiungi una nuova riga con il pulsante +."
+                    });
+                }
                 if ((topScheduleIsNew || topScheduleIsEdited) && !categoryAllowed) {
                     return res.status(422).json({
                         code: "TOP_CATEGORY_INVALID",
@@ -3111,6 +3118,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     });
                 }
                 details.schemaVersion = 2;
+                details.publishMode = "create-only";
                 if (categoryAllowed) details.category = category;
                 details.slotMode = range === "NIGHT" ? "fixed-range" : (fullRangeBundle ? "full-range" : "hourly");
                 details.climbs = null;

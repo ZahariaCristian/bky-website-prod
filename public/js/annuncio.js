@@ -908,9 +908,15 @@ let images = [];
 
 let pubs = {};
 
+const isBakecaincontriiCreateOnlyTopPanel = (panel) =>
+    CURRENT_PANEL === "bakecaincontrii" && Boolean(panel?.closest?.(".promoTop"));
+
 const markSchedulePanelEdited = (element) => {
     const panel = element?.closest?.(".newpost-panel");
     if (!panel) return;
+    // UCU/UCD is a create-only workflow. Published/saved Top rows are managed
+    // from history and must never be turned into remote EDIT operations.
+    if (panel.getAttribute("data-id") && isBakecaincontriiCreateOnlyTopPanel(panel)) return;
     if (panel.getAttribute("data-id")) {
         $(panel).attr("data-state", "EDIT");
         $(panel).data("state", "EDIT");
@@ -921,6 +927,7 @@ const markSchedulePanelEdited = (element) => {
 const schedulePanelNeedsValidation = (panel) => {
     if (!panel || $(panel).data("GCRecord")) return false;
     const scheduleId = `${panel.getAttribute("data-id") || ""}`.trim();
+    if (isBakecaincontriiCreateOnlyTopPanel(panel)) return !scheduleId;
     const state = `${$(panel).data("state") || panel.getAttribute("data-state") || ""}`.trim().toUpperCase();
     return !scheduleId || state === "EDIT";
 };
@@ -1670,6 +1677,7 @@ const normalizeBakecaincontriiTopPeriod = (rawPeriod, typeAnnuncio = "Top") => {
     return {
         schemaVersion: 2,
         product: "top",
+        publishMode: "create-only",
         category: normalizeBakecaincontriiTopCategory(parsed.category),
         timeRange: normalizedRange,
         timeSlot: normalizedSlot,
@@ -3499,6 +3507,7 @@ function getSelectedDayPubs(currentDate) {
                 typeData.period = JSON.stringify(getStarPeriodFromPanel(panel));
             } else if (promoType === "Top") {
                 typeData.period = JSON.stringify(getBakecaincontriiTopPeriodFromPanel(panel));
+                if (CURRENT_PANEL === "bakecaincontrii") typeData.operation = "CREATE";
             }
             typeData.hasPremium = $(panel).data("premium");
             typeData.hasVideo = $(panel).data("cam");
@@ -3649,6 +3658,10 @@ function loadDayData(pubs) {
             .filter((announcement) => announcement.typeAnnuncio === promoType)
             .forEach(announcement => {
                 if (announcement.status !== undefined && announcement.status !== "pending") return;
+                // Existing UCU/UCD schedules belong to publication history. The
+                // Top editor intentionally contains only fresh, ID-less rows so
+                // changing a category can never edit a previous remote advert.
+                if (CURRENT_PANEL === "bakecaincontrii" && promoType === "Top" && announcement.id) return;
 
                 document.querySelector(`.promo${promoType} .btn-primary`).click();
                 const panel = $(`.promo${promoType} .newpost-panel:last-child`);
@@ -3919,6 +3932,14 @@ function updateSchedule() {
 
 function requestUpdate(reload){
     var anID = $("#annuncioID").val();
+    const schedulePayload = CURRENT_PANEL === "bakecaincontrii"
+        ? Object.fromEntries(Object.entries(pubs).map(([date, schedules]) => [
+            date,
+            (Array.isArray(schedules) ? schedules : []).filter((schedule) =>
+                !(schedule.typeAnnuncio === "Top" && `${schedule.id ?? ""}`.trim())
+            )
+        ]))
+        : pubs;
     toggleLoader();
     fetch("/annuncio/updateSchedule", {
         method: "POST",
@@ -3932,7 +3953,7 @@ function requestUpdate(reload){
         referrerPolicy: "no-referrer",
         body: JSON.stringify({
             id: anID,
-            schedule: pubs,
+            schedule: schedulePayload,
             panel: CURRENT_PANEL,
             starCategory: CURRENT_PANEL === "bakecaincontrii" ? getAdvertisementCategory() : undefined,
             deletedScheduleIds: CURRENT_PANEL === "bakecaincontrii"
@@ -4295,6 +4316,7 @@ function copyPub(source){
     u.id = source.id;
     u.relativeID = source.relativeID;
     u.typePeriodic = source.typePeriodic;
+    u.operation = source.operation;
     u.images = source.images;
     u.period = source.period;
     u.city = source.city;
