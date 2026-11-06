@@ -3080,6 +3080,23 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                 const range = `${details?.timeRange || ""}`.toUpperCase();
                 const timeSlot = `${details?.timeSlot || ""}`;
                 const days = Number.parseInt(details?.days, 10);
+                const category = `${details?.category || ""}`.trim().toUpperCase();
+                const topScheduleIsNew = !`${slot.id ?? ""}`.trim();
+                const topScheduleIsEdited = `${slot.state || ""}`.trim().toUpperCase() === "EDIT";
+                const categoryProvided = Boolean(category);
+                const categoryAllowed = ["UOMOUOMO", "UOMODONNA"].includes(category);
+                if ((topScheduleIsNew || topScheduleIsEdited) && !categoryAllowed) {
+                    return res.status(422).json({
+                        code: "TOP_CATEGORY_INVALID",
+                        error: "Seleziona UCU (Uomo Cerca Uomo) oppure UCD (Uomo Cerca Donna) per la pubblicazione Top."
+                    });
+                }
+                if (categoryProvided && !categoryAllowed) {
+                    return res.status(422).json({
+                        code: "TOP_CATEGORY_INVALID",
+                        error: `Categoria Top Bakecaincontrii non valida: ${category}.`
+                    });
+                }
                 const fullRangeBundle = range !== "NIGHT" && timeSlot === range;
                 const validCommercialOptions = fullRangeBundle
                     ? days === 1
@@ -3094,6 +3111,7 @@ router.post("/updateSchedule", authenticateKey, async (req, res) => {
                     });
                 }
                 details.schemaVersion = 2;
+                if (categoryAllowed) details.category = category;
                 details.slotMode = range === "NIGHT" ? "fixed-range" : (fullRangeBundle ? "full-range" : "hourly");
                 details.climbs = null;
                 slot.period = JSON.stringify(details);

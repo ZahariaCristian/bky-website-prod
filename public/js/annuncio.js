@@ -787,6 +787,16 @@ function configureHistoryErrorButton(row, schedule) {
     });
 }
 
+function getBakecaincontriiTopHistoryLabel(schedule) {
+    if (`${schedule?.typeAnnuncio || ""}` !== "Top") return `${schedule?.typeAnnuncio || ""}`;
+    let details = {};
+    try { details = JSON.parse(schedule?.period || "{}"); } catch { details = {}; }
+    const category = normalizeBakecaincontriiTopCategory(details.category);
+    if (category === "UOMOUOMO") return "UCU";
+    if (category === "UOMODONNA") return "UCD";
+    return "Top";
+}
+
 var addRptStorico = (sxhedule, i) =>{
     $(".rptNoData").hide();
     var root = $("#rptStorico");
@@ -811,7 +821,7 @@ if (sxhedule.hasVideo){
     premium = " + VIDEO"
 }
 
-    var text = `[TOP ${sxhedule.typeAnnuncio}${premium}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
+    var text = `[TOP ${getBakecaincontriiTopHistoryLabel(sxhedule)}${premium}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
     newRow.html(newRow.html().replace(/@id@/g, sxhedule.id));
     newRow.html(newRow.html().replace(/@descrizione@/g, text));
     newRow.html(newRow.html().replace(/@città@/g, (sxhedule.city || "Non presente")));
@@ -1506,6 +1516,32 @@ const createTimeslotCategoryBadge = () => {
     return badge;
 };
 
+const BAKECAINCONTRII_TOP_CATEGORIES = {
+    UOMOUOMO: "UCU — Uomo Cerca Uomo",
+    UOMODONNA: "UCD — Uomo Cerca Donna"
+};
+
+const normalizeBakecaincontriiTopCategory = (category = "") => {
+    const normalized = `${category || ""}`.trim().toUpperCase();
+    return Object.prototype.hasOwnProperty.call(BAKECAINCONTRII_TOP_CATEGORIES, normalized)
+        ? normalized
+        : "";
+};
+
+const createBakecaincontriiTopCategorySelect = () => {
+    const select = document.createElement("select");
+    select.className = "form-control top-category-select";
+    select.title = "Categoria Bakecaincontrii forzata per questa pubblicazione";
+    select.style.marginLeft = "12px";
+    select.style.width = "190px";
+    select.innerHTML = Object.entries(BAKECAINCONTRII_TOP_CATEGORIES)
+        .map(([value, label]) => `<option value="${value}">${label}</option>`)
+        .join("");
+    select.value = normalizeBakecaincontriiTopCategory(getAdvertisementCategory()) || "UOMOUOMO";
+    select.addEventListener("change", () => markSchedulePanelEdited(select));
+    return select;
+};
+
 const refreshTimeslotCategoryBadges = () => {
     const label = getBakecaincontriiCategoryLabel();
     document.querySelectorAll(".timeslot-category-badge").forEach((badge) => {
@@ -1634,6 +1670,7 @@ const normalizeBakecaincontriiTopPeriod = (rawPeriod, typeAnnuncio = "Top") => {
     return {
         schemaVersion: 2,
         product: "top",
+        category: normalizeBakecaincontriiTopCategory(parsed.category),
         timeRange: normalizedRange,
         timeSlot: normalizedSlot,
         slotMode: normalizedRange === "NIGHT"
@@ -1796,6 +1833,7 @@ const getBakecaincontriiTopPeriodFromPanel = (panel) => {
         ? "00:00 - 06:00"
         : (editor?.querySelector(".top-slot-select")?.value || "06:00 - 07:00");
     return normalizeBakecaincontriiTopPeriod({
+        category: panel.querySelector(".top-category-select")?.value || "UOMOUOMO",
         timeRange,
         timeSlot,
         days: Number(editor?.querySelector(".top-days-button.active")?.dataset.days || 1)
@@ -1806,6 +1844,10 @@ const restoreBakecaincontriiTopPeriod = (panel, rawPeriod, typeAnnuncio = "Top",
     const editor = panel.querySelector(".bakecaincontrii-top-editor");
     if (!editor) return;
     const period = normalizeBakecaincontriiTopPeriod(rawPeriod, typeAnnuncio);
+    const categorySelect = panel.querySelector(".top-category-select");
+    if (categorySelect) {
+        categorySelect.value = period.category || normalizeBakecaincontriiTopCategory(getAdvertisementCategory()) || "UOMOUOMO";
+    }
     selectBakecaincontriiTopButton(editor, ".top-range-button", period.timeRange, "range");
     refreshBakecaincontriiTopSlots(editor, period.timeSlot);
     applyBakecaincontriiTopBundleRules(editor);
@@ -1823,7 +1865,7 @@ const setupBakecaincontriiTopPanel = () => {
     if (!navigation || !content) return;
     const item = document.createElement("li");
     item.className = "bakecaincontrii-only";
-    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#f5c2c7; color:#842029;">UCU</a>';
+    item.innerHTML = '<a href="#tabTop" data-toggle="tab" style="background-color:#f5c2c7; color:#842029;">UCU/UCD</a>';
     const flashItem = navigation.querySelector('a[href="#tabFlash"]')?.closest("li");
     navigation.insertBefore(item, flashItem || null);
 
@@ -2113,7 +2155,11 @@ const postsPanelOperations = (panel) => {
             newPost.appendChild(btnCam);
         }
         newPost.appendChild(cityPost);
-        newPost.appendChild(isStar ? createStarCategorySelect() : createTimeslotCategoryBadge());
+        newPost.appendChild(
+            isStar
+                ? createStarCategorySelect()
+                : (isBakecaincontriiTop ? createBakecaincontriiTopCategorySelect() : createTimeslotCategoryBadge())
+        );
         newPostPanel.appendChild(newPost);
         if (isStar) newPostPanel.appendChild(createStarScheduleEditor(newPostPanel));
         if (isBakecaincontriiTop) newPostPanel.appendChild(createBakecaincontriiTopScheduleEditor(newPostPanel));
@@ -3620,7 +3666,9 @@ function loadDayData(pubs) {
                 }
 
                 panel.attr("data-city", announcement.city);
-                panel.find(".newpost-wrapper select").val(announcement.city);
+                // The first select is the city. Top and Star rows may also contain
+                // a category selector, which must keep its restored value.
+                panel.find(".newpost-wrapper select").first().val(announcement.city);
                 panel.attr("data-state", announcement.state);
 
                 if (promoType !== "Free" && promoType !== "Star" && promoType !== "Top") {
@@ -3854,6 +3902,7 @@ function updateSchedule() {
         if (!schedulePanelNeedsValidation(panel)) return false;
         const details = getBakecaincontriiTopPeriodFromPanel(panel);
         return details.product !== "top" ||
+            !normalizeBakecaincontriiTopCategory(details.category) ||
             !BAKECAINCONTRII_TOP_RANGES[details.timeRange] ||
             ![1, 3, 7].includes(details.days) ||
             !details.timeSlot;
@@ -3861,7 +3910,7 @@ function updateSchedule() {
     if (invalidTopPanel) {
         document.querySelector('a[href="#tabTop"]')?.click();
         invalidTopPanel.scrollIntoView({ behavior: "smooth", block: "center" });
-        return alert("Completa la configurazione Top: momento del giorno, fascia oraria, durata e numero di risalite.");
+        return alert("Completa la configurazione Top: categoria UCU/UCD, momento del giorno, fascia oraria e durata.");
     }
     pubs[currentDay] = getSelectedDayPubs();
     const phone = document.querySelector("input[name='phone']").value;
@@ -4348,7 +4397,7 @@ function addRptStoricoSus(sxhedule){
     newRow.attr("data-id", sxhedule.id);
     newRow.data("id", sxhedule.id);
     
-    var text = `[TOP ${sxhedule.typeAnnuncio}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
+    var text = `[TOP ${getBakecaincontriiTopHistoryLabel(sxhedule)}] del ${sxhedule.data.split("T")[0]} alle ${sxhedule.data.split("T")[1].split(":00.")[0]}`;
     newRow.html(newRow.html().replace(/@id@/g, sxhedule.id));
     newRow.html(newRow.html().replace(/@descrizione@/g, text));
     newRow.html(newRow.html().replace(/@città@/g, (sxhedule.city || "Non presente")));
